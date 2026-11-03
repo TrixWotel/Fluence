@@ -1,6 +1,6 @@
-# Fluentio: Math Tests
+# Fluence: Math Tests
 
-Served at https://trixwotel.github.io/Fluentio/math/ as the math folder of the Fluentio site (see the space branch).
+Served at https://trixwotel.github.io/Fluence/math/ as the math folder of the Fluence site (see the space branch).
 
 * **index.html** is the page.
 * **triangles.js** makes the Triangle Angles questions: 11 kinds, 20 variants each (220), every one with its triangle drawn to scale. **triangles-lessons.js** is its learning path (4 units) and a short lesson for each kind.
