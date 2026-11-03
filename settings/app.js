@@ -218,7 +218,7 @@ function home() {
     set('Name', 'At the top of the home page and the bar, and in every tab’s title.', text(s.name, (v) => { s.name = v; save(); }, 'Name')),
     set('Line under it', '', text(s.tagline, (v) => { s.tagline = v; save(); }, 'Line under the name')),
     set('Welcome', 'A greeting on the home page, and a line that changes with the time, the date, holidays, your music and what you’ve been doing.', toggle(s.greeting, (v) => { s.greeting = v; save(); }, 'Greeting')),
-    set('Layout', 'Auto changes with the time of day: study things in the morning, your tiles in the afternoon, music in the evening, and calm at night. Classic is always your tiles, in their order.',
+    set('Layout', 'The home page fits one screen: three tiles (two on a smaller screen, one on a phone), with the rest a click away under them. Auto picks them by what you’ve been doing (the song that’s playing, the topic you learned last, today’s question) and the time of day. Classic is always your tiles, in their order.',
       seg([['auto', 'Auto'], ['classic', 'Classic'], ['study', 'Study first'], ['music', 'Music first'], ['calm', 'Calm']], s.homeLayout || 'auto', (v) => { s.homeLayout = v; save(); draw(); }, 'Home layout')),
     set('Tiles', 'Which show on the home page, and in what order.', tiles),
     set('Quick buttons', 'The Quick tile’s buttons: a name, and where each goes.', quick,

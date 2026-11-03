@@ -69,8 +69,9 @@ window.FLUENTIO_SETTINGS = {
   // the home page's tiles, in this order (take one out to hide it): 'workspace' (what you worked on last), 'music',
   // 'study', 'progress', 'today', 'question', 'data' and 'quick'
   home: ['workspace', 'music', 'study', 'progress', 'today', 'question', 'data', 'quick'],
-  // how the home page is laid out: 'auto' changes with the time of day (study things in the morning, music in the
-  // evening, calm at night), or always 'classic' (the tiles above, in their order), 'study', 'music' or 'calm'
+  // which tiles the home page shows (it fits one screen, so three of them, with the rest a click away): 'auto' picks them
+  // by what you've been doing and the time of day, or always 'classic' (the tiles above, in their order), 'study',
+  // 'music' or 'calm'
   homeLayout: 'auto',
   // the buttons on the Quick tile (a link can also be a whole web address)
   quick: [

@@ -10,33 +10,40 @@
   <script src="kit/bar.js"></script>
   <link rel="stylesheet" href="kit/site.css">
   <style>
-    main { width: 100%; max-width: 1080px; margin: 0 auto; padding: clamp(28px, 7vh, 72px) 20px 40px; flex: 1; }
+    main { width: 100%; max-width: 1080px; margin: 0 auto; padding: clamp(14px, 4vh, 44px) 20px clamp(12px, 2.4vh, 24px); flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    /* the whole home page in one screen: the welcome on top, and the tiles in one row taking the rest (each scrolls inside
+       itself if it has more than fits); a very short window scrolls as usual */
+    @media (min-height: 540px) {
+      html.home-fit body { height: 100svh; min-height: 0; }
+      html.home-fit .bento { flex: 1; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
+    }
     .hero > * { animation: rise var(--t3) var(--ease) backwards; }
-    .hello { margin: 0 0 6px; color: var(--text); font-size: clamp(1.1rem, 2.4vw, 1.3rem); font-weight: 650; letter-spacing: -0.01em; }
+    .hello { margin: 0 0 4px; color: var(--text); font-size: clamp(1rem, 2.2vw, 1.15rem); font-weight: 650; letter-spacing: -0.01em; }
+    .title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
     .name {
-      margin: 0; width: fit-content; font-size: clamp(2.3rem, 6vw, 3.3rem); line-height: 1.08; font-weight: 800; letter-spacing: -0.04em;
+      margin: 0; width: fit-content; font-size: clamp(1.9rem, min(5vw, 6vh), 2.7rem); line-height: 1.08; font-weight: 800; letter-spacing: -0.04em;
       background: linear-gradient(100deg, var(--text) 0 38%, var(--accent) 48%, var(--accent-2) 56%, var(--text) 66% 100%) 0 center / 200% auto;
       -webkit-background-clip: text; background-clip: text; color: transparent;
       animation: rise var(--t3) var(--ease) backwards, shimmer calc(7s / var(--speed)) linear calc(1.2s / var(--speed)) infinite;
       animation-delay: calc(70ms / var(--speed)), calc(1.2s / var(--speed));
     }
-    .lead { margin: 6px 0 0; color: var(--muted); font-size: 1.05rem; animation-delay: calc(140ms / var(--speed)); }
+    .lead { margin: 0; color: var(--muted); font-size: 1rem; animation-delay: calc(140ms / var(--speed)); }
     /* the welcome under the name: what the day and your progress say, and a way back to your topic */
-    .welcome { margin: 14px 0 0; max-width: 62ch; font-size: 1.02rem; animation-delay: calc(210ms / var(--speed)); }
+    .welcome { margin: 8px 0 0; max-width: 70ch; font-size: 1rem; animation-delay: calc(210ms / var(--speed)); }
     .welcome a { margin-left: 6px; color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
     .welcome a:hover { text-decoration: underline; }
     html.flat .name { background: none; color: var(--text); animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(70ms / var(--speed)); }
 
     /* the tiles: Recent tall on the left, Modules and Data beside it, Quick across under those */
-    .bento { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr); grid-auto-flow: row dense; gap: 14px; margin-top: clamp(22px, 4vh, 34px); }
+    .bento { display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); grid-auto-flow: row dense; gap: 14px; margin-top: clamp(14px, 2.6vh, 26px); }
     .bento > * { animation-delay: calc((var(--n, 0) * 70ms + 200ms) / var(--speed)); }
     .tile {
-      --c: var(--accent); display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 18px 20px;
+      --c: var(--accent); display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 18px 20px;
       background: color-mix(in srgb, var(--card) 86%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
       border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); box-shadow: var(--shadow);
     }
     .tile:active { transform: translateY(-3px); }
-    .tile.big { grid-row: span 2; }
+    .tile.big { grid-row: auto; }
     .tile.wide { grid-column: span 2; flex-direction: row; flex-wrap: wrap; align-items: center; }
     .tile p { margin: 0; }
     .tile-head { display: flex; align-items: center; gap: 12px; color: var(--text); text-decoration: none; font-weight: 650; font-size: 1.15rem; letter-spacing: -0.01em; }
@@ -84,7 +91,7 @@
     /* Today: the date, how far through the year, and what's coming */
     .date b { display: block; font-size: 1.7rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
     /* Question of the day: answer it right here */
-    .tile.wide2 { grid-column: span 2; }
+    .tile.wide2 { grid-column: auto; }
     .qd-text { font-size: 1.06rem; }
     .qd-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 6px; }
     .qd-choice { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: calc(var(--radius) * .7); background: var(--bg); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color var(--t1), background var(--t2), transform var(--t2) var(--spring); }
@@ -110,26 +117,29 @@
     .tile.music .row .btn { display: inline-flex; align-items: center; gap: 6px; }
     .tile.music .m-bars { margin-left: auto; }
     .tile.music .m-bars + .tile-go { margin-left: 10px; }
-    .tile.music.feature { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 18px 28px; padding: 22px 24px;
+    .tile.music.feature { grid-column: span 2; flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 18px 28px; padding: 22px 24px;
       background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 14%, var(--card)), color-mix(in srgb, var(--accent-2) 12%, var(--card)));
       box-shadow: var(--shadow), 0 0 calc(10px + var(--level) * 50px) calc(var(--level) * 8px) color-mix(in srgb, var(--accent) calc(var(--level) * 40%), transparent); }
     .tile.music.feature > .tile-head { flex: 1 0 100%; }
     .tile.music.feature > .now { flex: 1 1 340px; display: grid; gap: 10px; align-content: start; }
     .tile.music.feature > .side { flex: 1 1 260px; display: grid; gap: 8px; align-content: start; }
-    .tile.music.feature .m-tile-now .m-art { --s: 132px; border-radius: 20px; }
+    .tile.music.feature .m-tile-now .m-art { --s: clamp(84px, 14vh, 132px); border-radius: 20px; }
     .tile.music.feature .m-tile-now b { font-size: 1.5rem; letter-spacing: -0.02em; }
     .tile.music .side h3 { margin: 0; font-size: .78rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
     /* the layouts: the hero in the middle for music and calm, and at night a big clock and quieter colors */
     main.layout-music .hero, main.layout-calm .hero { text-align: center; }
     main.layout-music .hero .name, main.layout-calm .hero .name, main.layout-music .hero .welcome, main.layout-calm .hero .welcome { margin-left: auto; margin-right: auto; }
-    .clock { margin: 0 0 4px; font-size: clamp(3.4rem, 11vw, 6rem); font-weight: 200; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text); opacity: .9; }
+    .clock { margin: 0 0 2px; font-size: clamp(2.6rem, min(9vw, 9vh), 4.6rem); font-weight: 200; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text); opacity: .9; }
     main.layout-calm .name { font-size: clamp(1.6rem, 4vw, 2.2rem); }
     main.layout-calm .bento { max-width: 860px; margin-left: auto; margin-right: auto; }
     body.calm .sky i { opacity: calc(var(--sky) * .55); }
-    .layouts { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; margin-top: 26px; color: var(--muted); font-size: .86rem; animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(700ms / var(--speed)); }
-    .layouts .seg button { font-size: .84rem; }
-    @media (max-width: 820px) { .bento { grid-template-columns: 1fr 1fr; } .tile.big { grid-column: span 2; grid-row: auto; } }
-    @media (max-width: 560px) { .bento { grid-template-columns: 1fr; } .tile.big, .tile.wide, .tile.wide2 { grid-column: auto; } }
+    /* under the tiles: the others, to swap in, and the layout */
+    .layouts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; color: var(--muted); font-size: .86rem; animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(600ms / var(--speed)); }
+    .layouts .also { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1; }
+    .layouts .chip { padding: 3px 10px; font: inherit; font-size: .86rem; cursor: pointer; }
+    .layouts .chip .i { width: 14px; height: 14px; }
+    .layouts select { font: inherit; font-size: .86rem; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+    @media (max-width: 560px) { .tile.music.feature, .tile.wide { grid-column: auto; } .layouts select { flex: 1 0 100%; } }
   </style>
 </head>
 <body>
@@ -138,8 +148,7 @@
     <header class="hero">
       <p class="clock" id="clock" hidden></p>
       <p class="hello" id="hello" hidden></p>
-      <h1 class="name" id="name">Fluence</h1>
-      <p class="lead" id="tagline">Web stack workspace</p>
+      <div class="title-row"><h1 class="name" id="name">Fluence</h1><p class="lead" id="tagline">Web stack workspace</p></div>
       <p class="welcome" id="welcome" hidden></p>
     </header>
     <section class="bento stagger" id="tiles" aria-label="Your spaces">
@@ -307,7 +316,7 @@
         },
         // Music: what's playing with its controls (or your newest songs to start one), carried along on every page
         music: () => {
-          const box = tile(`music${layout === 'music' || layout === 'calm' ? ' feature' : ' big'}`, 'var(--accent)', head('music', s.musicTitle, link('music/')), el('p', { className: 'muted' }, 'Loading your music…'));
+          const box = tile(`music${featureMusic ? ' feature' : ''}`, 'var(--accent)', head('music', s.musicTitle, link('music/')), el('p', { className: 'muted' }, 'Loading your music…'));
           import(link('kit/music/player.js')).then(async (player) => {
             const lib = await import(link('kit/music/library.js'));
             player.mount();
@@ -356,20 +365,53 @@
       };
       // (while Data, Code and Notes are off, so are Recent, Data and the Quick buttons into them)
       if (!f.spacesOn) { delete TILES.workspace; delete TILES.data; }
-      // the tiles in the layout's order (only those your settings show), and the hero to suit: in the middle for music and
-      // calm, and at night a big clock with quieter colors
+      // which tiles: as many as fit in one row (three, two on a smaller screen, one on a phone), picked by what you've
+      // been doing (Auto), or in the order of the layout you chose; the rest wait under them, a click away
       const main = document.querySelector('main');
+      document.documentElement.classList.add('home-fit');
       main.className = `layout-${layout}`;
       document.body.classList.toggle('calm', layout === 'calm');
-      const order = layout === 'classic' ? s.home : LAYOUTS[layout].filter((k) => s.home.includes(k));
-      $('tiles').replaceChildren(...order.filter((k, i, all) => TILES[k] && all.indexOf(k) === i).map((k) => TILES[k]()));
+      const mode = ['classic', 'study', 'music', 'calm'].includes(s.homeLayout) ? s.homeLayout : 'auto';
+      const evening = hourNow >= 18 || hourNow < 5, morning = hourNow >= 5 && hourNow < 12;
+      const studied = f.last(), sinceStudy = studied?.at ? (now - studied.at) / 86400000 : Infinity, answered = (f.read('fluentio.today') || {}).day === day(now);
+      // how much each tile matters now: what's playing or what you learned last counts most, the time of day a little
+      const SCORE = {
+        music: (music?.playing ? 100 : on ? 72 : songs.length ? 48 : 12) + (evening ? 22 : 0),
+        study: (sinceStudy <= 3 ? 90 : sinceStudy <= 14 ? 62 : 40) + (morning ? 10 : 0),
+        question: (answered ? 14 : 66) + (morning ? 8 : 0),
+        progress: learned || bests ? 46 + Math.min(visits.streak || 0, 10) : 8,
+        today: 30, quick: 24, workspace: items.length ? 58 : 4, data: 4,
+      };
+      const allowed = s.home.filter((k, i, all) => TILES[k] && all.indexOf(k) === i);
+      const order = mode === 'auto' ? [...allowed].sort((a, b) => (SCORE[b] || 0) - (SCORE[a] || 0))
+        : mode === 'classic' ? allowed : LAYOUTS[mode].filter((k) => allowed.includes(k));
+      let featureMusic = false, shown = [];
+      const TILE_ICON = { music: 'music', study: 'study', progress: 'chart', today: 'calendar', question: 'spark', quick: 'bolt', workspace: 'clock', data: 'database' };
+      const NAME = { music: s.musicTitle, study: s.studyTitle, progress: 'Your progress', today: 'Today', question: 'Question of the day', quick: 'Quick', workspace: 'Recent', data: s.dataTitle };
+      const fit = (list) => {
+        const cols = matchMedia('(min-width: 900px)').matches ? 3 : matchMedia('(min-width: 561px)').matches ? 2 : 1, out = [];
+        featureMusic = cols === 3 && list[0] === 'music' && (layout === 'music' || layout === 'calm' || (mode === 'auto' && music?.playing && evening));
+        let used = 0;
+        for (const k of list) { const w = k === 'music' && featureMusic ? 2 : 1; if (used + w <= cols) { out.push(k); used += w; } }
+        $('tiles').style.setProperty('--cols', cols);
+        return out;
+      };
+      const draw = (list) => {
+        shown = fit(list);
+        $('tiles').replaceChildren(...shown.map((k) => TILES[k]()));
+        const rest = order.filter((k) => !shown.includes(k));
+        const pick = el('select', { 'aria-label': 'Home layout', onchange: (e) => { f.save({ ...f.settings, homeLayout: e.target.value }); location.reload(); } },
+          [['auto', 'Auto: by what you’ve been doing'], ['classic', 'Classic: your order'], ['study', 'Study first'], ['music', 'Music first'], ['calm', 'Calm']].map(([k, name]) => el('option', { value: k, selected: k === mode }, name)));
+        $('layouts').replaceChildren(
+          el('div', { className: 'also' }, rest.length ? 'Also:' : '', rest.map((k) => el('button', { type: 'button', className: 'chip', title: `Show ${NAME[k]} here`, onclick: () => draw([k, ...shown.filter((x) => x !== k)]) }, svg(TILE_ICON[k] || 'plus'), NAME[k] || k))),
+          pick);
+      };
+      draw(order);
+      for (const q of ['(min-width: 900px)', '(min-width: 561px)']) matchMedia(q).addEventListener('change', () => draw(shown.length ? [...shown, ...order.filter((k) => !shown.includes(k))] : order));
       if (layout === 'calm') {
         const tick = () => { $('clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
         tick(); $('clock').hidden = false; setInterval(tick, 15000);
       }
-      // switching layouts right here (Settings → Home has it too)
-      const names = [['auto', 'Auto'], ['classic', 'Classic'], ['study', 'Study'], ['music', 'Music'], ['calm', 'Calm']], picked = s.homeLayout && LAYOUTS[s.homeLayout] !== undefined ? s.homeLayout : 'auto';
-      $('layouts').replaceChildren('Layout', el('div', { className: 'seg', role: 'group', 'aria-label': 'Home layout' }, names.map(([k, name]) => el('button', { type: 'button', className: k === picked ? 'on' : '', title: k === 'auto' ? `Changes with the time of day (now: ${autoLayout[0].toUpperCase() + autoLayout.slice(1)})` : '', onclick: () => { f.save({ ...f.settings, homeLayout: k }); location.reload(); } }, name))));
     }
   </script>
 </body>
