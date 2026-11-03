@@ -1,6 +1,6 @@
-# Fluentio: Spanish
+# Fluence: Spanish
 
-Served at https://trixwotel.github.io/Fluentio/spanish/ as the spanish folder of the Fluentio site (see the space branch).
+Served at https://trixwotel.github.io/Fluence/spanish/ as the spanish folder of the Fluence site (see the space branch).
 
 * **index.html** is the page, with a table of each tense next to its test.
 * **words.js** is the vocabulary: 1,100 words in 25 themes of 44 (nouns with their article, adjectives in the masculine singular, verbs in the infinitive), and notes for each theme. **vocab.js** asks each word both ways (2,200 variants) and makes each theme's lesson from its word list; a theme is learned after 8 right in a row.
