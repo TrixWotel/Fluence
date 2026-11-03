@@ -1,6 +1,6 @@
-# Fluentio: History
+# Fluence: History
 
-Served at https://trixwotel.github.io/Fluentio/history/ as the history folder of the Fluentio site (see the space branch).
+Served at https://trixwotel.github.io/Fluence/history/ as the history folder of the Fluence site (see the space branch).
 
 * **index.html** is the page, with the timeline next to the test.
 * **middle-ages-data.js** is what the questions are made from: 14 topics from the fall of Rome to the printing press, each with its dates, questions with choices, names and words to type, pairs to match and sets to choose from. Every date is the usual one in school histories.
