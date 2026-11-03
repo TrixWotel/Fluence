@@ -1,6 +1,6 @@
-# Fluentio: Geography Tests
+# Fluence: Geography Tests
 
-Served at https://trixwotel.github.io/Fluentio/geography/ as the geography folder of the Fluentio site (see the space branch).
+Served at https://trixwotel.github.io/Fluence/geography/ as the geography folder of the Fluence site (see the space branch).
 
 * **index.html** and **quiz.js** are the tests: the World Map, or one continent at a time. A country test names a country and you click it. A capitals test (geography/#capitals/eu, and so on for every map) names a capital and you click its country, on the same map.
 * **countries.json** is the map: Natural Earth countries at 50m (public domain), simplified.
