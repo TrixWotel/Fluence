@@ -1,6 +1,6 @@
-# Fluentio: Physics Tests
+# Fluence: Physics Tests
 
-Served at https://trixwotel.github.io/Fluentio/physics/ as the physics folder of the Fluentio site (see the space branch).
+Served at https://trixwotel.github.io/Fluence/physics/ as the physics folder of the Fluence site (see the space branch).
 
 * **index.html** is the page, with the formulas for each test and the styles for the drawings.
 * **kinematics.js** makes the Kinematics questions: 14 kinds, 20 variants each (280), and every variant draws its own motion graph (position, velocity or acceleration against time).
