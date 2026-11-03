@@ -1,4 +1,4 @@
-/* Fluentio's shared look, on every page: the built-in colors (settings.js, through look.js, can change them all), the
+/* Fluence's shared look, on every page: the built-in colors (settings.js, through look.js, can change them all), the
    colors drifting behind the page, cards that glow under the pointer, page transitions, and the motion every page
    shares. Every duration is divided by --speed, and nothing moves for people whose device asks for less motion. */
 :root {

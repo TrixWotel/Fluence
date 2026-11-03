@@ -46,7 +46,7 @@ export function start(id, base = LANGS[id]?.file || 'main') {
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Hello from Fluentio</h1>
+  <h1>Hello from Fluence</h1>
   <p>Press Preview to see this page. It uses the style.css and script.js in its folder, if there are any.</p>
   <button id="hello">Say hello</button>
   <script src="script.js"></script>
@@ -70,17 +70,17 @@ button {
 }
 `,
     js: `// Press Run to try it: what you log shows underneath
-console.log('Hello from Fluentio')
+console.log('Hello from Fluence')
 `,
     py: `# Press Run to try it: what you print shows underneath
-name = "Fluentio"
+name = "Fluence"
 print(f"Hello from {name}")
 `,
     java: `// Java runs on a computer with Java on it: download this file, then
 // javac ${base}.java, and java ${base}
 public class ${base} {
     public static void main(String[] args) {
-        System.out.println("Hello from Fluentio");
+        System.out.println("Hello from Fluence");
     }
 }
 `,
@@ -89,7 +89,7 @@ public class ${base} {
 #include <iostream>
 
 int main() {
-    std::cout << "Hello from Fluentio" << std::endl;
+    std::cout << "Hello from Fluence" << std::endl;
     return 0;
 }
 `,

@@ -1,9 +1,10 @@
-// The bar at the top of every page: the site's name, the spaces (Home, Modules, Data, Code and Notes: the one you're in
-// is marked, and the mark slides across when you go to another), Search, and Settings. Each page loads this right after
-// look.js and calls fluentio.bar() first thing in its <body>, so the bar is there before the page is drawn.
-// Search finds the pages, the subjects, and everything in Data, Code and Notes. While look.js has Data, Code and Notes
-// switched off, the bar, Search and the keys leave them out. The keys are the settings' (Settings can
-// record new ones): ⌃K (or /) searches, and ⌃1 to ⌃5 go to Home, Modules, Data, Code and Notes from anywhere.
+// The bar at the top of every page: the site's name, the spaces (Home, Modules, Music, Data, Code and Notes: the one
+// you're in is marked, and the mark slides across when you go to another), Search, and Settings. Each page loads this
+// right after look.js and calls fluentio.bar() first thing in its <body>, so the bar is there before the page is drawn.
+// Search finds the pages, the subjects, your songs, and everything in Data, Code and Notes. While look.js has Data, Code
+// and Notes switched off, the bar, Search and the keys leave them out. The keys are the settings' (Settings can record
+// new ones): ⌃K (or /) searches, and ⌃1 to ⌃6 go to Home, Modules, Music, Data, Code and Notes from anywhere. When a
+// song is playing (or waiting), the music player comes along at the bottom of every page (kit/music/player.js).
 (() => {
   const f = window.fluentio;
   if (!f) return;
@@ -12,6 +13,7 @@
   const spaces = () => [
     { id: 'home', title: 'Home', href: f.link('./'), icon: 'home', key: keyFor('home') },
     { id: 'study', title: f.settings.studyTitle, href: f.link('study/'), icon: 'study', key: keyFor('study') },
+    { id: 'music', title: f.settings.musicTitle, href: f.link('music/'), icon: 'music', key: keyFor('music') },
     { id: 'data', title: f.settings.dataTitle, href: f.link('data/'), icon: 'database', key: keyFor('data') },
     { id: 'code', title: f.settings.codeTitle, href: f.link('code/'), icon: 'code', key: keyFor('code') },
     { id: 'notes', title: f.settings.notesTitle, href: f.link('notes/'), icon: 'note', key: keyFor('notes') },
@@ -49,6 +51,8 @@
     const gear = el('a', { className: 'gear' + (where() === 'settings' ? ' on' : ''), href: f.link('settings/'), title: 'Settings', 'aria-label': 'Settings' }, svg('settings'));
     document.body.prepend(el('header', { className: 'topbar' }, brand, nav, el('div', { className: 'tools' }, find, gear)));
     document.documentElement.classList.add('has-bar');
+    // the music player, when there's a song to carry on with (Music's page and the home page bring it themselves)
+    if ((f.read('fluentio.music.player') || {}).queue?.length && document.body.dataset.music !== 'off') import(f.link('kit/music/player.js')).then((m) => m.mount()).catch(() => {});
   };
   addEventListener('fluentio:settings', () => nav && drawNav());
 
@@ -70,6 +74,9 @@
       out.push({ title: x.title || 'Untitled', kind: base ? 'Database' : 'Folder', icon: base ? 'database' : 'folder', href: f.workspace.link(x), group: 'Recent' });
     }
     for (const x of s.study) out.push({ title: x.title || '', kind: s.studyTitle, emoji: x.emoji || '📘', href: f.link(x.link), group: s.studyTitle });
+    // your songs, once something's typed (from the library this browser last saw)
+    const songs = q ? (f.read('fluentio.music.library') || {}).songs || [] : [];
+    for (const x of songs) if (x && typeof x.title === 'string') out.push({ title: x.title, kind: x.artist || s.musicTitle, icon: 'music', href: f.link(`music/#search/${encodeURIComponent(x.title)}`), group: s.musicTitle, text: `${x.artist || ''} ${x.album || ''}` });
     const named = { notes: s.notesTitle, data: s.dataTitle, code: s.codeTitle };
     for (const [k, name] of f.spacesOn ? Object.entries(KINDS) : []) {
       const space = f.workspace.space({ kind: k });

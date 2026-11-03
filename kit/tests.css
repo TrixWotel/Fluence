@@ -1,4 +1,4 @@
-/* Fluentio's test pages (Math, Science, Physics, Spanish). The colors, font, corners, buttons and motion come from
+/* Fluence's test pages (Math, Science, Physics, Spanish). The colors, font, corners, buttons and motion come from
    site.css and settings.js; this is the tests' own layout, and how their parts move. */
 body { --sky-scale: .6; }
 main { width: 100%; max-width: 860px; margin: 0 auto; padding: 40px 20px 40px; flex: 1; }

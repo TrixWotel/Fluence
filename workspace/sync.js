@@ -14,14 +14,14 @@ const TAB = { note: 'notes', doc: 'database', table: 'database', code: 'code' };
 const ENDING = { note: '.md', doc: '.md', table: '.csv', code: '' };
 const README = `# Database
 
-Fluentio's Data, Code and Notes, saved here by Fluentio (Settings → GitHub).
+Fluence's Data, Code and Notes, saved here by Fluence (Settings → GitHub).
 
 * **notes/** has your notes as Markdown, in their folders.
 * **data/** has your databases, each doc as Markdown and each sheet as CSV.
 * **code/** has your code files, in their folders.
 * **fluentio.json** keeps what the files can't: each one's id and folder, when it was made and changed, a doc's link and a Python file's input.
 
-Change a file's text here and Fluentio takes the change the next time it syncs. Making, moving and renaming things happens in Fluentio.
+Change a file's text here and Fluence takes the change the next time it syncs. Making, moving and renaming things happens in Fluence.
 `;
 
 // ---------- the connection, kept in this browser ----------
@@ -48,7 +48,7 @@ async function gh(s, method, path, body) {
 function explain(e, s) {
   const name = s?.repo || 'the repo';
   if (e.status === 401) return 'GitHub didn’t take the token. It may have expired: make a new one and connect again.';
-  if (e.status === 403) return /rate limit/i.test(e.message) ? 'GitHub asked Fluentio to slow down. It tries again in a minute.' : `The token can’t write to ${name}. It needs Contents: Read and write.`;
+  if (e.status === 403) return /rate limit/i.test(e.message) ? 'GitHub asked Fluence to slow down. It tries again in a minute.' : `The token can’t write to ${name}. It needs Contents: Read and write.`;
   if (e.status === 404) return `GitHub has no repo called ${name} that the token can see.`;
   return e.message || 'Something went wrong with GitHub.';
 }
@@ -193,7 +193,7 @@ async function once(s) {
   const here = local(), there = await remote(s);
   if (!there.head) {
     // (an empty repo takes no commits of this kind, so its first is the README, made the simple way)
-    await gh(s, 'PUT', '/contents/README.md', { message: 'Fluentio’s data', content: toBase64(README) });
+    await gh(s, 'PUT', '/contents/README.md', { message: 'Fluence’s data', content: toBase64(README) });
     return { changed: false, done: false };
   }
   const base = s.index || { items: [], folders: [] }, theirs = there.index || { items: [], folders: [] };
@@ -217,7 +217,7 @@ async function once(s) {
   if (!there.files.has('README.md')) want.set('README.md', README);
   for (const path of ['fluentio.json', 'README.md']) if (want.has(path)) sha.set(path, await blobSha(want.get(path)));
   const tree = [...want].filter(([path]) => there.files.get(path) !== sha.get(path)).map(([path, content]) => ({ path, mode: '100644', type: 'blob', content }));
-  // (a file Fluentio saved before that nothing has now goes, but files put in the repo some other way stay)
+  // (a file Fluence saved before that nothing has now goes, but files put in the repo some other way stay)
   const gone = (theirs.items || []).map((x) => x.path).filter((path) => !want.has(path) && there.files.has(path));
   for (const path of new Set(gone)) tree.push({ path, mode: '100644', type: 'blob', sha: null });
   const files = new Map(there.files);
@@ -227,9 +227,9 @@ async function once(s) {
     const what = ({ edited, ...rest }) => JSON.stringify(rest);
     const was = new Map([...(theirs.items || []), ...(theirs.folders || [])].map((x) => [x.id, what(x)]));
     const named = [...index.folders, ...index.items].filter((x) => was.get(x.id) !== what(x)).map((x) => x.title || 'Untitled');
-    const message = [named.length ? `${named.slice(0, 3).join(', ')}${named.length > 3 ? ` and ${named.length - 3} more` : ''}` : '', gone.length ? `${gone.length} deleted` : ''].filter(Boolean).join(', ') || 'Fluentio’s index';
+    const message = [named.length ? `${named.slice(0, 3).join(', ')}${named.length > 3 ? ` and ${named.length - 3} more` : ''}` : '', gone.length ? `${gone.length} deleted` : ''].filter(Boolean).join(', ') || 'Fluence’s index';
     const made = await gh(s, 'POST', '/git/trees', { base_tree: there.tree, tree });
-    const commit = await gh(s, 'POST', '/git/commits', { message: `${message} (from Fluentio)`, tree: made.sha, parents: [there.head] });
+    const commit = await gh(s, 'POST', '/git/commits', { message: `${message} (from Fluence)`, tree: made.sha, parents: [there.head] });
     try { await gh(s, 'PATCH', `/git/refs/heads/${encodeURIComponent(s.branch)}`, { sha: commit.sha, force: false }); }
     catch (e) { if (e.status === 422 || e.status === 409) return { changed, done: false }; throw e; }  // (GitHub moved on meanwhile: again)
     for (const x of tree) if (x.sha === null) files.delete(x.path); else files.set(x.path, sha.get(x.path));
@@ -270,7 +270,7 @@ export function run() {
         const r = await once(s);
         changed ||= r.changed;
         if (r.done) break;
-        if (tries >= 4) throw new Error('GitHub kept changing while this was saving. Fluentio tries again soon.');
+        if (tries >= 4) throw new Error('GitHub kept changing while this was saving. Fluence tries again soon.');
       }
       tell('synced', { at: Date.now(), error: '' });
     } catch (e) { tell('error', { error: explain(e, load()) }); }

@@ -1,4 +1,4 @@
-// Fluentio's test runner, shared by the Math, Science, Physics and Spanish pages: a card for each test, a test of random variants
+// Fluence's test runner, shared by the Math, Science, Physics and Spanish pages: a card for each test, a test of random variants
 // with a score (your best is kept in this browser), learning a topic at a time with hints, and practice by variant
 // number with worked solutions. A course with an exam (kit/exam.js) also has tests like the ones in class, and then
 // its test of random variants is called practice.
@@ -110,7 +110,7 @@ export function testsPage({ tests }) {
   let run = null, clock = 0;                        // the test in progress, and its timer
   const show = (...nodes) => app.replaceChildren(...nodes.flat().filter(Boolean));   // (replaceChildren would print a null as "null")
   // the tab's title: what's showing, then the page (its body's data-title), then the site's name (settings.js)
-  const titled = (...parts) => { document.title = [...parts, document.body.dataset.title, window.fluentio?.settings.name ?? 'Fluentio'].join(' · '); };
+  const titled = (...parts) => { document.title = [...parts, document.body.dataset.title, window.fluentio?.settings.name ?? 'Fluence'].join(' · '); };
   // a new screen: the old one fades as the new one rises, where the browser can (look.js says whether motion is on)
   const moving = () => window.fluentio?.moving?.() ?? !matchMedia('(prefers-reduced-motion: reduce)').matches;
   const swap = (draw) => (document.startViewTransition && moving() ? document.startViewTransition(draw).ready.catch(() => {}) : draw());

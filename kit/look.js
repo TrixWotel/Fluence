@@ -8,7 +8,7 @@
 // drifting colors behind the page.
 (() => {
   const DEFAULTS = {
-    name: 'Fluentio', tagline: 'Web stack workspace', greeting: true, theme: 'auto',
+    name: 'Fluence', tagline: 'Web stack workspace', greeting: true, theme: 'auto',
     colors: {
       light: { accent: '#2f6fed', accent2: '#9b5cf6', background: '#f6f7f9', card: '#ffffff', text: '#1b1f24', muted: '#5b6470', line: '#e3e6ea', right: '#2da44e', wrong: '#e5534b', second: '#e8743b' },
       dark: { accent: '#6c9bff', accent2: '#b48cff', background: '#0f1115', card: '#171a21', text: '#e8eaee', muted: '#9aa3ae', line: '#262b35', right: '#3fb950', wrong: '#f85149', second: '#f0a04b' },
@@ -19,8 +19,8 @@
     },
     font: 'system', corners: 14, style: 'glow', textSize: 16, animations: true, speed: 1, floatingColors: true,
     animationsIn: { data: true, code: true, notes: true },
-    keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', data: 'Ctrl+3', code: 'Ctrl+4', notes: 'Ctrl+5' },
-    home: ['workspace', 'study', 'progress', 'today', 'question', 'data', 'quick'],
+    keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', music: 'Ctrl+3', data: 'Ctrl+4', code: 'Ctrl+5', notes: 'Ctrl+6' },
+    home: ['workspace', 'music', 'study', 'progress', 'today', 'question', 'data', 'quick'], homeLayout: 'auto',
     quick: [
       { title: 'New note', link: 'notes/#new/note' },
       { title: 'New sheet', link: 'data/#new/table' },
@@ -29,6 +29,7 @@
     dataTitle: 'Data',
     codeTitle: 'Code',
     notesTitle: 'Notes',
+    musicTitle: 'Music',
     studyTitle: 'Modules',
     studyIntro: 'Pick a subject. Take a test, learn it one topic at a time, or practise any question.',
     study: [
@@ -121,7 +122,7 @@
   };
   apply();
   // (each page's <title>, which comes before this script, ends with the built-in name)
-  if (s.name !== DEFAULTS.name) document.title = document.title.replace(/\bFluentio$/, () => s.name);
+  if (s.name !== DEFAULTS.name) document.title = document.title.replace(/\bFluence$/, () => s.name);
 
   // the words marked data-fill, and the drifting colors behind everything (each starts where the clock says it is, so
   // they carry on from one page to the next)
@@ -175,6 +176,7 @@
     calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
     spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
+    music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
     arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
     back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
     chevron: '<path d="m6 9 6 6 6-6"/>',

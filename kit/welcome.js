@@ -1,7 +1,7 @@
 // The home page's welcome: a greeting for the time of day (or for a holiday), and a line under the name that changes with
-// the date (holidays and the days before them, the seasons, AMC 10 season, the day of the week) and with what you've done
-// (your last topic, a new best score, days in a row, how long you've been away, topics learned). The wording changes
-// from visit to visit. welcome(facts) touches no page, so it can be tried for any day:
+// the date (holidays and the days before them, the seasons, AMC 10 season, the month, the time of day, the day of the
+// week), with your music (what's playing, or where you left off) and with what you've done (your last topic, a new best
+// score, days in a row, how long you've been away, topics learned). The wording changes from visit to visit. welcome(facts) touches no page, so it can be tried for any day:
 //   facts = { now: Date, visits: { count, streak, away (whole days since the last visit, or null the first time) },
 //             last: { topic, href, at } or null, learned (topics learned in all), best: { test, text, at } or null }
 // and it returns { hello, line, link: { text, href } or null }. upcoming() lists the next few holidays.
@@ -43,57 +43,80 @@ function holidays(y) {
     { day: on(11, 31), hello: 'Happy New Year’s Eve!', emoji: '🥂', line: 'One last lesson of the year?' },
   ];
 }
-// what the date says on its own: a holiday, or one coming up, a season starting, AMC 10 season, or the day of the week
+// what the date says on its own: a holiday, or one coming up, a season starting, AMC 10 season, the first or last day of
+// a month, the time of day, the month, or the day of the week
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 function dateNote(now, pick) {
   const y = now.getFullYear(), list = holidays(y);
   const today = list.find((h) => daysBetween(h.day, now) === 0);
   const coming = list.map((h) => ({ h, n: daysBetween(now, h.day) })).find(({ h, n }) => h.before && n > 0 && n <= h.before);
-  const m = now.getMonth(), d = now.getDate(), w = now.getDay();
+  const m = now.getMonth(), d = now.getDate(), w = now.getDay(), hr = now.getHours(), lastDay = new Date(y, m + 1, 0).getDate();
   const season = { '2-20': '🌱 Spring is here', '5-21': '☀️ Summer starts today', '8-22': '🍂 Fall starts today', '11-21': '❄️ Winter starts today' }[`${m}-${d}`];
   const amc = (m === 9 && d >= 10) || (m === 10 && d <= 15);
   const weekday = [
-    pick(['A slow Sunday is a fine time for one lesson.', 'Sunday: a good day to look back at what you missed.']),
-    pick(['A new week, a fresh start.', 'Monday: one lesson to set up the week.']),
-    pick(['Small steps add up.', 'A few questions a day goes a long way.']),
-    pick(['Halfway through the week.', 'Midweek: how about a practice set?']),
-    pick(['Almost the weekend.', 'One more lesson before Friday?']),
-    pick(['Happy Friday!', 'It’s Friday: one more lesson before the weekend?']),
-    pick(['Weekend time: no rush today.', 'A relaxed Saturday is good for a test.']),
+    pick(['A slow Sunday is a fine time for one lesson.', 'Sunday: a good day to look back at what you missed.', 'Sunday reset: a playlist and a plan for the week?', 'Lazy Sunday. Put something good on.']),
+    pick(['A new week, a fresh start.', 'Monday: one lesson to set up the week.', 'Monday again. Music on, one topic down.', 'New week, new playlist?']),
+    pick(['Small steps add up.', 'A few questions a day goes a long way.', 'Tuesday: quietly getting things done.', 'One topic today keeps the test away.']),
+    pick(['Halfway through the week.', 'Midweek: how about a practice set?', 'Wednesday: over the hump.', 'Midweek music break?']),
+    pick(['Almost the weekend.', 'One more lesson before Friday?', 'Thursday: the weekend can almost hear you.', 'Nearly there. Keep going.']),
+    pick(['Happy Friday!', 'It’s Friday: one more lesson before the weekend?', 'Friday feeling: turn the music up.', 'Made it to Friday.']),
+    pick(['Weekend time: no rush today.', 'A relaxed Saturday is good for a test.', 'Saturday: take it easy, maybe one lesson.', 'Weekend soundtrack time.']),
   ][w];
-  return { today, note: coming ? coming.h.soon(coming.n) + '.' : season ? season + '.' : amc ? pick(['It’s AMC 10 season: a practice test keeps you sharp.', 'AMC 10 season is here. Try a test like the real one?']) : weekday };
+  const daytime = hr >= 5 && hr < 9 ? pick(['An early start: the quiet hours are the best for thinking.', 'Up early. A question of the day goes well with breakfast.'])
+    : hr >= 12 && hr < 14 ? pick(['Lunch break? A quick question fits.', 'Midday. Something to listen to while you eat?'])
+      : hr >= 15 && hr < 18 ? pick(['After school: one topic, then some music?', 'Afternoon slump? A song and a short lesson fix that.'])
+        : hr >= 20 && hr < 23 ? pick(['Evening: put something good on and wind down.', 'A calm evening is good for a playlist.'])
+          : hr >= 23 || hr < 5 ? pick(['It’s late. Something quiet, then sleep?', 'Late night: soft music, short lessons.']) : '';
+  const month = d === 1 ? `A new month: ${MONTHS[m]} starts today.` : d === lastDay ? `The last day of ${MONTHS[m]}.` : pick([
+    ['January: a fresh year to learn something new.', 'February: short month, big progress.', 'March: spring’s on its way.', 'April: showers outside, music inside.', 'May: the year’s in full bloom.', 'June: summer’s almost here.',
+      'July: long days, long playlists.', 'August: the last stretch of summer.', 'September: back to it.', 'October: cozy season starts.', 'November: warm drinks and good music.', 'December: the year’s nearly done.'][m], '']);
+  const note = coming ? `${coming.h.soon(coming.n)}.` : season ? `${season}.` : amc && pick([true, false]) ? pick(['It’s AMC 10 season: a practice test keeps you sharp.', 'AMC 10 season is here. Try a test like the real one?']) : pick([weekday, weekday, daytime || weekday, month || weekday]);
+  return { today, note };
 }
 function greetingFor(h, pick) {
-  if (h < 5) return pick(['Good night', 'Up late', 'Hello, night owl']);
-  if (h < 9) return pick(['Good morning', 'Morning, early bird', 'Rise and shine']);
-  if (h < 12) return pick(['Good morning', 'Morning']);
-  if (h < 17) return pick(['Good afternoon', 'Afternoon']);
-  if (h < 22) return pick(['Good evening', 'Evening']);
-  return pick(['Good evening', 'Late night']);
+  if (h < 5) return pick(['Good night', 'Up late', 'Hello, night owl', 'Still up', 'Quiet hours']);
+  if (h < 9) return pick(['Good morning', 'Morning, early bird', 'Rise and shine', 'Hello, sunshine', 'Bright and early']);
+  if (h < 12) return pick(['Good morning', 'Morning', 'Hey there', 'Top of the morning']);
+  if (h < 14) return pick(['Good afternoon', 'Hey there', 'Hi again', 'Hello at lunchtime']);
+  if (h < 17) return pick(['Good afternoon', 'Afternoon', 'Hello there', 'Hey']);
+  if (h < 20) return pick(['Good evening', 'Evening', 'Hey there', 'Hello this evening']);
+  if (h < 22) return pick(['Good evening', 'Evening', 'Winding down']);
+  return pick(['Good evening', 'Late night hello', 'Night owl hours']);
 }
-export function welcome({ now = new Date(), visits = { count: 1, streak: 1, away: null }, last = null, learned = 0, best = null } = {}) {
+// facts = { now, visits: { count, streak, away }, last, learned, best, name (the site's), music: { title, artist, playing,
+// songs (how many), liked } or null }
+export function welcome({ now = new Date(), visits = { count: 1, streak: 1, away: null }, last = null, learned = 0, best = null, name = 'Fluence', music = null } = {}) {
   // a different choice of words each visit, the same on a reload of the same visit
   let seed = (now.getFullYear() * 400 + now.getMonth() * 32 + now.getDate()) * 7919 + (visits.count || 0) * 104729;
-  const pick = (list) => { seed = (seed * 1103515245 + 12345) % 2147483648; return list[seed % list.length]; };
+  const pick = (list) => { seed = (seed * 1103515245 + 12345) % 2147483648; return list[Math.floor(seed / 65536) % list.length]; };   // (the high bits: the low ones just alternate)
   const { today, note } = dateNote(now, pick);
   const first = !visits.count || visits.count <= 1, away = visits.away;
-  const back = first ? ', welcome to Fluentio' : away >= 14 ? ', long time no see' : away >= 1 || visits.count > 1 ? pick([', welcome back', ', good to see you']) : '';
-  const hello = today ? `${today.hello} ${today.emoji}` : `${greetingFor(now.getHours(), pick)}${back}`;
+  const g = greetingFor(now.getHours(), pick), hi = /^(hello|hey|hi)\b|hello$/i.test(g);
+  const back = first ? `, welcome to ${name}` : away >= 14 ? ', long time no see' : away >= 1 || visits.count > 1 ? pick([', welcome back', ', good to see you', ', nice to see you again', ...(hi ? [] : [', hello again'])]) : '';
+  // (a greeting with a comma in it, like "Hello, sunshine", gets the welcome as its own sentence, or none)
+  const hello = today ? `${today.hello} ${today.emoji}` : !g.includes(',') ? `${g}${back}` : first ? `${g}. Welcome to ${name}` : g;
   // what you've done, most worth saying first
   const said = [];
   let link = null;
-  const daysAgo = (t) => (t ? daysBetween(new Date(t), now) : Infinity);
+  const daysAgo = (t) => (t ? daysBetween(new Date(t), now) : Infinity), hr = now.getHours(), evening = hr >= 18 || hr < 5;
   if (first && !last && !learned) said.push('Pick a subject to start: every one has lessons, practice and tests.');
   if (best && daysAgo(best.at) <= 3) said.push(pick([`A new best on ${best.test}: ${best.text}. Nice work!`, `${best.text} on ${best.test}, your best yet.`]));
   if (away >= 7 && !first) said.push(pick([`It’s been ${away} days. Good to have you back.`, `${away} days since your last visit. Pick up where you left off?`]));
-  else if (visits.streak >= 3) said.push(pick([`That’s ${visits.streak} days in a row. Keep it going!`, `${visits.streak} days in a row now.`]));
-  else if (visits.streak === 2 && !first) said.push('Two days in a row.');
+  else if (visits.streak >= 3) said.push(pick([`That’s ${visits.streak} days in a row. Keep it going!`, `${visits.streak} days in a row now.`, `Day ${visits.streak} in a row. Nice rhythm.`]));
+  else if (visits.streak === 2 && !first) said.push(pick(['Two days in a row.', 'Back again today, nice.']));
+  // music: what's on, or what you left off with (first in the evening, when you're more likely to want it)
+  if (music?.playing && music.title) said[evening ? 'unshift' : 'push'](pick([`Now playing: ${music.title} by ${music.artist}.`, `${music.title} is playing. Good choice.`]));
+  else if (music?.title && (evening || !last?.topic)) {
+    said[evening ? 'unshift' : 'push'](pick([`Last time you were listening to ${music.title}.`, `${music.title} by ${music.artist} is where you left off.`, `Ready for more from ${music.artist}?`]));
+    link ||= { text: `Play ${music.title}`, href: 'music/#now' };
+  } else if (music?.songs && !music.title) said.push(pick([`${music.songs.toLocaleString('en-US')} song${music.songs === 1 ? '' : 's'} in your library, ready to play.`, evening ? 'Some music for the evening?' : 'Something to listen to while you study?']));
   if (last?.topic && daysAgo(last.at) <= 14) {
-    said.push(pick([`Last time you were on ${last.topic}.`, `${last.topic} is waiting where you left it.`]));
+    said.push(pick([`Last time you were on ${last.topic}.`, `${last.topic} is waiting where you left it.`, `Pick up ${last.topic} again?`]));
     link = { text: `Continue ${last.topic}`, href: last.href };
   }
   if (learned >= 1 && said.length < 2) said.push(pick([`${learned} topic${learned === 1 ? '' : 's'} learned so far.`, `${learned} topic${learned === 1 ? '' : 's'} learned and counting.`]));
   // a line of two parts: the date's (or the holiday's own), then the most worth saying of yours
-  const dated = today ? `${greetingFor(now.getHours(), pick)}! ${today.line}` : note;
+  const dated = today ? `${greetingFor(hr, pick)}! ${today.line}` : note;
   const line = [dated, ...said].slice(0, said.length ? 2 : 1).join(' ');
   return { hello, line, link };
 }

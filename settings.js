@@ -1,4 +1,4 @@
-// Fluentio's settings: the colors, the look, the motion, and the words on the pages.
+// Fluence's settings: the colors, the look, the motion, and the words on the pages.
 //
 // Two ways to change them:
 // On the site, Settings (the button at the top right) shows each change as you make it, but keeps it in that browser
@@ -11,7 +11,7 @@
 
 window.FLUENTIO_SETTINGS = {
   // the name at the top of the home page, and the line under it
-  name: 'Fluentio',
+  name: 'Fluence',
   tagline: 'Web stack workspace',
   greeting: true,          // the welcome on the home page: a greeting, and a line that changes with the day and what you’ve done
 
@@ -64,11 +64,14 @@ window.FLUENTIO_SETTINGS = {
 
   // the keys (Settings can record new ones): Ctrl, Alt, Shift or Meta (⌘ on a Mac) with a key, like 'Ctrl+K', and ''
   // turns one off. On Windows and Linux the browser keeps Ctrl with a number for its tabs, so there Ctrl+1 works as Alt+1
-  keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', data: 'Ctrl+3', code: 'Ctrl+4', notes: 'Ctrl+5' },
+  keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', music: 'Ctrl+3', data: 'Ctrl+4', code: 'Ctrl+5', notes: 'Ctrl+6' },
 
-  // the home page's tiles, in this order (take one out to hide it): 'workspace' (what you worked on last), 'study',
-  // 'data' and 'quick'
-  home: ['workspace', 'study', 'progress', 'today', 'question', 'data', 'quick'],
+  // the home page's tiles, in this order (take one out to hide it): 'workspace' (what you worked on last), 'music',
+  // 'study', 'progress', 'today', 'question', 'data' and 'quick'
+  home: ['workspace', 'music', 'study', 'progress', 'today', 'question', 'data', 'quick'],
+  // how the home page is laid out: 'auto' changes with the time of day (study things in the morning, music in the
+  // evening, calm at night), or always 'classic' (the tiles above, in their order), 'study', 'music' or 'calm'
+  homeLayout: 'auto',
   // the buttons on the Quick tile (a link can also be a whole web address)
   quick: [
     { title: 'New note', link: 'notes/#new/note' },
@@ -84,6 +87,9 @@ window.FLUENTIO_SETTINGS = {
   dataTitle: 'Data',
   codeTitle: 'Code',
   notesTitle: 'Notes',
+
+  // Music (the music/ page): its name in the bar and on its page
+  musicTitle: 'Music',
 
   // Modules (the study/ page): its title, the line under it, and its subjects in this order (color is the subject's
   // own color)

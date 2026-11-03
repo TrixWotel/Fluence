@@ -1,4 +1,4 @@
-// Fluentio's tests like the ones in class, on the page: the paper (the formulas, a timer, and each question's context
+// Fluence's tests like the ones in class, on the page: the paper (the formulas, a timer, and each question's context
 // with its parts to answer), kept in this browser as you go so a closed tab loses nothing; handing it in; the page
 // marking the numbers, choices, tables and graphs while you tick the points your written answers and sketches make
 // against the mark scheme; and your score, with the topics to work on. kit/exam-kit.js makes the tests, and

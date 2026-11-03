@@ -1,6 +1,6 @@
 // Settings: everything settings.js holds, changed here, each change showing straight away. What's changed stays in this
 // browser (look.js keeps it as fluentio.look, over settings.js), and "Copy as settings.js" turns all of it into a new
-// settings.js to paste on GitHub for every device. Also here: the keys, and a backup of everything Fluentio keeps in
+// settings.js to paste on GitHub for every device. Also here: the keys, and a backup of everything Fluence keeps in
 // this browser (your data, code and notes, these settings, learning progress and best scores).
 import * as github from '../workspace/sync.js?v=3';
 
@@ -92,7 +92,7 @@ function download(name, body, type) {
 
 // ---------- the panels ----------
 const PRESETS = [
-  ['Fluentio', ['#2f6fed', '#9b5cf6'], ['#6c9bff', '#b48cff']],
+  ['Fluence', ['#2f6fed', '#9b5cf6'], ['#6c9bff', '#b48cff']],
   ['Ocean', ['#0e7490', '#2563eb'], ['#22d3ee', '#60a5fa']],
   ['Forest', ['#15803d', '#0d9488'], ['#4ade80', '#2dd4bf']],
   ['Sunset', ['#ea580c', '#db2777'], ['#fb923c', '#f472b6']],
@@ -102,7 +102,7 @@ const PRESETS = [
 ];
 // whole looks at once: the colors for light and dark, the style, the corners, and the drifting colors on or off
 const THEMES = [
-  { name: 'Fluentio', note: 'Soft glows, gradients and drifting colors', look: () => ({ style: 'glow', corners: f.DEFAULTS.corners, font: 'system', floatingColors: true, colors: clone(f.DEFAULTS.colors) }) },
+  { name: 'Fluence', note: 'Soft glows, gradients and drifting colors', look: () => ({ style: 'glow', corners: f.DEFAULTS.corners, font: 'system', floatingColors: true, colors: clone(f.DEFAULTS.colors) }) },
   // (Fluent's own Pure Black and Light themes, from its style.css and themes.js)
   { name: 'Fluent', note: 'Your browser’s look: pure black, grays and white', look: () => ({ style: 'flat', corners: 8, font: 'system', floatingColors: false, colors: {
     light: { accent: '#1d1d1f', accent2: '#515154', background: '#e9e9eb', card: '#ffffff', text: '#1d1d1f', muted: '#6e6e73', line: '#d7d7db', right: '#248a3d', wrong: '#d70015', second: '#b25000' },
@@ -126,7 +126,7 @@ const COLORS = [
   ['second', 'Graphs', 'The second line on graphs and drawings'],
 ];
 const MAP = [['ocean', 'Ocean'], ['land', 'Land'], ['country', 'Countries'], ['border', 'Borders'], ['late', 'Found late', 'A country found after a wrong try']];
-const TILES = () => ({ ...(f.spacesOn ? { workspace: 'Recent' } : {}), study: s.studyTitle, progress: 'Your progress', today: 'Today', question: 'Question of the day', ...(f.spacesOn ? { data: s.dataTitle } : {}), quick: 'Quick' });
+const TILES = () => ({ ...(f.spacesOn ? { workspace: 'Recent' } : {}), music: s.musicTitle, study: s.studyTitle, progress: 'Your progress', today: 'Today', question: 'Question of the day', ...(f.spacesOn ? { data: s.dataTitle } : {}), quick: 'Quick' });
 const shown = () => (s.theme === 'dark' || s.theme === 'light' ? s.theme : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 let palette = shown();                              // which colors the Colors panel changes
 
@@ -217,7 +217,9 @@ function home() {
   return el('section', { className: 'panel', id: 'home' }, el('h2', {}, 'Home'),
     set('Name', 'At the top of the home page and the bar, and in every tab’s title.', text(s.name, (v) => { s.name = v; save(); }, 'Name')),
     set('Line under it', '', text(s.tagline, (v) => { s.tagline = v; save(); }, 'Line under the name')),
-    set('Welcome', 'A greeting on the home page, and a line that changes with the time, the date, holidays and what you’ve been doing.', toggle(s.greeting, (v) => { s.greeting = v; save(); }, 'Greeting')),
+    set('Welcome', 'A greeting on the home page, and a line that changes with the time, the date, holidays, your music and what you’ve been doing.', toggle(s.greeting, (v) => { s.greeting = v; save(); }, 'Greeting')),
+    set('Layout', 'Auto changes with the time of day: study things in the morning, your tiles in the afternoon, music in the evening, and calm at night. Classic is always your tiles, in their order.',
+      seg([['auto', 'Auto'], ['classic', 'Classic'], ['study', 'Study first'], ['music', 'Music first'], ['calm', 'Calm']], s.homeLayout || 'auto', (v) => { s.homeLayout = v; save(); draw(); }, 'Home layout')),
     set('Tiles', 'Which show on the home page, and in what order.', tiles),
     set('Quick buttons', 'The Quick tile’s buttons: a name, and where each goes.', quick,
       el('button', { type: 'button', className: 'btn', onclick: () => { s.quick.push({ title: 'New button', link: f.spacesOn ? 'notes/' : 'study/' }); save(); draw(); panels.querySelector('#home .quick-list li:last-child input')?.select(); } }, svg('plus'), 'Add a button')));
@@ -227,6 +229,7 @@ function names() {
   return el('section', { className: 'panel', id: 'names' }, el('h2', {}, 'Names'),
     set('Modules', 'The subjects’ page: its name in the bar, on its page and on the home page.', text(s.studyTitle, (v) => { s.studyTitle = v; save(); }, 'Modules’ name')),
     set('Modules’ line', 'Under its name on its page.', text(s.studyIntro, (v) => { s.studyIntro = v; save(); }, 'Modules’ line', { long: true })),
+    set('Music', 'Your songs: its name in the bar, on its page and on the home page.', text(s.musicTitle, (v) => { s.musicTitle = v; save(); }, 'Music’s name')),
     ...(!f.spacesOn ? [] : [set('Data', 'Your databases of docs and sheets: its name in the bar and on its page.', text(s.dataTitle, (v) => { s.dataTitle = v; save(); }, 'Data’s name')),
     set('Code', 'Your code: its name in the bar and on its page.', text(s.codeTitle, (v) => { s.codeTitle = v; save(); }, 'Code’s name')),
     set('Notes', 'Your notes: its name in the bar and on its page.', text(s.notesTitle, (v) => { s.notesTitle = v; save(); }, 'Notes’ name'))]));
@@ -234,7 +237,7 @@ function names() {
 
 // a key you can change: click it, then press the new one. Esc keeps the old one, Delete (or Backspace) turns it off,
 // and a key another action had moves here (that one is left with none)
-const ACTIONS = () => [['search', 'Search', `Pages, subjects${f.spacesOn ? ', and your data, code and notes' : ''}. / works too, when you aren’t typing.`], ['home', 'Home', ''], ['study', s.studyTitle, ''], ...(f.spacesOn ? [['data', s.dataTitle, ''], ['code', s.codeTitle, ''], ['notes', s.notesTitle, '']] : [])];
+const ACTIONS = () => [['search', 'Search', `Pages, subjects${f.spacesOn ? ', and your data, code and notes' : ''}. / works too, when you aren’t typing.`], ['home', 'Home', ''], ['study', s.studyTitle, ''], ['music', s.musicTitle, ''], ...(f.spacesOn ? [['data', s.dataTitle, ''], ['code', s.codeTitle, ''], ['notes', s.notesTitle, '']] : [])];
 // (keys a browser usually keeps for itself, like ⌘T, or ⌘K in Fluent, never reach the page)
 const kept = (k) => { const t = f.key.meant(k); return /^(Shift\+)?Meta\+([0-9TWNQRLKEPSFDHMYZXCVAOG,])$/.test(t) || /^Ctrl\+(Shift\+)?Tab$/.test(t); };
 let recording = null;                               // how to stop the key being recorded
@@ -294,7 +297,7 @@ function data() {
     file.value = '';
     let backup = null;
     try { backup = JSON.parse(await chosen.text()); } catch {}
-    if (!backup || backup.app !== 'Fluentio' || !backup.data || typeof backup.data !== 'object') { toast('That isn’t a Fluentio backup'); return; }
+    if (!backup || !['Fluence', 'Fluentio'].includes(backup.app) || !backup.data || typeof backup.data !== 'object') { toast('That isn’t a Fluence backup'); return; }
     const made = backup.made ? new Date(backup.made).toLocaleString() : 'earlier';
     confirmIn(panel, `Restore the backup from ${made}? It replaces your ${f.spacesOn ? 'data, code, notes, ' : ''}settings and progress in this browser${github.connected() ? `, and in ${github.repo()} on GitHub` : ''}.`, 'Restore', () => {
       for (const k of ours()) localStorage.removeItem(k);
@@ -308,7 +311,7 @@ function data() {
     el('div', { className: 'set' }, el('div', { className: 'row' },
       el('button', { type: 'button', className: 'btn primary', onclick: () => {
         const all = Object.fromEntries(ours().map((k) => [k, f.read(k)]));
-        download(`fluentio-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ app: 'Fluentio', v: 1, made: new Date().toISOString(), data: all }, null, 2), 'application/json');
+        download(`fluence-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ app: 'Fluence', v: 1, made: new Date().toISOString(), data: all }, null, 2), 'application/json');
         toast('Backup downloaded');
       } }, svg('download'), 'Download a backup'),
       el('button', { type: 'button', className: 'btn', onclick: () => file.click() }, svg('upload'), 'Restore a backup'),
@@ -382,7 +385,7 @@ function gitHub() {
 }
 
 // settings.js, made from what's here, with the comments people need when they paste it
-const HEADER = `// Fluentio's settings: the colors, the look, the motion, and the words on the pages.
+const HEADER = `// Fluence's settings: the colors, the look, the motion, and the words on the pages.
 // Made by Settings on the site. To use it on every device, open settings.js on the space branch, press the pencil,
 // paste this over everything, then press Commit changes.
 //
@@ -417,7 +420,7 @@ function everywhere() {
           el('button', { type: 'button', className: 'btn primary', onclick: async () => {
             try { await navigator.clipboard.writeText(area.value); toast('Copied. Now paste it in settings.js'); } catch { area.select(); toast('Press ⌘C to copy it'); }
           } }, svg('copy'), 'Copy'),
-          el('a', { className: 'btn', href: 'https://github.com/TrixWotel/Fluentio/edit/space/settings.js', target: '_blank', rel: 'noopener' }, svg('external'), 'Open settings.js on GitHub')));
+          el('a', { className: 'btn', href: 'https://github.com/TrixWotel/Fluence/edit/space/settings.js', target: '_blank', rel: 'noopener' }, svg('external'), 'Open settings.js on GitHub')));
         area.focus();
         area.select();
       } }, svg('code'), 'Copy as settings.js'),

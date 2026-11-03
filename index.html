@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Fluentio</title>
+  <title>Fluence</title>
   <meta name="description" content="My personal web playground: modules to study, and my own data, code and notes.">
   <script src="settings.js"></script>
   <script src="kit/look.js"></script>
@@ -105,6 +105,29 @@
     .quick-label { display: flex; align-items: center; gap: 12px; margin-right: 6px; font-weight: 650; font-size: 1.05rem; }
     .tile.wide .row { margin-top: 0; }
     .tile.quick .row { flex-direction: column; align-items: flex-start; margin-top: 0; }
+    /* Music: what's playing (with its controls), or your newest songs to start one */
+    .tile.music .m-tile-now .m-art { --s: 76px; }
+    .tile.music .row .btn { display: inline-flex; align-items: center; gap: 6px; }
+    .tile.music .m-bars { margin-left: auto; }
+    .tile.music .m-bars + .tile-go { margin-left: 10px; }
+    .tile.music.feature { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 18px 28px; padding: 22px 24px;
+      background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 14%, var(--card)), color-mix(in srgb, var(--accent-2) 12%, var(--card)));
+      box-shadow: var(--shadow), 0 0 calc(10px + var(--level) * 50px) calc(var(--level) * 8px) color-mix(in srgb, var(--accent) calc(var(--level) * 40%), transparent); }
+    .tile.music.feature > .tile-head { flex: 1 0 100%; }
+    .tile.music.feature > .now { flex: 1 1 340px; display: grid; gap: 10px; align-content: start; }
+    .tile.music.feature > .side { flex: 1 1 260px; display: grid; gap: 8px; align-content: start; }
+    .tile.music.feature .m-tile-now .m-art { --s: 132px; border-radius: 20px; }
+    .tile.music.feature .m-tile-now b { font-size: 1.5rem; letter-spacing: -0.02em; }
+    .tile.music .side h3 { margin: 0; font-size: .78rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
+    /* the layouts: the hero in the middle for music and calm, and at night a big clock and quieter colors */
+    main.layout-music .hero, main.layout-calm .hero { text-align: center; }
+    main.layout-music .hero .name, main.layout-calm .hero .name, main.layout-music .hero .welcome, main.layout-calm .hero .welcome { margin-left: auto; margin-right: auto; }
+    .clock { margin: 0 0 4px; font-size: clamp(3.4rem, 11vw, 6rem); font-weight: 200; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text); opacity: .9; }
+    main.layout-calm .name { font-size: clamp(1.6rem, 4vw, 2.2rem); }
+    main.layout-calm .bento { max-width: 860px; margin-left: auto; margin-right: auto; }
+    body.calm .sky i { opacity: calc(var(--sky) * .55); }
+    .layouts { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; margin-top: 26px; color: var(--muted); font-size: .86rem; animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(700ms / var(--speed)); }
+    .layouts .seg button { font-size: .84rem; }
     @media (max-width: 820px) { .bento { grid-template-columns: 1fr 1fr; } .tile.big { grid-column: span 2; grid-row: auto; } }
     @media (max-width: 560px) { .bento { grid-template-columns: 1fr; } .tile.big, .tile.wide, .tile.wide2 { grid-column: auto; } }
   </style>
@@ -113,19 +136,21 @@
   <script>window.fluentio?.bar?.()</script>
   <main>
     <header class="hero">
+      <p class="clock" id="clock" hidden></p>
       <p class="hello" id="hello" hidden></p>
-      <h1 class="name" id="name">Fluentio</h1>
+      <h1 class="name" id="name">Fluence</h1>
       <p class="lead" id="tagline">Web stack workspace</p>
       <p class="welcome" id="welcome" hidden></p>
     </header>
     <section class="bento stagger" id="tiles" aria-label="Your spaces">
       <article class="card tile"><a class="tile-head" href="study/">📚 Modules</a><p class="muted">Tests, lessons and practice in five subjects.</p></article>
     </section>
+    <div class="layouts" id="layouts"></div>
   </main>
   <script>
     // the home page from the settings (look.js has filled in what settings.js leaves out): the greeting, the name, and
-    // the tiles in the settings' order. Recent shows what you worked on last (in Data, Code or Notes), Modules the topic
-    // to go on with, Data your sheets, and Quick the settings' buttons.
+    // the tiles in the layout's order. Recent shows what you worked on last (in Data, Code or Notes), Music what's playing
+    // (or your newest songs), Modules the topic to go on with, Data your sheets, and Quick the settings' buttons.
     if (window.fluentio) {
       const f = window.fluentio, s = f.settings, { el, svg, link } = f, $ = (id) => document.getElementById(id);
       document.title = s.name;
@@ -156,12 +181,16 @@
       bests += geo;
       const folderOf = (x) => String(x.link || '').replace(/^\.?\//, '').split('/')[0];
       const welcomed = import(link('kit/welcome.js'));
+      // your music, as this browser last saw it: what's playing (or was), and how many songs there are
+      const tunes = f.read('fluentio.music.library') || {}, playing = f.read('fluentio.music.player') || {}, songs = Array.isArray(tunes.songs) ? tunes.songs : [];
+      const on = songs.find((x) => x && x.id === (playing.queue || [])[playing.at]);
+      const music = songs.length ? { title: on?.title || '', artist: on?.artist || '', playing: !!(on && playing.playing), songs: songs.length, liked: songs.filter((x) => x && x.liked).length } : null;
       if (s.greeting) {
         welcomed.then(({ welcome }) => {
-          const w = welcome({ now: new Date(now), visits, last: f.last(), learned, best });
+          const w = welcome({ now: new Date(now), visits, last: f.last(), learned, best, name: s.name, music });
           $('hello').textContent = w.hello;
           $('hello').hidden = false;
-          $('welcome').replaceChildren(w.line, w.link ? el('a', { href: w.link.href }, `${w.link.text} →`) : '');
+          $('welcome').replaceChildren(w.line, w.link ? el('a', { href: link(w.link.href) }, `${w.link.text} →`) : '');
           $('welcome').hidden = false;
         }).catch(() => {});
       }
@@ -174,6 +203,12 @@
       const tile = (cls, color, ...kids) => { const t = el('article', { className: `card tile ${cls}`.trim() }, ...kids); t.style.setProperty('--c', color); return t; };
       const html = (tag, cls, markup) => { const n = el(tag, { className: cls }); n.innerHTML = markup; return n; };   // (the banks' own markup)
       const midnight = (t) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
+      // the layout: Auto picks one for the time of day (study things in the morning, your tiles in the afternoon, music
+      // in the evening and at weekends, and calm at night); Settings can fix one
+      const LAYOUTS = { auto: null, classic: null, study: ['question', 'study', 'today', 'progress', 'music', 'quick'], music: ['music', 'study', 'question', 'today', 'progress', 'quick'], calm: ['music', 'today', 'quick'] };
+      const hourNow = new Date(now).getHours(), weekend = [0, 6].includes(new Date(now).getDay());
+      const autoLayout = hourNow >= 22 || hourNow < 5 ? 'calm' : hourNow < 11 ? 'study' : hourNow >= 17 || weekend ? 'music' : 'classic';
+      const layout = s.homeLayout && LAYOUTS[s.homeLayout] && s.homeLayout !== 'auto' ? s.homeLayout : s.homeLayout === 'classic' ? 'classic' : autoLayout;
       const TILES = {
         workspace: () => tile('big', 'var(--accent-2)',
           head('clock', 'Recent'),
@@ -270,6 +305,48 @@
               ? el('div', { className: 'bars', 'aria-hidden': 'true' }, sizes.map((n, i) => { const bar = el('span', { style: `height:${Math.max(14, Math.round((100 * n) / most))}%` }); bar.style.setProperty('--n', i); return bar; }))
               : el('div', { className: 'row' }, button('New sheet', link('data/#new/table'))));
         },
+        // Music: what's playing with its controls (or your newest songs to start one), carried along on every page
+        music: () => {
+          const box = tile(`music${layout === 'music' || layout === 'calm' ? ' feature' : ' big'}`, 'var(--accent)', head('music', s.musicTitle, link('music/')), el('p', { className: 'muted' }, 'Loading your music…'));
+          import(link('kit/music/player.js')).then(async (player) => {
+            const lib = await import(link('kit/music/library.js'));
+            player.mount();
+            let seek = null;
+            const fill = () => {
+              const cur = player.current(), all = lib.state.lib.songs, newest = [...all].sort((a, b) => (b.added || 0) - (a.added || 0)), feature = box.classList.contains('feature');
+              const go = el('span', { className: 'tile-go' }, svg('arrow'));
+              const top = el('a', { className: 'tile-head', href: link('music/') }, el('span', { className: 'tile-ic' }, svg('music')), el('span', {}, s.musicTitle), cur && !player.audio.paused ? el('span', { className: 'm-bars', 'aria-hidden': 'true' }, el('i'), el('i'), el('i'), el('i')) : null, go);
+              const row = (x, list, i) => el('li', {}, el('button', { type: 'button', onclick: () => player.playList(list, i) }, lib.art(x, { size: 38 }), el('span', { className: 't' }, el('b', {}, x.title), el('small', {}, x.artist)), el('span', { className: 'pl' }, lib.svg('play', true))));
+              if (!lib.state.conn && !all.length) {
+                seek = null;
+                return box.replaceChildren(top, el('p', { className: 'muted' }, 'Play your own songs here and on every page. They’re kept in your private Database repo on GitHub.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('music/') }, svg('plus'), 'Set up Music')));
+              }
+              if (!all.length) { seek = null; return box.replaceChildren(top, el('p', { className: 'muted' }, lib.state.loading ? 'Loading your music…' : 'No songs yet. Drop some on Music’s page.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('music/') }, lib.svg('upload'), 'Add songs'))); }
+              const liked = all.filter((x) => x.liked);
+              const buttons = el('div', { className: 'row' },
+                el('button', { type: 'button', className: 'btn', onclick: () => player.playList(newest, 0) }, lib.svg('play', true), 'Play all'),
+                el('button', { type: 'button', className: 'btn', onclick: () => player.playList(newest, Math.floor(Math.random() * newest.length), true) }, lib.svg('shuffle'), 'Shuffle'),
+                liked.length ? el('button', { type: 'button', className: 'btn', onclick: () => player.playList(liked, 0) }, lib.svg('heart'), `Liked · ${liked.length}`) : null);
+              if (cur) {
+                seek = player.seeker();
+                const now = el('div', { className: 'now' }, el('div', { className: 'm-tile-now' }, lib.art(cur, { size: feature ? 132 : 76 }), el('div', { className: 't' }, el('b', {}, cur.title), el('span', {}, cur.artist + (cur.album ? ` · ${cur.album}` : '')), seek.box)), player.controls());
+                const next = player.upNext().slice(0, feature ? 4 : 3);
+                const side = el('div', { className: 'side' }, el('h3', {}, next.length ? 'Up next' : 'Newest'), el('ul', { className: 'm-mini' }, (next.length ? next : newest.slice(0, feature ? 4 : 3)).map((x) => row(x, next.length ? [x] : newest, next.length ? 0 : newest.indexOf(x)))));
+                if (next.length) side.querySelectorAll('.m-mini button').forEach((b, i) => { b.onclick = () => player.jump(player.position() + 1 + i); });
+                return box.replaceChildren(...[top, now, side, feature ? buttons : null].filter(Boolean));
+              }
+              seek = null;
+              box.replaceChildren(top, el('p', { className: 'muted small' }, `${lib.plural(all.length, 'song')} · ${lib.total(all)}`),
+                el('div', { className: 'side' }, el('h3', {}, 'Newest'), el('ul', { className: 'm-mini' }, newest.slice(0, feature ? 5 : 4).map((x, i) => row(x, newest, i)))), buttons);
+            };
+            fill();
+            for (const w of ['song', 'state', 'queue']) player.events.addEventListener(w, fill);
+            player.events.addEventListener('time', () => seek?.paint());
+            lib.events.addEventListener('library', fill);
+            lib.refresh();   // (the newest library, in case another device added songs)
+          }).catch(() => box.replaceChildren(head('music', s.musicTitle, link('music/')), el('p', { className: 'muted' }, 'Music didn’t load here. Open it from the bar.')));
+          return box;
+        },
         quick: () => tile('quick', 'var(--plot2)', head('bolt', 'Quick'),
           el('div', { className: 'row' }, s.quick.filter((q) => q.link && (f.spacesOn || !/^(data|code|notes|workspace)\//.test(link(q.link).slice(f.root.length)))).map((q) => {
             const a = el('a', { className: 'btn', href: link(q.link) }, q.title || q.link);
@@ -279,7 +356,20 @@
       };
       // (while Data, Code and Notes are off, so are Recent, Data and the Quick buttons into them)
       if (!f.spacesOn) { delete TILES.workspace; delete TILES.data; }
-      $('tiles').replaceChildren(...s.home.filter((k, i, all) => TILES[k] && all.indexOf(k) === i).map((k) => TILES[k]()));
+      // the tiles in the layout's order (only those your settings show), and the hero to suit: in the middle for music and
+      // calm, and at night a big clock with quieter colors
+      const main = document.querySelector('main');
+      main.className = `layout-${layout}`;
+      document.body.classList.toggle('calm', layout === 'calm');
+      const order = layout === 'classic' ? s.home : LAYOUTS[layout].filter((k) => s.home.includes(k));
+      $('tiles').replaceChildren(...order.filter((k, i, all) => TILES[k] && all.indexOf(k) === i).map((k) => TILES[k]()));
+      if (layout === 'calm') {
+        const tick = () => { $('clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+        tick(); $('clock').hidden = false; setInterval(tick, 15000);
+      }
+      // switching layouts right here (Settings → Home has it too)
+      const names = [['auto', 'Auto'], ['classic', 'Classic'], ['study', 'Study'], ['music', 'Music'], ['calm', 'Calm']], picked = s.homeLayout && LAYOUTS[s.homeLayout] !== undefined ? s.homeLayout : 'auto';
+      $('layouts').replaceChildren('Layout', el('div', { className: 'seg', role: 'group', 'aria-label': 'Home layout' }, names.map(([k, name]) => el('button', { type: 'button', className: k === picked ? 'on' : '', title: k === 'auto' ? `Changes with the time of day (now: ${autoLayout[0].toUpperCase() + autoLayout.slice(1)})` : '', onclick: () => { f.save({ ...f.settings, homeLayout: k }); location.reload(); } }, name))));
     }
   </script>
 </body>

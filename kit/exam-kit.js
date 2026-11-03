@@ -1,4 +1,4 @@
-// Fluentio's tests like the ones in class: what one is made of, how each part is marked, and the graphs and tables of
+// Fluence's tests like the ones in class: what one is made of, how each part is marked, and the graphs and tables of
 // their contexts. Nothing here touches the page (kit/exam.js shows a test), so a bank of tests can be checked outside a
 // browser too.
 //

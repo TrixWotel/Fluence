@@ -1,4 +1,4 @@
-// Fluentio's question toolkit: every variant is built from its number, so "Variant 137" is always the same question.
+// Fluence's question toolkit: every variant is built from its number, so "Variant 137" is always the same question.
 // Nothing here touches the page, so the banks can be checked outside a browser too.
 
 // a small seeded random generator (mulberry32), seeded from the bank's name and the variant number
