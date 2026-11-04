@@ -10,17 +10,18 @@
   <script src="kit/bar.js"></script>
   <link rel="stylesheet" href="kit/site.css">
   <style>
-    main { width: 100%; max-width: 1080px; margin: 0 auto; padding: clamp(14px, 4vh, 44px) 20px clamp(12px, 2.4vh, 24px); flex: 1; display: flex; flex-direction: column; min-height: 0; }
-    /* the whole home page in one screen: the welcome on top, then the tiles in one row, as tall as what's in them. In a
+    main { width: 100%; max-width: 1080px; margin: 0 auto; padding: clamp(14px, 4vh, 44px) 20px clamp(12px, 2.4vh, 24px); flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+    /* the whole home page in one screen, in the middle of the window: the welcome, then the tiles in one row, as tall as what's in them. In a
        window too short for them, the row shrinks to fit and a tile with more scrolls inside itself; a very short window
        scrolls as usual */
     @media (min-height: 540px) {
       html.home-fit body { height: 100svh; min-height: 0; }
       html.home-fit .bento { flex: 0 1 auto; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
     }
+    .hero { text-align: center; }
     .hero > * { animation: rise var(--t3) var(--ease) backwards; }
     .hello { margin: 0 0 4px; color: var(--text); font-size: clamp(1rem, 2.2vw, 1.15rem); font-weight: 650; letter-spacing: -0.01em; }
-    .title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
+    .title-row { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 2px 14px; }
     .name {
       margin: 0; width: fit-content; font-size: clamp(1.9rem, min(5vw, 6vh), 2.7rem); line-height: 1.08; font-weight: 800; letter-spacing: -0.04em;
       background: linear-gradient(100deg, var(--text) 0 38%, var(--accent) 48%, var(--accent-2) 56%, var(--text) 66% 100%) 0 center / 200% auto;
@@ -30,7 +31,7 @@
     }
     .lead { margin: 0; color: var(--muted); font-size: 1rem; animation-delay: calc(140ms / var(--speed)); }
     /* the welcome under the name: what the day and your progress say, and a way back to your topic */
-    .welcome { margin: 8px 0 0; max-width: 70ch; font-size: 1rem; animation-delay: calc(210ms / var(--speed)); }
+    .welcome { margin: 8px auto 0; max-width: 70ch; font-size: 1rem; animation-delay: calc(210ms / var(--speed)); }
     .welcome a { margin-left: 6px; color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
     .welcome a:hover { text-decoration: underline; }
     html.flat .name { background: none; color: var(--text); animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(70ms / var(--speed)); }
@@ -127,19 +128,17 @@
     .tile.music.feature .m-tile-now .m-art { --s: clamp(84px, 14vh, 132px); border-radius: 20px; }
     .tile.music.feature .m-tile-now b { font-size: 1.5rem; letter-spacing: -0.02em; }
     .tile.music .side h3 { margin: 0; font-size: .78rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
-    /* the layouts: the hero in the middle for music and calm, and at night a big clock and quieter colors */
-    main.layout-music .hero, main.layout-calm .hero { text-align: center; }
-    main.layout-music .hero .name, main.layout-calm .hero .name, main.layout-music .hero .welcome, main.layout-calm .hero .welcome { margin-left: auto; margin-right: auto; }
+    /* the layouts: at night a big clock and quieter colors */
     .clock { margin: 0 0 2px; font-size: clamp(2.6rem, min(9vw, 9vh), 4.6rem); font-weight: 200; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text); opacity: .9; }
     main.layout-calm .name { font-size: clamp(1.6rem, 4vw, 2.2rem); }
     main.layout-calm .bento { max-width: 860px; margin-left: auto; margin-right: auto; }
     body.calm .sky i { opacity: calc(var(--sky) * .55); }
     /* under the tiles: the others, to swap in */
-    .layouts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; color: var(--muted); font-size: .86rem; animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(600ms / var(--speed)); }
-    .layouts .also { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1; }
+    .layouts { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin-top: 12px; color: var(--muted); font-size: .86rem; animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(600ms / var(--speed)); }
+    .layouts .also { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
     .layouts .chip { padding: 3px 10px; font: inherit; font-size: .86rem; cursor: pointer; }
     .layouts .chip .i { width: 14px; height: 14px; }
-    @media (max-width: 560px) { .tile.music.feature, .tile.wide { grid-column: auto; } }
+    @media (max-width: 560px) { .tile.music.feature, .tile.wide { grid-column: auto; } .welcome a { white-space: normal; } }
   </style>
 </head>
 <body>

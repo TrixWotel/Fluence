@@ -261,6 +261,8 @@
   addEventListener('DOMContentLoaded', () => {
     fill();
     sky();
+    // your progress goes to the repo you're connected to, if you are
+    if (read('fluentio:music') || read('fluentio:github')) import(new URL('kit/progress.js', root).href).catch(() => {});
     // a soft light that follows the pointer across a card
     if (matchMedia('(hover: hover)').matches) {
       addEventListener('pointermove', (e) => {

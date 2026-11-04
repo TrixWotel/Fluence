@@ -46,6 +46,7 @@ async function gh(s, method, path, body, accept = 'application/vnd.github+json')
   if (!r.ok) throw fail(data?.message || `GitHub answered ${r.status}`, r.status);
   return data;
 }
+export { gh as call };
 export function explain(e, s) {
   const name = s?.repo || 'the repo';
   if (e.status === 401) return 'GitHub didn’t take the token. It may have expired: make a new one and connect again.';

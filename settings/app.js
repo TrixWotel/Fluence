@@ -1,8 +1,10 @@
 // Settings: everything settings.js holds, changed here, each change showing straight away. What's changed stays in this
 // browser (look.js keeps it as fluentio.look, over settings.js), and "Copy as settings.js" turns all of it into a new
 // settings.js to paste on GitHub for every device. Also here: the keys, and a backup of everything Fluence keeps in
-// this browser (your data, code and notes, these settings, learning progress and best scores).
+// this browser (your data, code and notes, these settings, learning progress and best scores), and how saving your
+// progress to the repo you're connected to is going (kit/progress.js does the saving).
 import * as github from '../workspace/sync.js?v=3';
+import * as progress from '../kit/progress.js';
 
 const f = window.fluentio;
 const { el, svg } = f;
@@ -286,6 +288,21 @@ function keys() {
       row(['Tab'], 'In code: spaces in')));
 }
 
+// where your learning progress is saved, and how the last save went
+function progressSaved() {
+  const line = el('small', {}), box = el('div', { className: 'set' });
+  const said = (t) => { const m = Math.round((Date.now() - t) / 60000); return !t ? 'Saving…' : m < 1 ? 'Saved just now' : m < 60 ? `Saved ${m} min ago` : m < 1440 ? `Saved ${Math.round(m / 60)} h ago` : `Saved ${Math.round(m / 1440)} d ago`; };
+  const paint = () => { const st = progress.status(); line.textContent = st.error || said(st.saved); line.classList.toggle('bad', !!st.error); };
+  const st = progress.status();
+  if (!st.repo) return el('p', {}, 'Your learning progress is in this browser only. ', el('a', { href: f.link('music/#settings') }, 'Connect your Database in Music'), ' and it’s saved there too, so any browser you connect carries on from the same place.');
+  paint();
+  progress.events.addEventListener('change', paint);
+  box.append(el('div', { className: 'what' }, el('b', {}, `Your progress is saved in ${st.repo}`), el('small', {}, `On its ${st.branch} branch, by itself, so any browser you connect carries on from the same place: topics learned, best scores, tests under way, days in a row.`), line),
+    el('div', { className: 'row' }, el('button', { type: 'button', className: 'btn', onclick: () => { line.textContent = 'Saving…'; progress.saveNow().then(paint); } }, 'Save now'),
+      el('a', { className: 'btn', href: `https://github.com/${st.repo}/tree/${st.branch}`, target: '_blank', rel: 'noopener' }, 'Open on GitHub')));
+  return box;
+}
+
 function data() {
   const items = f.workspace.items(), count = (kind) => items.filter((x) => x.kind === kind).length;
   const folders = f.workspace.folders?.() || [], bases = folders.filter((x) => x.tab === 'database').length;
@@ -306,7 +323,8 @@ function data() {
     });
   } });
   const panel = el('section', { className: 'panel', id: 'data' }, el('h2', {}, 'Your data'),
-    !f.spacesOn ? el('p', {}, 'In this browser only: these settings and your learning progress. Clearing the browser’s site data deletes them, so download a backup now and then.') :
+    progressSaved(),
+    !f.spacesOn ? el('p', {}, `These settings stay in this browser${progress.status().repo ? '' : ', with your learning progress'}. Clearing the browser’s site data deletes them, so download a backup now and then.`) :
     el('p', {}, `${github.connected() ? `In this browser and in ${github.repo()} on GitHub` : 'In this browser only'}: ${plural(count('note'), 'note')}, ${plural(count('doc'), 'doc')}, ${plural(count('table'), 'sheet')} and ${plural(count('code'), 'code file')}${kept ? ` in ${kept}` : ''}, these settings, and your learning progress. Clearing the browser’s site data deletes them, so download a backup now and then.`),
     el('div', { className: 'set' }, el('div', { className: 'row' },
       el('button', { type: 'button', className: 'btn primary', onclick: () => {

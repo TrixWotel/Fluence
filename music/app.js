@@ -401,7 +401,7 @@ function connectPanel() {
     el('ol', {}, el('li', {}, 'On GitHub: Settings → Developer settings → Fine-grained tokens → Generate new token.'), el('li', {}, 'Repository access: Only select repositories → your Database repo.'), el('li', {}, 'Permissions: Contents → Read and write. Then generate it and paste it here.')),
     el('form', { className: 'm-form', onsubmit: async (e) => {
       e.preventDefault(); err.textContent = ''; go.disabled = true;
-      try { state.conn = await gh.connect(repo.value, token.value); toast(`Connected to ${state.conn.repo}`); location.hash = '#songs'; load(); }
+      try { state.conn = await gh.connect(repo.value, token.value); toast(`Connected to ${state.conn.repo}`); location.hash = '#songs'; load(); import('../kit/progress.js').catch(() => {}); }
       catch (x) { err.textContent = x.message; }
       go.disabled = false;
     } }, el('label', { className: 'm-field' }, 'Repo', repo), el('label', { className: 'm-field' }, 'Token (it stays in this browser only)', token), err, el('div', {}, go)));
@@ -413,7 +413,7 @@ function settingsView() {
     wrap.append(el('div', { className: 'm-panel' },
       el('h2', {}, 'Your Database'),
       el('p', {}, el('span', { className: 'm-status' }, el('span', { className: 'dot' }), `Connected to ${conn().repo}`), conn().from === 'workspace' ? el('span', { className: 'm-muted' }, ' · with Data, Code and Notes’ token') : null),
-      el('p', { className: 'm-muted' }, 'Songs are saved on its ', el('b', {}, gh.BRANCH), ' branch: songs/ (a folder for each artist), covers/ and music.json. Data, Code and Notes stay on main.'),
+      el('p', { className: 'm-muted' }, 'Songs are saved on its ', el('b', {}, gh.BRANCH), ' branch: songs/ (a folder for each artist), covers/ and music.json. Your learning progress goes on its ', el('b', {}, 'progress'), ' branch, and Data, Code and Notes stay on main.'),
       el('div', { className: 'm-actions', style: 'margin:0' },
         el('a', { className: 'btn', href: `https://github.com/${conn().repo}/tree/${gh.BRANCH}`, target: '_blank', rel: 'noopener' }, 'Open on GitHub'),
         el('button', { className: 'btn', onclick: load }, 'Reload library'),
