@@ -3,7 +3,7 @@
 // capitals.json is each country's capital and where it is: [name, longitude, latitude, and maybe a line to say after].
 // A capitals test has the same map as a country test: it names a capital, and you click its country.
 // Right on the first try is worth 1 point, on the second or third try half a point. After three
-// wrong tries (or Skip) the answer blinks, and it's worth nothing. Best scores stay in this browser.
+// wrong tries (or Skip) the answer blinks, and it's worth nothing.
 
 const MAPS = [
   { id: 'world', name: 'World Map', icon: '🌍', box: [-180, -57, 180, 84] },
@@ -48,7 +48,7 @@ const countriesOf = (t) => [...countries.values()].filter((x) => (t.map.id === '
 const nameOf = (id) => (countries.get(id) || {}).name || id;
 const capitalOf = (id) => (capitals.get(id) || {}).name || id;
 
-// ---------- best scores (this browser only) ----------
+// ---------- best scores ----------
 function bests() { try { return JSON.parse(localStorage.getItem('fluentio.geo.best')) || {}; } catch { return {}; } }
 function saveBest(id, pct, ms) {
   const all = bests(), was = all[id];
