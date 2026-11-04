@@ -11,11 +11,12 @@
   <link rel="stylesheet" href="kit/site.css">
   <style>
     main { width: 100%; max-width: 1080px; margin: 0 auto; padding: clamp(14px, 4vh, 44px) 20px clamp(12px, 2.4vh, 24px); flex: 1; display: flex; flex-direction: column; min-height: 0; }
-    /* the whole home page in one screen: the welcome on top, and the tiles in one row taking the rest (each scrolls inside
-       itself if it has more than fits); a very short window scrolls as usual */
+    /* the whole home page in one screen: the welcome on top, then the tiles in one row, as tall as what's in them. In a
+       window too short for them, the row shrinks to fit and a tile with more scrolls inside itself; a very short window
+       scrolls as usual */
     @media (min-height: 540px) {
       html.home-fit body { height: 100svh; min-height: 0; }
-      html.home-fit .bento { flex: 1; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
+      html.home-fit .bento { flex: 0 1 auto; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
     }
     .hero > * { animation: rise var(--t3) var(--ease) backwards; }
     .hello { margin: 0 0 4px; color: var(--text); font-size: clamp(1rem, 2.2vw, 1.15rem); font-weight: 650; letter-spacing: -0.01em; }
@@ -104,7 +105,7 @@
     .qd-type .input { width: 180px; }
     .qd-result { font-weight: 600; min-height: 1.2em; }
     .qd-result.good { color: var(--good); } .qd-result.bad { color: var(--bad); }
-    .qd-more { margin-top: auto; color: var(--c); font-weight: 600; text-decoration: none; }
+    .qd-more { color: var(--c); font-weight: 600; text-decoration: none; }
     .qd-more:hover { text-decoration: underline; }
     .fr { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: .9em; line-height: 1.15; margin: 0 .1em; }
     .fr > span:first-child { border-bottom: 1.5px solid currentColor; padding: 0 .2em; }
@@ -133,13 +134,12 @@
     main.layout-calm .name { font-size: clamp(1.6rem, 4vw, 2.2rem); }
     main.layout-calm .bento { max-width: 860px; margin-left: auto; margin-right: auto; }
     body.calm .sky i { opacity: calc(var(--sky) * .55); }
-    /* under the tiles: the others, to swap in, and the layout */
+    /* under the tiles: the others, to swap in */
     .layouts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; color: var(--muted); font-size: .86rem; animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(600ms / var(--speed)); }
     .layouts .also { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1; }
     .layouts .chip { padding: 3px 10px; font: inherit; font-size: .86rem; cursor: pointer; }
     .layouts .chip .i { width: 14px; height: 14px; }
-    .layouts select { font: inherit; font-size: .86rem; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
-    @media (max-width: 560px) { .tile.music.feature, .tile.wide { grid-column: auto; } .layouts select { flex: 1 0 100%; } }
+    @media (max-width: 560px) { .tile.music.feature, .tile.wide { grid-column: auto; } }
   </style>
 </head>
 <body>
@@ -366,7 +366,7 @@
       // (while Data, Code and Notes are off, so are Recent, Data and the Quick buttons into them)
       if (!f.spacesOn) { delete TILES.workspace; delete TILES.data; }
       // which tiles: as many as fit in one row (three, two on a smaller screen, one on a phone), picked by what you've
-      // been doing (Auto), or in the order of the layout you chose; the rest wait under them, a click away
+      // been doing (Auto), or in the order of the layout chosen in Settings → Home; the rest wait under them, a click away
       const main = document.querySelector('main');
       document.documentElement.classList.add('home-fit');
       main.className = `layout-${layout}`;
@@ -400,11 +400,7 @@
         shown = fit(list);
         $('tiles').replaceChildren(...shown.map((k) => TILES[k]()));
         const rest = order.filter((k) => !shown.includes(k));
-        const pick = el('select', { 'aria-label': 'Home layout', onchange: (e) => { f.save({ ...f.settings, homeLayout: e.target.value }); location.reload(); } },
-          [['auto', 'Auto: by what you’ve been doing'], ['classic', 'Classic: your order'], ['study', 'Study first'], ['music', 'Music first'], ['calm', 'Calm']].map(([k, name]) => el('option', { value: k, selected: k === mode }, name)));
-        $('layouts').replaceChildren(
-          el('div', { className: 'also' }, rest.length ? 'Also:' : '', rest.map((k) => el('button', { type: 'button', className: 'chip', title: `Show ${NAME[k]} here`, onclick: () => draw([k, ...shown.filter((x) => x !== k)]) }, svg(TILE_ICON[k] || 'plus'), NAME[k] || k))),
-          pick);
+        $('layouts').replaceChildren(rest.length ? el('div', { className: 'also' }, 'Also:', rest.map((k) => el('button', { type: 'button', className: 'chip', title: `Show ${NAME[k]} here`, onclick: () => draw([k, ...shown.filter((x) => x !== k)]) }, svg(TILE_ICON[k] || 'plus'), NAME[k] || k))) : '');
       };
       draw(order);
       for (const q of ['(min-width: 900px)', '(min-width: 561px)']) matchMedia(q).addEventListener('change', () => draw(shown.length ? [...shown, ...order.filter((k) => !shown.includes(k))] : order));
