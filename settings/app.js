@@ -222,6 +222,8 @@ function home() {
     set('Welcome', 'A greeting on the home page, and a line that changes with the time, the date, holidays, your music and what you’ve been doing.', toggle(s.greeting, (v) => { s.greeting = v; save(); }, 'Greeting')),
     set('Layout', 'The home page fits one screen: three tiles (two on a smaller screen, one on a phone), with the rest a click away under them. Auto picks them by what you’ve been doing (the song that’s playing, the topic you learned last, today’s question) and the time of day. Classic is always your tiles, in their order.',
       seg([['auto', 'Auto'], ['classic', 'Classic'], ['study', 'Study first'], ['music', 'Music first'], ['calm', 'Calm']], s.homeLayout || 'auto', (v) => { s.homeLayout = v; save(); draw(); }, 'Home layout')),
+    set('Text', 'The page stays in the middle of the window. This is where its words and buttons sit: along its left edge, in the middle, or along its right edge. Left and Right take what’s inside the tiles along too. Center leaves that on the left.',
+      seg([['left', 'Left'], ['center', 'Center'], ['right', 'Right']], s.homeAlign || 'center', (v) => { s.homeAlign = v; save(); }, 'Where the home page’s text sits')),
     set('Tiles', 'Which show on the home page, and in what order.', tiles),
     set('Quick buttons', 'The Quick tile’s buttons: a name, and where each goes.', quick,
       el('button', { type: 'button', className: 'btn', onclick: () => { s.quick.push({ title: 'New button', link: f.spacesOn ? 'notes/' : 'study/' }); save(); draw(); panels.querySelector('#home .quick-list li:last-child input')?.select(); } }, svg('plus'), 'Add a button')));

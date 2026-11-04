@@ -73,6 +73,8 @@ window.FLUENTIO_SETTINGS = {
   // by what you've been doing and the time of day, or always 'classic' (the tiles above, in their order), 'study',
   // 'music' or 'calm'
   homeLayout: 'auto',
+  // where the home page's words and buttons sit: 'left', 'center' or 'right' (the page itself stays in the middle of the window)
+  homeAlign: 'center',
   // the buttons on the Quick tile (a link can also be a whole web address)
   quick: [
     { title: 'New note', link: 'notes/#new/note' },

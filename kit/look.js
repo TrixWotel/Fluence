@@ -20,7 +20,7 @@
     font: 'system', corners: 14, style: 'glow', textSize: 16, animations: true, speed: 1, floatingColors: true,
     animationsIn: { data: true, code: true, notes: true },
     keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', music: 'Ctrl+3', data: 'Ctrl+4', code: 'Ctrl+5', notes: 'Ctrl+6' },
-    home: ['workspace', 'music', 'study', 'progress', 'today', 'question', 'data', 'quick'], homeLayout: 'auto',
+    home: ['workspace', 'music', 'study', 'progress', 'today', 'question', 'data', 'quick'], homeLayout: 'auto', homeAlign: 'center',
     quick: [
       { title: 'New note', link: 'notes/#new/note' },
       { title: 'New sheet', link: 'data/#new/table' },
@@ -249,7 +249,7 @@
       link: (x) => new URL(`${spaceOf(x)}/#${x.kind ? `${x.kind}/${x.id}` : `folder/${x.id}`}`, root).href,
     },
     // the topic Learn was last on (tests.js keeps it), for Continue on the home page
-    last: () => { const l = read('fluentio.last'); return plain(l) && typeof l.href === 'string' && /^\/(?!\/)/.test(l.href) ? l : null; },
+    last: () => { const l = read('fluentio.last'); return plain(l) && typeof l.href === 'string' && /^\/(?!\/)/.test(l.href) ? { ...l, href: l.href.replace(/^\/Fluentio\//, new URL(root).pathname) } : null; },
     // the Settings page: keep what's different from the site's settings in this browser, and show it straight away
     save: (next) => { const d = diff(site, next), ok = write('fluentio.look', d ?? null); s = merge(site, d || {}); changed(); return ok; },
     reset: () => { write('fluentio.look', null); s = site; changed(); },
