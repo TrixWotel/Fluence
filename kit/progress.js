@@ -100,10 +100,11 @@ async function saveCopy(s, data, sha) {
 
 // ---------- saving ----------
 export const events = new EventTarget();
+const underFrame = () => !!document.getElementById('page-frame');   // (the page in the frame does the saving: kit/look.js)
 let copy = null, seen = null, touched = false, running = null;   // copy: GitHub's, as last seen; seen: what this browser had then
 async function run() {
   const s = connection();
-  if (!s) return;
+  if (!s || underFrame()) return;
   let state = load();
   if (state.repo !== s.repo) state = { repo: s.repo, base: {} };
   for (let tries = 0; ; tries++) {
@@ -148,7 +149,7 @@ export function status() {
 // and the next page saves it.
 function lastSave() {
   const s = connection();
-  if (!s || !copy) return;
+  if (!s || !copy || underFrame()) return;
   const next = merge(load().base || {}, mine(), copy.data);
   if (meaning(next) === meaning(copy.data)) return;
   const body = JSON.stringify(putBody(next, copy.sha));

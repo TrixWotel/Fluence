@@ -258,6 +258,57 @@
   // (a page transition the browser skips, in a hidden tab say, isn't an error)
   addEventListener('pagereveal', (e) => e.viewTransition?.ready.catch(() => {}));
 
+  // A page takes its sound with it when it goes. So while a song is playing, the next page opens in a frame over this one,
+  // and this page, which holds the song (kit/music/player.js), stays open under it; from then on pages change in the frame.
+  // With no song playing, or in a browser without the Navigation API, pages change as usual.
+  const above = (() => { try { return window !== window.top && window.top.fluentioSong ? window.top : null; } catch { return null; } })();
+  if (above) {
+    // the address and the title are the whole window's, and so is leaving the site
+    const tell = () => { try { above.history.replaceState(null, '', location.href); if (document.title) above.document.title = document.title; } catch {} };
+    for (const name of ['pushState', 'replaceState']) { const real = history[name]; history[name] = function (...args) { const out = real.apply(this, args); tell(); return out; }; }
+    addEventListener('hashchange', tell);
+    addEventListener('DOMContentLoaded', () => {
+      tell();
+      new MutationObserver(tell).observe(document.querySelector('title') || document.head, { childList: true, characterData: true, subtree: true });
+      above.fluentioSong.arrived?.();
+    });
+    tell();
+    window.navigation?.addEventListener('navigate', (e) => {
+      if (e.destination.sameDocument || !e.cancelable || e.downloadRequest != null || e.destination.url.startsWith(root)) return;
+      e.preventDefault();
+      above.location.href = e.destination.url;
+    });
+  } else if (window === window.top) {
+    const openFrame = (url) => {
+      let frame = document.getElementById('page-frame');
+      if (frame) { frame.contentWindow.location.href = url; return; }
+      const song = window.fluentioSong;
+      song.sleep();
+      history.pushState(null, '', url);
+      frame = document.createElement('iframe');
+      frame.id = 'page-frame';
+      frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;z-index:2147483647';
+      song.arrived = () => {
+        frame.style.opacity = '1'; frame.style.pointerEvents = 'auto';
+        document.documentElement.style.overflow = 'hidden';
+        for (const kid of document.body.children) if (kid !== frame) kid.style.display = 'none';
+        try { frame.contentWindow.focus(); } catch {}
+      };
+      frame.addEventListener('load', song.arrived, { once: true });
+      // (Back to the page from before the frame: the frame has no history of it, so it goes there itself)
+      addEventListener('popstate', () => setTimeout(() => { try { if (frame.contentWindow.location.href !== location.href) frame.contentWindow.location.replace(location.href); } catch {} }, 150));
+      frame.src = url;
+      document.body.append(frame);
+    };
+    window.navigation?.addEventListener('navigate', (e) => {
+      const song = window.fluentioSong, url = e.destination.url, path = new URL(url).pathname;
+      if (!song || song.audio.paused || e.destination.sameDocument || !e.cancelable || e.downloadRequest != null || e.formData || e.navigationType === 'reload') return;
+      if (!url.startsWith(root) || (/\.[a-z0-9]+$/i.test(path) && !/\.html$/i.test(path))) return;
+      e.preventDefault();
+      openFrame(url);
+    });
+  }
+
   addEventListener('DOMContentLoaded', () => {
     fill();
     sky();

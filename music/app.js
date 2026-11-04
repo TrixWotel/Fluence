@@ -533,7 +533,7 @@ addEventListener('keydown', (e) => {
 // ---------- go: back where you were ----------
 // coming back to Music brings you to the same tab, album, playlist or search, scrolled to the same place
 const PLACE = 'fluentio.music.place';
-addEventListener('pagehide', () => write(PLACE, { hash: location.hash, y: scrollY }));
+addEventListener('pagehide', () => { if (!document.getElementById('page-frame')) write(PLACE, { hash: location.hash, y: scrollY }); });
 player.mount();
 const nowWanted = route().name === 'now', place = nowWanted || !location.hash ? read(PLACE, null) : null;
 if (nowWanted || place?.hash) history.replaceState(null, '', place?.hash || '#songs');

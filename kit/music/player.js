@@ -1,6 +1,8 @@
-// The player, on every page: the song that's playing, the queue, shuffle and repeat, and the bar at the bottom. Going to
-// another page carries on where it was (the song is on this device by then, so it picks up within a moment). Media keys
-// and the lock screen control it, and an analyser between the song and the speakers lets pages move with the music.
+// The player, on every page: the song that's playing, the queue, shuffle and repeat, and the bar at the bottom. While a
+// song plays, other pages open in a frame over the page that holds it (kit/look.js), so the sound never stops: a player in
+// a frame uses that page's audio, and picks up the queue from where the last page left it. Opening a page anew (a reload)
+// carries on where it was, within a moment. Media keys and the lock screen control it, and an analyser between the song
+// and the speakers lets pages move with the music.
 import * as gh from './github.js';
 import * as store from './store.js';
 import { el, svg, time, art, read, write, state, song, local, save, coverUrl, toast, styles, hash, events as libraryEvents } from './library.js';
@@ -12,13 +14,15 @@ const ext = (path) => (path.match(/\.([a-z0-9]+)$/i)?.[1] || 'mp3').toLowerCase(
 export const events = new EventTarget();
 const tell = (what) => events.dispatchEvent(new Event(what));
 
-export const audio = new Audio();
-audio.preload = 'auto';
+// where the song lives: this page, or the page this one is in a frame over
+const home = (() => { try { return window !== window.top && window.top.fluentioSong ? window.top : window; } catch { return window; } })();
+const owner = home === window;
+export const audio = owner ? new Audio() : home.fluentioSong.audio;
+if (owner) { audio.preload = 'auto'; home.fluentioSong = { audio, sleep }; }
 const saved = read(KEY, {});
 let queue = Array.isArray(saved.queue) ? saved.queue : [], at = Number.isInteger(saved.at) ? saved.at : -1;
 export const mode = { shuffle: !!saved.shuffle, repeat: ['off', 'all', 'one'].includes(saved.repeat) ? saved.repeat : 'off' };
-audio.volume = Number.isFinite(saved.volume) ? saved.volume : 0.9;
-audio.muted = !!saved.muted;
+if (owner) { audio.volume = Number.isFinite(saved.volume) ? saved.volume : 0.9; audio.muted = !!saved.muted; }
 let srcUrl = '', loadingId = '';
 // where the last page left off: the song picks up there once it has loaded, and until then that's its time
 let resume = queue[at] && saved.time > 0 ? { id: queue[at], time: saved.time } : null;
@@ -45,7 +49,7 @@ export function forget(id) {
   const was = queue[at];
   queue = queue.filter((x) => x !== id);
   at = was === id ? Math.min(at, queue.length - 1) : queue.indexOf(was);
-  if (was === id) { audio.pause(); audio.removeAttribute('src'); if (at >= 0) start(false); else tell('song'); }
+  if (was === id) { audio.pause(); audio.removeAttribute('src'); delete audio.dataset.song; if (at >= 0) start(false); else tell('song'); }
   keep();
 }
 // a song that turned out to be a copy of another: the other takes its place, and what's playing carries on
@@ -75,9 +79,11 @@ async function start(play) {
   }
   if (loadingId !== s.id) return;   // another song was picked meanwhile
   buffering = 0;
-  if (srcUrl) URL.revokeObjectURL(srcUrl);
-  srcUrl = URL.createObjectURL(blob.type ? blob : new Blob([blob], { type: TYPES[ext(s.path)] || 'audio/mpeg' }));
+  // (its address belongs to the page that holds the song, as a frame's go when the frame's page does)
+  if (srcUrl) home.URL.revokeObjectURL(srcUrl);
+  srcUrl = home.URL.createObjectURL(blob.type ? blob : new Blob([blob], { type: TYPES[ext(s.path)] || 'audio/mpeg' }));
   audio.src = srcUrl;
+  audio.dataset.song = s.id;
   if (waiting()) audio.addEventListener('loadedmetadata', () => { if (waiting()) audio.currentTime = Math.min(resume.time, Math.max(0, (audio.duration || resume.time + 1) - 1)); resume = null; }, { once: true });
   if (play) { wire(); audio.play().catch(() => tell('state')); }
   keep(); tell('time'); prefetch();
@@ -108,30 +114,40 @@ export function toggle() {
   if (audio.paused) audio.play().catch(() => {}); else audio.pause();
 }
 export const seek = (t) => { if (audio.duration) audio.currentTime = Math.max(0, Math.min(audio.duration - 0.25, t)); };
-audio.addEventListener('ended', () => next(true));
-audio.addEventListener('play', () => { document.documentElement.classList.add('music-playing'); keep(); tell('state'); loop(); });
-audio.addEventListener('pause', () => { document.documentElement.classList.remove('music-playing'); keep(); tell('state'); });
-audio.addEventListener('timeupdate', () => { tell('time'); if (Math.floor(audio.currentTime) % 5 === 0) keep(); });
-audio.addEventListener('volumechange', () => { keep(); tell('volume'); });
-audio.addEventListener('error', () => { if (audio.src) toast(`This browser can’t play ${current()?.title || 'that song'}.`); });
+// (what's listening to the audio goes with the page, or when this page's player gives way to one in a frame)
+const heard = [], on = (what, fn) => { audio.addEventListener(what, fn); heard.push([what, fn]); };
+const deaf = () => { for (const [what, fn] of heard.splice(0)) audio.removeEventListener(what, fn); };
+on('ended', () => next(true));
+on('play', () => { document.documentElement.classList.add('music-playing'); keep(); tell('state'); loop(); });
+on('pause', () => { document.documentElement.classList.remove('music-playing'); keep(); tell('state'); });
+on('timeupdate', () => { tell('time'); if (Math.floor(audio.currentTime) % 5 === 0) keep(); });
+on('volumechange', () => { keep(); tell('volume'); });
+on('error', () => { if (audio.src) toast(`This browser can’t play ${current()?.title || 'that song'}.`); });
 // a song added some other way learns its length the first time it plays
-audio.addEventListener('loadedmetadata', () => {
+on('loadedmetadata', () => {
   const s = current(), secs = Math.round(audio.duration);
   if (s && !s.duration && Number.isFinite(secs) && secs > 0 && state.conn) save(`Length of ${s.title}`, (index) => { const x = index.songs.find((y) => y.id === s.id); if (x && !x.duration) x.duration = secs; }).catch(() => {});
 });
-addEventListener('pagehide', keep);
+let asleep = false;
+function sleep() { keep(); asleep = true; deaf(); cancelAnimationFrame(raf); }
+addEventListener('pagehide', () => { if (asleep) return; keep(); if (!owner) deaf(); });
 
 // the sound, for anything that moves with it: an analyser between the song and the speakers, made on the first play
 export const sound = { analyser: null, freq: null, level: 0 };
-let ctx = null, raf = 0;
+let raf = 0;
 function wire() {
-  if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
-  try {
-    ctx = new AudioContext();
-    sound.analyser = ctx.createAnalyser(); sound.analyser.fftSize = 256; sound.analyser.smoothingTimeConstant = 0.82;
-    ctx.createMediaElementSource(audio).connect(sound.analyser); sound.analyser.connect(ctx.destination);
-    sound.freq = new Uint8Array(sound.analyser.frequencyBinCount);
-  } catch { ctx = null; sound.analyser = null; }
+  // (one for the audio, ever, on the page that holds it)
+  let w = home.fluentioSong.wired;
+  if (!w) {
+    try {
+      const ctx = new home.AudioContext(), analyser = ctx.createAnalyser();
+      analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.82;
+      ctx.createMediaElementSource(audio).connect(analyser); analyser.connect(ctx.destination);
+      w = home.fluentioSong.wired = { ctx, analyser };
+    } catch { return; }
+  }
+  if (w.ctx.state === 'suspended') w.ctx.resume();
+  if (!sound.analyser) { sound.analyser = w.analyser; sound.freq = new Uint8Array(w.analyser.frequencyBinCount); }
 }
 const still = () => document.documentElement.classList.contains('no-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
 function loop() {
@@ -149,11 +165,12 @@ function loop() {
 }
 // the lock screen and the keyboard's media keys
 async function media(s) {
-  if (!('mediaSession' in navigator) || !s) return;
+  const session = home.navigator.mediaSession;
+  if (!session || !s) return;
   const url = await coverUrl(s);
-  navigator.mediaSession.metadata = new MediaMetadata({ title: s.title, artist: s.artist, album: s.album, artwork: url ? [{ src: url }] : [] });
+  session.metadata = new home.MediaMetadata({ title: s.title, artist: s.artist, album: s.album, artwork: url ? [{ src: url }] : [] });
   for (const [a, fn] of [['play', toggle], ['pause', toggle], ['previoustrack', prev], ['nexttrack', () => next()], ['seekto', (d) => seek(d.seekTime)]]) {
-    try { navigator.mediaSession.setActionHandler(a, fn); } catch {}
+    try { session.setActionHandler(a, fn); } catch {}
   }
 }
 // the colors of the cover: its average lively color, as a hue (or one made from the song's name)
@@ -247,9 +264,14 @@ export function mount() {
   paint();
 }
 // songs deleted somewhere else (another device, GitHub) leave the queue, and stop if one was playing
-libraryEvents.addEventListener('library', () => queue.filter((id) => !song(id)).forEach(forget));
+libraryEvents.addEventListener('library', () => { if (!asleep) queue.filter((id) => !song(id)).forEach(forget); });
 // ---------- go: carry on from the last page ----------
 if (current()) {
   media(current());
-  if (saved.playing) start(true); else start(false);
+  if (!owner && audio.dataset.song === current().id) {
+    // still going, under this frame: just take it over
+    srcUrl = audio.src; resume = null;
+    if (audio.ended) next(true);
+    else if (!audio.paused) { document.documentElement.classList.add('music-playing'); wire(); loop(); }
+  } else if (saved.playing) start(true); else start(false);
 }
