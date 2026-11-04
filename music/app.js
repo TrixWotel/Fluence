@@ -5,6 +5,7 @@
 import * as gh from '../kit/music/github.js';
 import * as store from '../kit/music/store.js';
 import { readTags } from '../kit/music/tags.js';
+import { copyOf, removeCopies } from '../kit/music/same.js';
 import { el, svg, time, bytes, plural, total, toast, art, shade, coverUrl, read, write, state, song, local, refresh, save, events as libraryEvents } from '../kit/music/library.js';
 import * as player from '../kit/music/player.js';
 
@@ -44,7 +45,7 @@ function hero({ kind, title, sub, artEl, round }) {
 }
 function status() {
   if (state.loading && !lib().songs.length) return el('div', {}, ...Array.from({ length: 6 }, () => el('div', { className: 'm-skeleton' })));
-  if (state.error) return el('div', { className: 'm-panel' }, el('h2', {}, 'Couldn’t load your music'), el('p', { className: 'm-muted' }, state.error), el('button', { className: 'btn', onclick: refresh }, 'Try again'));
+  if (state.error) return el('div', { className: 'm-panel' }, el('h2', {}, 'Couldn’t load your music'), el('p', { className: 'm-muted' }, state.error), el('button', { className: 'btn', onclick: load }, 'Try again'));
   return null;
 }
 const addButton = () => el('button', { className: 'btn', onclick: pickFiles }, svg('upload'), 'Add songs');
@@ -309,6 +310,20 @@ const ask = async ({ title, field, value, ok }) => (await form({ title, fields: 
 const sure = (title, text) => dialog((close) => el('div', { className: 'm-dialog' }, el('h2', {}, title), el('p', { className: 'm-muted', style: 'margin:0' }, text),
   el('div', { className: 'row' }, el('button', { className: 'btn', onclick: () => close(false) }, 'Keep'), el('button', { className: 'btn danger primary', onclick: () => close(true) }, 'Delete'))));
 
+// ---------- the same song twice ----------
+// a copy that got in some other way (from before this check, another device, git) goes by itself; adding skips them
+async function load() {
+  await refresh();
+  if (!state.base || state.error) return;
+  const { pairs } = removeCopies(structuredClone(lib()));
+  if (!pairs.length) return;
+  pairs.forEach(([id, to]) => player.swap(id, to));
+  try {
+    await save(`Removed ${plural(pairs.length, 'duplicate')}`, (index) => ({ remove: removeCopies(index).remove }));
+    toast(`Removed ${plural(pairs.length, 'duplicate song')}`);
+  } catch {}
+}
+
 // ---------- adding songs ----------
 function pickFiles() {
   if (!conn()) return toast('Connect your Database first.');
@@ -347,6 +362,7 @@ async function addFiles(files) {
         if (!state.base) state.base = await gh.library(conn());
         if (lib().songs.some((x) => x.sha === sha)) { row.set('Already in your library', 1, 'done'); continue; }
         const tags = readTags(data, file.name), id = uid(), ending = ext(file.name), secs = await duration(file);
+        if (copyOf(lib().songs, { ...tags, sha, duration: secs })) { row.set('Already in your library', 1, 'done'); continue; }
         let pic = null;
         if (tags.picture) pic = { path: `covers/${id}.${tags.picture.mime.includes('png') ? 'png' : 'jpg'}`, sha: await gh.blobSha(tags.picture.data), blob: new Blob([tags.picture.data], { type: tags.picture.mime }) };
         row.set('Uploading', 0.04);
@@ -356,7 +372,7 @@ async function addFiles(files) {
         row.set('Saving', 0.94);
         const entry = { id, title: tags.title, artist: tags.artist, album: tags.album, path: '', sha, size: file.size, duration: secs, cover: pic?.path || '', coverSha: pic?.sha || '', liked: false, added: Date.now() };
         await save(`Added ${entry.title}`, (index, now) => {
-          if (index.songs.some((x) => x.sha === sha)) return {};
+          if (copyOf(index.songs, entry)) return {};
           const e = { ...entry, path: pathFor(entry.artist, entry.title, ending, (p) => now.files.has(p) || index.songs.some((y) => y.path === p)) };
           index.songs.push(e);
           return { add: [{ path: e.path, sha }, ...(pic ? [{ path: pic.path, sha: pic.sha }] : [])] };
@@ -385,7 +401,7 @@ function connectPanel() {
     el('ol', {}, el('li', {}, 'On GitHub: Settings → Developer settings → Fine-grained tokens → Generate new token.'), el('li', {}, 'Repository access: Only select repositories → your Database repo.'), el('li', {}, 'Permissions: Contents → Read and write. Then generate it and paste it here.')),
     el('form', { className: 'm-form', onsubmit: async (e) => {
       e.preventDefault(); err.textContent = ''; go.disabled = true;
-      try { state.conn = await gh.connect(repo.value, token.value); toast(`Connected to ${state.conn.repo}`); location.hash = '#songs'; refresh(); }
+      try { state.conn = await gh.connect(repo.value, token.value); toast(`Connected to ${state.conn.repo}`); location.hash = '#songs'; load(); }
       catch (x) { err.textContent = x.message; }
       go.disabled = false;
     } }, el('label', { className: 'm-field' }, 'Repo', repo), el('label', { className: 'm-field' }, 'Token (it stays in this browser only)', token), err, el('div', {}, go)));
@@ -400,8 +416,8 @@ function settingsView() {
       el('p', { className: 'm-muted' }, 'Songs are saved on its ', el('b', {}, gh.BRANCH), ' branch: songs/ (a folder for each artist), covers/ and music.json. Data, Code and Notes stay on main.'),
       el('div', { className: 'm-actions', style: 'margin:0' },
         el('a', { className: 'btn', href: `https://github.com/${conn().repo}/tree/${gh.BRANCH}`, target: '_blank', rel: 'noopener' }, 'Open on GitHub'),
-        el('button', { className: 'btn', onclick: refresh }, 'Reload library'),
-        conn().from === 'music' ? el('button', { className: 'btn', onclick: () => { gh.disconnect(); state.conn = gh.connection(); toast(state.conn ? 'Using the other token now' : 'Disconnected'); refresh(); render(); } }, 'Disconnect') : null)));
+        el('button', { className: 'btn', onclick: load }, 'Reload library'),
+        conn().from === 'music' ? el('button', { className: 'btn', onclick: () => { gh.disconnect(); state.conn = gh.connection(); toast(state.conn ? 'Using the other token now' : 'Disconnected'); load(); render(); } }, 'Disconnect') : null)));
   } else wrap.append(connectPanel());
   const kept = el('span', {}, '…');
   store.size().then((n) => { kept.textContent = n ? bytes(n) : 'nothing yet'; });
@@ -514,5 +530,5 @@ addEventListener('keydown', (e) => {
 player.mount();
 render(true);
 tint();
-refresh();
+load();
 if (route().name === 'now') { history.replaceState(null, '', '#songs'); setTimeout(openNow, 300); }

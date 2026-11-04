@@ -110,7 +110,7 @@ function flac(b) {
 
 // a file name without its ending: "Artist - Title", or just a title (a leading track number goes)
 export function fromName(name) {
-  const base = String(name).replace(/\.[^.]+$/, '').replace(/_/g, ' ').replace(/^\d{1,3}\s*[-.)]?\s+/, '').trim();
+  const base = String(name).replace(/\.[^.]+$/, '').replace(/_/g, ' ').replace(/^\d{1,3}\s*[-.)]?\s+/, '').replace(/\s+(?:\(\d+\)|copy)$/i, '').trim();
   const m = base.match(/^(.+?)\s+[-–]\s+(.+)$/);
   return m ? { artist: m[1].trim(), title: m[2].trim() } : { title: base };
 }

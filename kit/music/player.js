@@ -45,6 +45,14 @@ export function forget(id) {
   if (was === id) { audio.pause(); audio.removeAttribute('src'); if (at >= 0) start(false); else tell('song'); }
   keep();
 }
+// a song that turned out to be a copy of another: the other takes its place, and what's playing carries on
+export function swap(id, to) {
+  if (!queue.includes(id)) return;
+  const was = queue[at] === id ? to : queue[at];
+  queue = queue.map((x) => (x === id ? to : x)).filter((x, i, all) => x !== to || i === all.indexOf(to));
+  at = queue.indexOf(was);
+  keep(); tell('song');
+}
 export function setShuffle(on) { mode.shuffle = on; if (on) shuffleRest(); keep(); tell('queue'); }
 export function cycleRepeat() { mode.repeat = { off: 'all', all: 'one', one: 'off' }[mode.repeat]; keep(); tell('queue'); return mode.repeat; }
 
@@ -232,6 +240,8 @@ export function mount() {
   libraryEvents.addEventListener('library', paint);
   paint();
 }
+// songs deleted somewhere else (another device, GitHub) leave the queue, and stop if one was playing
+libraryEvents.addEventListener('library', () => queue.filter((id) => !song(id)).forEach(forget));
 // ---------- go: carry on from the last page ----------
 if (current()) {
   media(current());

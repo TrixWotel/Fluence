@@ -60,7 +60,7 @@ export const emptyIndex = () => ({ app: 'Fluence', v: 1, songs: [], playlists: [
 const text = async (r) => new TextDecoder().decode(await r.arrayBuffer());
 // a song found in songs/ without a line in music.json: its details from its path, songs/<artist>/<title>.mp3
 export function fromPath(path, sha) {
-  const parts = path.split('/'), file = parts.at(-1).replace(AUDIO, ''), folder = parts.length > 2 ? parts[1] : '';
+  const parts = path.split('/'), file = parts.at(-1).replace(AUDIO, '').replace(/\s+\(\d+\)$/, ''), folder = parts.length > 2 ? parts[1] : '';
   const m = !folder && file.match(/^(.+?)\s+[-–]\s+(.+)$/);
   return { id: `p${sha.slice(0, 12)}`, title: m ? m[2] : file, artist: m ? m[1] : folder || 'Unknown artist', album: '', path, sha, size: 0, duration: 0, cover: '', coverSha: '', liked: false, added: 0 };
 }
@@ -166,6 +166,7 @@ export async function commit(s, message, change, base) {
     if (!now.files.has('README.md')) tree.push({ path: 'README.md', mode: '100644', type: 'blob', content: README });
     try {
       const made = await gh(s, 'POST', '/git/trees', now.tree ? { base_tree: now.tree, tree } : { tree: tree.filter((x) => x.sha !== null) });
+      if (made.sha === now.tree) return now;   // (nothing changed, so no empty commit)
       const c = await gh(s, 'POST', '/git/commits', { message: `${message} (from Fluence)`, tree: made.sha, parents: now.head ? [now.head] : [] });
       if (now.head) await gh(s, 'PATCH', `/git/refs/heads/${BRANCH}`, { sha: c.sha, force: false });
       else await gh(s, 'POST', '/git/refs', { ref: `refs/heads/${BRANCH}`, sha: c.sha });

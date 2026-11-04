@@ -19,7 +19,7 @@ const ask = async (mode, fn) => {
   return new Promise((done) => {
     try {
       const tx = d.transaction('files', mode), r = fn(tx.objectStore('files'));
-      tx.oncomplete = () => done(r?.result ?? true);
+      tx.oncomplete = () => done(r?.result ?? null);
       tx.onerror = tx.onabort = () => done(null);
     } catch { done(null); }
   });
