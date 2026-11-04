@@ -350,7 +350,8 @@
             fill();
             for (const w of ['song', 'state', 'queue']) player.events.addEventListener(w, fill);
             player.events.addEventListener('time', () => seek?.paint());
-            lib.events.addEventListener('library', fill);
+            let seen = '';   // (the same library again changes nothing)
+            lib.events.addEventListener('library', () => { const now = JSON.stringify([lib.state.lib, !!lib.state.conn, lib.state.loading && !lib.state.lib.songs.length]); if (now !== seen) { seen = now; fill(); } });
             lib.refresh();   // (the newest library, in case another device added songs)
           }).catch(() => box.replaceChildren(head('music', s.musicTitle, link('music/')), el('p', { className: 'muted' }, 'Music didn’t load here. Open it from the bar.')));
           return box;

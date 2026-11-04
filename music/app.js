@@ -26,8 +26,12 @@ q.addEventListener('input', () => { const v = q.value.trim(); history.replaceSta
 q.addEventListener('keydown', (e) => { if (e.key === 'Escape') { q.value = ''; q.blur(); location.hash = '#songs'; } });
 const tabs = el('nav', { className: 'm-tabs', 'aria-label': 'Music' });
 $('#top').append(tabs, el('label', { className: 'm-find' }, svg('search'), q));
+// what the page shows from the library, so finding the same library on GitHub leaves the page as it is
+let drawn = '', lost = false;
+const signature = () => JSON.stringify([lib(), state.error, !!conn(), state.loading && !lib().songs.length]);
 function render(moved = false) {
   const r = route();
+  drawn = signature(); lost = false;
   tabs.replaceChildren(...TABS.map(([id, name, icon]) => el('a', { href: `#${id}`, className: r.name === id || (r.name === 'album' && id === 'albums') || (r.name === 'artist' && id === 'artists') || (r.name === 'playlist' && id === 'playlists') ? 'on' : '' }, svg(icon), name)));
   if (!conn() && r.name !== 'settings') return show(connectView(), moved);
   const make = { songs: songsView, albums: albumsView, album: albumView, artists: artistsView, artist: artistView, playlists: playlistsView, playlist: playlistView, liked: likedView, settings: settingsView, search: searchView }[r.name] || songsView;
@@ -53,7 +57,7 @@ const playButtons = (list) => [
   el('button', { className: 'btn primary', disabled: !list.length, onclick: () => player.playList(list, 0) }, svg('play', true), 'Play'),
   el('button', { className: 'btn', disabled: list.length < 2, onclick: () => player.playList(list, Math.floor(Math.random() * list.length), true) }, svg('shuffle'), 'Shuffle'),
 ];
-const missing = (text) => el('div', { className: 'm-empty' }, el('h2', {}, 'Not here'), el('p', {}, text), el('a', { className: 'btn', href: '#songs' }, 'All songs'));
+const missing = (text) => { lost = true; return el('div', { className: 'm-empty' }, el('h2', {}, 'Not here'), el('p', {}, text), el('a', { className: 'btn', href: '#songs' }, 'All songs')); };
 const nothing = (title, text) => el('div', { className: 'm-empty' }, el('h2', {}, title), el('p', {}, text));
 
 // ---------- songs ----------
@@ -513,7 +517,7 @@ player.events.addEventListener('time', () => nowSeek?.paint());
 player.events.addEventListener('song', () => { paintRows(); paintNow(); tint(); });
 player.events.addEventListener('state', () => { paintRows(); if (nowEl) { const c = nowEl.querySelector('.m-btns'); c?.replaceWith(player.controls()); } });
 player.events.addEventListener('queue', () => { if (nowEl) paintNow(); });
-libraryEvents.addEventListener('library', () => { render(); if (nowEl) paintNow(); });
+libraryEvents.addEventListener('library', () => { if (signature() === drawn) return; render(); if (nowEl) paintNow(); });
 
 // ---------- keys here ----------
 addEventListener('keydown', (e) => {
@@ -526,9 +530,16 @@ addEventListener('keydown', (e) => {
   else if (e.key === 'Escape') { if (menuEl) closeMenu(); else closeNow(); }
 });
 
-// ---------- go ----------
+// ---------- go: back where you were ----------
+// coming back to Music brings you to the same tab, album, playlist or search, scrolled to the same place
+const PLACE = 'fluentio.music.place';
+addEventListener('pagehide', () => write(PLACE, { hash: location.hash, y: scrollY }));
 player.mount();
+const nowWanted = route().name === 'now', place = nowWanted || !location.hash ? read(PLACE, null) : null;
+if (nowWanted || place?.hash) history.replaceState(null, '', place?.hash || '#songs');
 render(true);
+if (place && lost) { history.replaceState(null, '', '#songs'); render(true); }
+else if (place) scrollTo(0, place.y || 0);
 tint();
 load();
-if (route().name === 'now') { history.replaceState(null, '', '#songs'); setTimeout(openNow, 300); }
+if (nowWanted) setTimeout(openNow, 300);

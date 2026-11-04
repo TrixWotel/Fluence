@@ -19,12 +19,15 @@ let queue = Array.isArray(saved.queue) ? saved.queue : [], at = Number.isInteger
 export const mode = { shuffle: !!saved.shuffle, repeat: ['off', 'all', 'one'].includes(saved.repeat) ? saved.repeat : 'off' };
 audio.volume = Number.isFinite(saved.volume) ? saved.volume : 0.9;
 audio.muted = !!saved.muted;
-let srcUrl = '', loadingId = '', pendingTime = Number.isFinite(saved.time) ? saved.time : 0;
+let srcUrl = '', loadingId = '';
+// where the last page left off: the song picks up there once it has loaded, and until then that's its time
+let resume = queue[at] && saved.time > 0 ? { id: queue[at], time: saved.time } : null;
+const waiting = () => (resume?.id === queue[at] ? resume.time : 0);
 export let buffering = 0;
 export const current = () => song(queue[at]);
 export const upNext = () => queue.slice(at + 1).map(song).filter(Boolean);
 export const position = () => at;
-const keep = () => write(KEY, { queue, at, shuffle: mode.shuffle, repeat: mode.repeat, volume: audio.volume, muted: audio.muted, time: audio.currentTime || pendingTime, playing: !audio.paused });
+const keep = () => write(KEY, { queue, at, shuffle: mode.shuffle, repeat: mode.repeat, volume: audio.volume, muted: audio.muted, time: audio.currentTime || waiting(), playing: !audio.paused });
 
 // ---------- what plays ----------
 const mixed = (ids) => { for (let k = ids.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [ids[k], ids[j]] = [ids[j], ids[k]]; } return ids; };
@@ -49,6 +52,7 @@ export function forget(id) {
 export function swap(id, to) {
   if (!queue.includes(id)) return;
   const was = queue[at] === id ? to : queue[at];
+  if (resume?.id === id) resume.id = to;
   queue = queue.map((x) => (x === id ? to : x)).filter((x, i, all) => x !== to || i === all.indexOf(to));
   at = queue.indexOf(was);
   keep(); tell('song');
@@ -74,7 +78,7 @@ async function start(play) {
   if (srcUrl) URL.revokeObjectURL(srcUrl);
   srcUrl = URL.createObjectURL(blob.type ? blob : new Blob([blob], { type: TYPES[ext(s.path)] || 'audio/mpeg' }));
   audio.src = srcUrl;
-  if (pendingTime) { const t = pendingTime; audio.addEventListener('loadedmetadata', () => { audio.currentTime = Math.min(t, Math.max(0, (audio.duration || t + 1) - 1)); }, { once: true }); pendingTime = 0; }
+  if (waiting()) audio.addEventListener('loadedmetadata', () => { if (waiting()) audio.currentTime = Math.min(resume.time, Math.max(0, (audio.duration || resume.time + 1) - 1)); resume = null; }, { once: true });
   if (play) { wire(); audio.play().catch(() => tell('state')); }
   keep(); tell('time'); prefetch();
 }
@@ -176,7 +180,7 @@ export async function hueOf(s) {
 }
 
 // ---------- the bar at the bottom ----------
-let bar = null, parts = null;
+let bar = null, parts = null, cover = null;   // (the cover stays while the song does, so it doesn't flicker as the bar is redrawn)
 export let openNow = () => { location.href = f.link('music/#now'); };   // (Music's page shows it in place)
 export const setOpenNow = (fn) => { openNow = fn; };
 function range(label, oninput) {
@@ -193,7 +197,7 @@ export function controls() {
 export function seeker() {
   const now = el('span', {}, '0:00'), end = el('span', {}, '0:00'), r = range('Seek', (v) => seek(v * (audio.duration || 0)));
   const paint = () => {
-    const d = audio.duration || current()?.duration || 0, t = audio.currentTime || pendingTime || 0;
+    const d = audio.duration || current()?.duration || 0, t = audio.currentTime || waiting();
     now.textContent = time(t); end.textContent = d ? time(d) : '–:––';
     if (document.activeElement !== r) { r.value = d ? Math.round((t / d) * 1000) : 0; r.style.setProperty('--v', `${r.value / 10}%`); }
     r.style.setProperty('--b', `${buffering ? buffering * 100 : 0}%`);
@@ -214,10 +218,11 @@ function paint() {
   bar.hidden = !s;
   document.documentElement.classList.toggle('has-player', !!s);
   if (!s) return;
+  if (cover?.id !== s.id || cover.sha !== s.coverSha) cover = { id: s.id, sha: s.coverSha, el: art(s, { size: 52 }) };
   const sk = seeker(), vol = range('Volume', (v) => { audio.volume = v; audio.muted = v === 0; });
   parts = { sk, vol, mute: el('button', { className: 'm-icon', 'aria-label': 'Mute', title: 'Mute', onclick: () => { audio.muted = !audio.muted; } }) };
   bar.replaceChildren(
-    el('div', { className: 'm-song', onclick: () => openNow(), title: 'Now playing' }, art(s, { size: 52 }), el('div', { className: 't' }, el('b', {}, s.title), el('span', {}, s.artist))),
+    el('div', { className: 'm-song', onclick: () => openNow(), title: 'Now playing' }, cover.el, el('div', { className: 't' }, el('b', {}, s.title), el('span', {}, s.artist))),
     el('div', { className: 'm-mid' }, controls(), sk.box),
     el('div', { className: 'm-end' }, likeButton(s, 'hide-small'), el('button', { className: 'm-icon hide-small', 'aria-label': 'Now playing and the queue', title: 'Now playing', onclick: () => openNow() }, svg('queue')), parts.mute, vol));
   paintVolume();
@@ -237,7 +242,8 @@ export function mount() {
   for (const w of ['song', 'state', 'queue']) events.addEventListener(w, paint);
   events.addEventListener('time', () => parts?.sk.paint());
   events.addEventListener('volume', paintVolume);
-  libraryEvents.addEventListener('library', paint);
+  let shown = '';   // (the song as the bar last had it: the same library again changes nothing)
+  libraryEvents.addEventListener('library', () => { const now = JSON.stringify(current() ?? null); if (now !== shown) { shown = now; paint(); } });
   paint();
 }
 // songs deleted somewhere else (another device, GitHub) leave the queue, and stop if one was playing
