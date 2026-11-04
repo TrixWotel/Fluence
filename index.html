@@ -207,7 +207,7 @@
       const geo = Object.keys(f.read('fluentio.geo.best') || {}).length;
       bests += geo;
       const folderOf = (x) => String(x.link || '').replace(/^\.?\//, '').split('/')[0];
-      const welcomed = import(link('kit/welcome.js'));
+      const welcomed = f.wait(import(link('kit/welcome.js')));
       // your music, as this browser last saw it: what's playing (or was), and how many songs there are
       const tunes = f.read('fluentio.music.library') || {}, playing = f.read('fluentio.music.player') || {}, songs = Array.isArray(tunes.songs) ? tunes.songs : [];
       const on = songs.find((x) => x && x.id === (playing.queue || [])[playing.at]);
@@ -286,7 +286,7 @@
             ['amc10', 'math/amc.js', 'amc'], ['preterite', 'spanish/tenses.js', 'preteriteTest'], ['vectors', 'physics/vectors.js', 'vectorBank'], ['imperfect', 'spanish/tenses.js', 'imperfectTest'], ['middleages', 'history/middle-ages.js', 'middleAges']];
           const today = Math.round((midnight(now) - new Date(2026, 0, 1)) / 86400000), [id, file, name] = POOL[((today % POOL.length) + POOL.length) % POOL.length];
           const folder = file.split('/')[0], subject = s.study.find((x) => folderOf(x) === folder) || { title: folder, emoji: '' };
-          Promise.all([import(link(file)), import(link('kit/tests.js'))]).then(([mod, { isRight }]) => {
+          f.wait(Promise.all([import(link(file)), import(link('kit/tests.js'))]).then(([mod, { isRight }]) => {
             const bank = mod[name];
             let n = (Math.imul(today + 1, 2654435761) >>> 0) % bank.count + 1, q = bank.make(n);
             for (let j = 0; j < 80 && (q.figure || !['choice', 'text', 'number'].includes(q.answer.kind)); j++) { n = (n % bank.count) + 1; q = bank.make(n); }
@@ -320,7 +320,7 @@
             box.replaceChildren(head('spark', 'Question of the day'), el('p', { className: 'muted small' }, `${subject.emoji || ''} ${subject.title} · ${q.topic}`.trim()),
               html('p', 'qd-text', q.text), area, result, el('a', { className: 'qd-more', href: `${link(subject.link || folder + '/')}#${id}/${n}` }, 'See it with the working →'));
             if (done) settle(done.given, done.right);
-          }).catch(() => box.replaceChildren(head('spark', 'Question of the day'), el('p', { className: 'muted' }, 'Today’s question didn’t load. Try the subjects in Modules.')));
+          }).catch(() => box.replaceChildren(head('spark', 'Question of the day'), el('p', { className: 'muted' }, 'Today’s question didn’t load. Try the subjects in Modules.'))));
           return box;
         },
         data: () => {
@@ -335,7 +335,7 @@
         // Music: what's playing with its controls (or your newest songs to start one), carried along on every page
         music: () => {
           const box = tile(`music${featureMusic ? ' feature' : ''}`, 'var(--accent)', head('music', s.musicTitle, link('music/')), el('p', { className: 'muted' }, 'Loading your music…'));
-          import(link('kit/music/player.js')).then(async (player) => {
+          f.wait(import(link('kit/music/player.js')).then(async (player) => {
             const lib = await import(link('kit/music/library.js'));
             player.mount();
             let seek = null;
@@ -372,7 +372,7 @@
             let seen = '';   // (the same library again changes nothing)
             lib.events.addEventListener('library', () => { const now = JSON.stringify([lib.state.lib, !!lib.state.conn, lib.state.loading && !lib.state.lib.songs.length]); if (now !== seen) { seen = now; fill(); } });
             lib.refresh();   // (the newest library, in case another device added songs)
-          }).catch(() => box.replaceChildren(head('music', s.musicTitle, link('music/')), el('p', { className: 'muted' }, 'Music didn’t load here. Open it from the bar.')));
+          }).catch(() => box.replaceChildren(head('music', s.musicTitle, link('music/')), el('p', { className: 'muted' }, 'Music didn’t load here. Open it from the bar.'))));
           return box;
         },
         quick: () => tile('quick', 'var(--plot2)', head('bolt', 'Quick'),

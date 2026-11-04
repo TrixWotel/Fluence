@@ -21,8 +21,8 @@
   // a link into Data, Code or Notes (a Quick button's, say), left out while they're off
   const offLink = (href) => !f.spacesOn && /^(data|code|notes|workspace)\//.test(f.link(href).slice(f.root.length));
   // the space this page is in (a subject's page is in Modules, whose folder is study/), or what it is: 'settings', say
-  const where = () => {
-    const top = new URL(f.root).pathname, path = location.pathname;
+  const where = (url = location.href) => {
+    const top = new URL(f.root).pathname, path = new URL(url).pathname;
     const first = path.startsWith(top) ? path.slice(top.length).split('/')[0] : '';
     if (first === '' || first === 'index.html') return 'home';
     if (first === 'study' || f.settings.study.some((x) => String(x.link).replace(/^\.?\//, '').split('/')[0] === first)) return 'study';
@@ -52,9 +52,19 @@
     document.body.prepend(el('header', { className: 'topbar' }, brand, nav, el('div', { className: 'tools' }, find, gear)));
     document.documentElement.classList.add('has-bar');
     // the music player, when there's a song to carry on with (Music's page and the home page bring it themselves)
-    if ((f.read('fluentio.music.player') || {}).queue?.length && document.body.dataset.music !== 'off') import(f.link('kit/music/player.js')).then((m) => m.mount()).catch(() => {});
+    if ((f.read('fluentio.music.player') || {}).queue?.length && document.body.dataset.music !== 'off') f.wait(import(f.link('kit/music/player.js')).then((m) => m.mount()).catch(() => {}));
   };
   addEventListener('fluentio:settings', () => nav && drawNav());
+  // the mark slides across as soon as you go somewhere, and the page takes the place of this one a moment later (kit/look.js)
+  addEventListener('fluence:going', (e) => {
+    const i = nav ? spaces().findIndex((x) => x.id === where(e.detail)) : -1, to = nav?.children[i], from = nav?.querySelector('a.on'), pill = from?.querySelector('.pill');
+    if (!to || !pill || to === from) return;
+    from.classList.remove('on'); to.classList.add('on');
+    for (const a of nav.children) if (a !== from) a.style.zIndex = 1;   // (so it passes under the other names, not over them)
+    const a = pill.getBoundingClientRect(), b = to.getBoundingClientRect(), speed = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
+    pill.style.transformOrigin = 'left center';
+    pill.animate({ transform: ['none', `translateX(${b.left - a.left}px) scaleX(${b.width / a.width})`] }, { duration: f.moving() ? 300 / speed : 0, easing: 'cubic-bezier(.3, 1.2, .5, 1)', fill: 'forwards' });
+  });
 
   // ---------- Search ----------
   const KINDS = { note: 'Note', doc: 'Doc', table: 'Sheet', code: 'Code file' };

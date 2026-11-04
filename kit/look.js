@@ -7,6 +7,8 @@
 // the page's title, fills in any element marked data-fill="name" (or another of the settings' words), and adds the
 // drifting colors behind the page.
 (() => {
+  const above = (() => { try { return window !== window.top && window.top.fluentioHost ? window.top : null; } catch { return null; } })();   // the page holding this one in a frame (below)
+  const waits = [];                                  // what a page is still bringing in, that it wants to show when it's shown
   const DEFAULTS = {
     name: 'Fluence', tagline: 'Web stack workspace', greeting: true, theme: 'auto',
     colors: {
@@ -109,7 +111,7 @@
         : s.theme === 'light' ? `html:root { ${palette('light')}; ${look} }`
           : `html:root { ${palette('light')}; ${look} } @media (prefers-color-scheme: dark) { html:root { ${palette('dark')} } }`,
       // moving between pages: the old one fades out as the new one rises in (browsers that can't, just switch)
-      s.animations !== false ? '@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }' : '',
+      s.animations !== false && !above ? '@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }' : '',
     ].join('\n');
   };
   const style = document.createElement('style');
@@ -236,6 +238,7 @@
   const spaceOf = (x) => { const k = x.kind ?? x.tab; return typeof k === 'string' && Object.hasOwn(SPACES, k) ? SPACES[k] : 'notes'; };
   window.fluentio = {
     settings: s, site, DEFAULTS, FONTS, root, read, write, el, svg, icon, key, spacesOn: SPACES_ON,
+    wait: (promise) => { waits.push(Promise.resolve(promise).catch(() => {})); return promise; },
     link: (href) => new URL(String(href || ''), root).href,
     moving: () => s.animations !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,
     // your docs and sheets (Data), code (Code) and notes (Notes), and their folders: kept in this browser only (Settings
@@ -258,54 +261,91 @@
   // (a page transition the browser skips, in a hidden tab say, isn't an error)
   addEventListener('pagereveal', (e) => e.viewTransition?.ready.catch(() => {}));
 
-  // A page takes its sound with it when it goes. So while a song is playing, the next page opens in a frame over this one,
-  // and this page, which holds the song (kit/music/player.js), stays open under it; from then on pages change in the frame.
-  // With no song playing, or in a browser without the Navigation API, pages change as usual.
-  const above = (() => { try { return window !== window.top && window.top.fluentioSong ? window.top : null; } catch { return null; } })();
+  // ---------- changing pages without a blink ----------
+  // A page that goes takes its sound with it, and the next one takes a moment to draw. So the next page opens in a hidden
+  // frame, while this one stays open under it holding the song (kit/music/player.js). Once that page is drawn, with nothing
+  // left to fade in, it takes the place of what's showing in one step. From then on pages change in frames like that.
+  // Reloading starts afresh, and a browser without the Navigation API changes pages as usual.
+  const pagePath = (url) => { const path = new URL(url).pathname; return url.startsWith(root) && (!/\.[a-z0-9]+$/i.test(path) || /\.html$/i.test(path)); };
+  const going = (url) => dispatchEvent(new CustomEvent('fluence:going', { detail: url }));
   if (above) {
-    // the address and the title are the whole window's, and so is leaving the site
-    const tell = () => { try { above.history.replaceState(null, '', location.href); if (document.title) above.document.title = document.title; } catch {} };
+    const me = window.frameElement, pause = (ms) => new Promise((done) => setTimeout(done, ms));
+    // the address and the title are the whole window's, once this page is the one showing
+    const tell = () => { if (me?.id !== 'page-frame') return; try { above.history.replaceState(null, '', location.href); if (document.title) above.document.title = document.title; } catch {} };
     for (const name of ['pushState', 'replaceState']) { const real = history[name]; history[name] = function (...args) { const out = real.apply(this, args); tell(); return out; }; }
     addEventListener('hashchange', tell);
-    addEventListener('DOMContentLoaded', () => {
-      tell();
-      new MutationObserver(tell).observe(document.querySelector('title') || document.head, { childList: true, characterData: true, subtree: true });
-      above.fluentioSong.arrived?.();
+    addEventListener('DOMContentLoaded', () => new MutationObserver(tell).observe(document.querySelector('title') || document.head, { childList: true, characterData: true, subtree: true }));
+    const settled = () => { for (const a of document.getAnimations()) { try { if (a.effect?.getComputedTiming().iterations !== Infinity) a.finish(); } catch {} } };
+    addEventListener('load', async () => {
+      await Promise.race([Promise.all(waits), pause(700)]);
+      settled();
+      await Promise.race([new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))), pause(150)]);
+      settled();
+      above.fluentioHost.show(me);
     });
-    tell();
     window.navigation?.addEventListener('navigate', (e) => {
-      if (e.destination.sameDocument || !e.cancelable || e.downloadRequest != null || e.destination.url.startsWith(root)) return;
+      const url = e.destination.url;
+      if (e.destination.sameDocument || !e.cancelable || e.downloadRequest != null || e.formData) return;
+      // leaving the site takes the whole window
+      if (!url.startsWith(root)) { e.preventDefault(); above.location.href = url; return; }
+      if (e.navigationType !== 'push' || !pagePath(url)) return;
       e.preventDefault();
-      above.location.href = e.destination.url;
+      going(url);
+      above.fluentioHost.open(url);
     });
-  } else if (window === window.top) {
-    const openFrame = (url) => {
-      let frame = document.getElementById('page-frame');
-      if (frame) { frame.contentWindow.location.href = url; return; }
-      const song = window.fluentioSong;
-      song.sleep();
-      history.pushState(null, '', url);
-      frame = document.createElement('iframe');
-      frame.id = 'page-frame';
-      frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;z-index:2147483647';
-      song.arrived = () => {
+  } else if (window === window.top && window.navigation) {
+    let next = null;
+    const showing = () => document.getElementById('page-frame');
+    const host = window.fluentioHost = {
+      open(url, push = true) {
+        if (next?.dataset.url === url) return;
+        next?.remove();
+        const frame = next = document.createElement('iframe');
+        frame.dataset.url = url;
+        frame.dataset.push = push ? 'yes' : '';
+        frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;z-index:2147483647';
+        // (a page that never says it's ready, like the browser's own error page, still gets shown)
+        frame.addEventListener('load', () => setTimeout(() => host.show(frame), 1500));
+        frame.src = url;
+        document.body.append(frame);
+      },
+      show(frame) {
+        if (frame !== next) return;   // (a page reloading itself, or one no longer wanted)
+        next = null;
+        const was = showing();
+        if (was) was.remove();
+        else {
+          try { window.fluentioSong?.sleep?.(); } catch {}
+          document.documentElement.style.overflow = 'hidden';
+          for (const kid of document.body.children) if (kid !== frame) kid.style.display = 'none';
+          // Back or Forward: the frame goes along when it can, and otherwise the page comes in a frame of its own
+          addEventListener('popstate', () => setTimeout(() => {
+            const now = showing();
+            try {
+              if (!now || now.contentWindow.location.href === location.href) return;
+              if (now.contentWindow.location.pathname === location.pathname) now.contentWindow.location.replace(location.href);
+              else host.open(location.href, false);
+            } catch { host.open(location.href, false); }
+          }, 120));
+        }
+        frame.id = 'page-frame';
         frame.style.opacity = '1'; frame.style.pointerEvents = 'auto';
-        document.documentElement.style.overflow = 'hidden';
-        for (const kid of document.body.children) if (kid !== frame) kid.style.display = 'none';
-        try { frame.contentWindow.focus(); } catch {}
-      };
-      frame.addEventListener('load', song.arrived, { once: true });
-      // (Back to the page from before the frame: the frame has no history of it, so it goes there itself)
-      addEventListener('popstate', () => setTimeout(() => { try { if (frame.contentWindow.location.href !== location.href) frame.contentWindow.location.replace(location.href); } catch {} }, 150));
-      frame.src = url;
-      document.body.append(frame);
+        try {
+          history[frame.dataset.push ? 'pushState' : 'replaceState'](null, '', frame.contentWindow.location.href);
+          document.title = frame.contentDocument.title;
+          frame.contentWindow.dispatchEvent(new Event('fluence:shown'));
+          frame.contentWindow.focus();
+        } catch {
+          if (frame.dataset.push) history.pushState(null, '', frame.dataset.url);
+        }
+      },
     };
-    window.navigation?.addEventListener('navigate', (e) => {
-      const song = window.fluentioSong, url = e.destination.url, path = new URL(url).pathname;
-      if (!song || song.audio.paused || e.destination.sameDocument || !e.cancelable || e.downloadRequest != null || e.formData || e.navigationType === 'reload') return;
-      if (!url.startsWith(root) || (/\.[a-z0-9]+$/i.test(path) && !/\.html$/i.test(path))) return;
+    window.navigation.addEventListener('navigate', (e) => {
+      const url = e.destination.url;
+      if (e.destination.sameDocument || !e.cancelable || e.downloadRequest != null || e.formData || e.navigationType !== 'push' || !pagePath(url)) return;
       e.preventDefault();
-      openFrame(url);
+      going(url);
+      host.open(url);
     });
   }
 

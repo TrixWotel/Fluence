@@ -1,8 +1,8 @@
-// The player, on every page: the song that's playing, the queue, shuffle and repeat, and the bar at the bottom. While a
-// song plays, other pages open in a frame over the page that holds it (kit/look.js), so the sound never stops: a player in
-// a frame uses that page's audio, and picks up the queue from where the last page left it. Opening a page anew (a reload)
-// carries on where it was, within a moment. Media keys and the lock screen control it, and an analyser between the song
-// and the speakers lets pages move with the music.
+// The player, on every page: the song that's playing, the queue, shuffle and repeat, and the bar at the bottom. Pages open
+// in frames over the page you first opened (kit/look.js), which holds the audio, so the sound never stops: a player in a
+// frame uses that audio, and picks up the queue from where the last page left it. Opening a page anew (a reload) carries
+// on where it was, within a moment. Media keys and the lock screen control it, and an analyser between the song and the
+// speakers lets pages move with the music.
 import * as gh from './github.js';
 import * as store from './store.js';
 import { el, svg, time, art, read, write, state, song, local, save, coverUrl, toast, styles, hash, events as libraryEvents } from './library.js';
@@ -15,18 +15,21 @@ export const events = new EventTarget();
 const tell = (what) => events.dispatchEvent(new Event(what));
 
 // where the song lives: this page, or the page this one is in a frame over
-const home = (() => { try { return window !== window.top && window.top.fluentioSong ? window.top : window; } catch { return window; } })();
-const owner = home === window;
-export const audio = owner ? new Audio() : home.fluentioSong.audio;
-if (owner) { audio.preload = 'auto'; home.fluentioSong = { audio, sleep }; }
+const home = (() => { try { return window !== window.top && window.top.fluentioHost ? window.top : window; } catch { return window; } })();
+const first = !home.fluentioSong;
+if (first) { home.fluentioSong = { audio: new home.Audio() }; home.fluentioSong.audio.preload = 'auto'; }
+if (home === window) home.fluentioSong.sleep = sleep;
+export const audio = home.fluentioSong.audio;
+// (a page still waiting to be shown leaves the song to the one showing)
+const inCharge = () => !window.frameElement || window.frameElement.id === 'page-frame';
 const saved = read(KEY, {});
 let queue = Array.isArray(saved.queue) ? saved.queue : [], at = Number.isInteger(saved.at) ? saved.at : -1;
 export const mode = { shuffle: !!saved.shuffle, repeat: ['off', 'all', 'one'].includes(saved.repeat) ? saved.repeat : 'off' };
-if (owner) { audio.volume = Number.isFinite(saved.volume) ? saved.volume : 0.9; audio.muted = !!saved.muted; }
+if (first) { audio.volume = Number.isFinite(saved.volume) ? saved.volume : 0.9; audio.muted = !!saved.muted; }
 let srcUrl = '', loadingId = '';
 // where the last page left off: the song picks up there once it has loaded, and until then that's its time
 let resume = queue[at] && saved.time > 0 ? { id: queue[at], time: saved.time } : null;
-const waiting = () => (resume?.id === queue[at] ? resume.time : 0);
+const waiting = () => (resume && resume.id === queue[at] ? resume.time : 0);
 export let buffering = 0;
 export const current = () => song(queue[at]);
 export const upNext = () => queue.slice(at + 1).map(song).filter(Boolean);
@@ -69,6 +72,7 @@ async function start(play) {
   tell('song');
   if (!s) return;
   loadingId = s.id; buffering = 0.01; tell('time'); media(s);
+  const before = audio.dataset.song;
   let blob = await store.get(s.sha);
   if (!blob) {
     if (!state.conn) { buffering = 0; tell('time'); return toast('Connect your Database in Music to play this song.'); }
@@ -79,6 +83,7 @@ async function start(play) {
   }
   if (loadingId !== s.id) return;   // another song was picked meanwhile
   buffering = 0;
+  if (audio.dataset.song !== before && audio.dataset.song === s.id) { srcUrl = audio.src; keep(); tell('time'); return; }   // the page before this one got there first
   // (its address belongs to the page that holds the song, as a frame's go when the frame's page does)
   if (srcUrl) home.URL.revokeObjectURL(srcUrl);
   srcUrl = home.URL.createObjectURL(blob.type ? blob : new Blob([blob], { type: TYPES[ext(s.path)] || 'audio/mpeg' }));
@@ -117,7 +122,7 @@ export const seek = (t) => { if (audio.duration) audio.currentTime = Math.max(0,
 // (what's listening to the audio goes with the page, or when this page's player gives way to one in a frame)
 const heard = [], on = (what, fn) => { audio.addEventListener(what, fn); heard.push([what, fn]); };
 const deaf = () => { for (const [what, fn] of heard.splice(0)) audio.removeEventListener(what, fn); };
-on('ended', () => next(true));
+on('ended', () => { if (inCharge()) next(true); });
 on('play', () => { document.documentElement.classList.add('music-playing'); keep(); tell('state'); loop(); });
 on('pause', () => { document.documentElement.classList.remove('music-playing'); keep(); tell('state'); });
 on('timeupdate', () => { tell('time'); if (Math.floor(audio.currentTime) % 5 === 0) keep(); });
@@ -130,7 +135,17 @@ on('loadedmetadata', () => {
 });
 let asleep = false;
 function sleep() { keep(); asleep = true; deaf(); cancelAnimationFrame(raf); }
-addEventListener('pagehide', () => { if (asleep) return; keep(); if (!owner) deaf(); });
+addEventListener('pagehide', () => { if (asleep) return; keep(); if (home !== window) deaf(); });
+addEventListener('fluence:going', keep);
+// shown at last: what the page before did meanwhile counts
+addEventListener('fluence:shown', () => {
+  const now = read(KEY, {});
+  if (now.at === at && JSON.stringify(now.queue) === JSON.stringify(queue)) return;
+  if (Array.isArray(now.queue)) queue = now.queue;
+  if (Number.isInteger(now.at)) at = now.at;
+  mode.shuffle = !!now.shuffle; mode.repeat = now.repeat || mode.repeat;
+  tell('queue'); tell('song');
+});
 
 // the sound, for anything that moves with it: an analyser between the song and the speakers, made on the first play
 export const sound = { analyser: null, freq: null, level: 0 };
@@ -268,7 +283,7 @@ libraryEvents.addEventListener('library', () => { if (!asleep) queue.filter((id)
 // ---------- go: carry on from the last page ----------
 if (current()) {
   media(current());
-  if (!owner && audio.dataset.song === current().id) {
+  if (home !== window && audio.dataset.song === current().id) {
     // still going, under this frame: just take it over
     srcUrl = audio.src; resume = null;
     if (audio.ended) next(true);
