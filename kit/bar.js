@@ -60,7 +60,7 @@
     for (const a of nav.children) if (!a.contains(pill)) a.style.zIndex = 1;   // (so it passes under the other names, not over them)
     pill.style.transformOrigin = 'left center';
     const speed = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
-    pill.animate({ transform: moves }, { duration: f.moving() ? 300 / speed : 0, easing: 'cubic-bezier(.3, 1.2, .5, 1)', fill: 'forwards' });
+    pill.animate({ transform: moves }, { duration: f.moving() ? 480 / speed : 0, easing: 'cubic-bezier(.3, 1.2, .5, 1)', fill: 'forwards' });
   };
   const toward = (a, b) => `translateX(${b.left - a.left}px) scaleX(${b.width / a.width})`;
   addEventListener('fluence:going', (e) => {

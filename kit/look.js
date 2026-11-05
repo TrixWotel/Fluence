@@ -277,7 +277,7 @@
   // Reloading starts afresh, and a browser without the Navigation API changes pages as usual.
   const pagePath = (url) => { const path = new URL(url).pathname; return url.startsWith(root) && (!/\.[a-z0-9]+$/i.test(path) || /\.html$/i.test(path)); };
   const going = (url) => dispatchEvent(new CustomEvent('fluence:going', { detail: url }));
-  const BARS = '.topbar, #music-bar', speed = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
+  const BARS = '.topbar, #music-bar', speed = (doc = document) => parseFloat(getComputedStyle(doc.documentElement).getPropertyValue('--speed')) || 1;
   if (above) {
     const me = window.frameElement, pause = (ms) => new Promise((done) => setTimeout(done, ms));
     document.documentElement.classList.add('arriving');
@@ -306,16 +306,16 @@
     // shown: everything rises in, quicker and closer together than when the site first opens, so there's never an empty page
     addEventListener('fluence:shown', () => {
       hold();
-      const moving = window.fluentio.moving();
+      const moving = window.fluentio.moving(), pace = speed();
       for (const a of opening()) {
         try {
           if (!moving) { a.finish(); continue; }
           const t = a.effect.getComputedTiming();
-          a.effect.updateTiming({ delay: Math.min(90, t.delay * .25), duration: Math.min(t.duration, 300) });
+          a.effect.updateTiming({ delay: Math.min(180 / pace, t.delay * .4), duration: Math.min(t.duration, 560 / pace) });
           a.play();
         } catch {}
       }
-      if (moving) for (const kid of document.body.children) if (!kid.matches(`${BARS}, .sky, script`)) kid.animate({ opacity: [0, 1] }, { duration: 220 / speed(), delay: 40 / speed(), easing: 'ease-out', fill: 'backwards' });
+      if (moving) for (const kid of document.body.children) if (!kid.matches(`${BARS}, .sky, script`)) kid.animate({ opacity: [0, 1] }, { duration: 480 / pace, delay: 60 / pace, easing: 'ease-out', fill: 'backwards' });
     });
     addEventListener('fluence:settled', () => document.documentElement.classList.remove('arriving'));
     window.navigation?.addEventListener('navigate', (e) => {
@@ -383,11 +383,12 @@
           try { frame.contentWindow.dispatchEvent(new Event('fluence:settled')); } catch {}
         };
         if (!moving) return done();
+        const pace = speed(last || document);
         for (const kid of kids) {
           if (kid.matches(BARS)) kid.style.visibility = 'hidden';
-          else kid.animate({ opacity: [1, 0] }, { duration: 130 / speed(), easing: 'ease-out', fill: 'forwards' });
+          else kid.animate({ opacity: [1, 0] }, { duration: 280 / pace, easing: 'ease-out', fill: 'forwards' });
         }
-        setTimeout(done, 150 / speed());
+        setTimeout(done, 300 / pace);
       },
     };
     window.navigation.addEventListener('navigate', (e) => {
