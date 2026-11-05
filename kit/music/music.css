@@ -7,7 +7,8 @@ svg.i.mi.solid { fill: currentColor; stroke: none; }
 
 /* covers: the song's own art, or one made from its name */
 .m-art { position: relative; overflow: hidden; flex: none; width: var(--s, 44px); height: var(--s, 44px); border-radius: calc(var(--s, 44px) * .2); background: var(--gen, var(--fill)); display: grid; place-items: center; color: rgb(255 255 255 / .94); font-weight: 750; letter-spacing: -0.02em; }
-.m-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: fade-in var(--t2) var(--ease); }
+.m-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.m-art img.fresh { animation: fade-in var(--t2) var(--ease); }
 .m-art .letters { font-size: calc(var(--s, 44px) * .36); text-shadow: 0 1px 6px rgb(0 0 0 / .22); }
 
 /* ---------- the player bar ---------- */

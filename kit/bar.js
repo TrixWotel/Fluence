@@ -47,7 +47,7 @@
     nav = el('nav', { className: 'spaces', 'aria-label': 'Spaces' });
     find = el('button', { type: 'button', className: 'find', onclick: () => openFind() }, svg('search'), el('span', {}, 'Search'), el('kbd'));
     drawNav();
-    const brand = el('a', { className: 'brand', href: f.link('./'), 'data-fill': 'name' }, f.settings.name);
+    const brand = el('a', { className: 'brand', href: f.link('./') }, f.logo(), el('span', { 'data-fill': 'name' }, f.settings.name));
     const gear = el('a', { className: 'gear' + (where() === 'settings' ? ' on' : ''), href: f.link('settings/'), title: 'Settings', 'aria-label': 'Settings' }, svg('settings'));
     document.body.prepend(el('header', { className: 'topbar' }, brand, nav, el('div', { className: 'tools' }, find, gear)));
     document.documentElement.classList.add('has-bar');
@@ -55,15 +55,25 @@
     if ((f.read('fluentio.music.player') || {}).queue?.length && document.body.dataset.music !== 'off') f.wait(import(f.link('kit/music/player.js')).then((m) => m.mount()).catch(() => {}));
   };
   addEventListener('fluentio:settings', () => nav && drawNav());
-  // the mark slides across as soon as you go somewhere, and the page takes the place of this one a moment later (kit/look.js)
+  // the mark slides across as soon as you go somewhere, and the next page's mark carries on from where it got to (kit/look.js)
+  const slide = (pill, moves) => {
+    for (const a of nav.children) if (!a.contains(pill)) a.style.zIndex = 1;   // (so it passes under the other names, not over them)
+    pill.style.transformOrigin = 'left center';
+    const speed = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
+    pill.animate({ transform: moves }, { duration: f.moving() ? 300 / speed : 0, easing: 'cubic-bezier(.3, 1.2, .5, 1)', fill: 'forwards' });
+  };
+  const toward = (a, b) => `translateX(${b.left - a.left}px) scaleX(${b.width / a.width})`;
   addEventListener('fluence:going', (e) => {
     const i = nav ? spaces().findIndex((x) => x.id === where(e.detail)) : -1, to = nav?.children[i], from = nav?.querySelector('a.on'), pill = from?.querySelector('.pill');
     if (!to || !pill || to === from) return;
     from.classList.remove('on'); to.classList.add('on');
-    for (const a of nav.children) if (a !== from) a.style.zIndex = 1;   // (so it passes under the other names, not over them)
-    const a = pill.getBoundingClientRect(), b = to.getBoundingClientRect(), speed = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
-    pill.style.transformOrigin = 'left center';
-    pill.animate({ transform: ['none', `translateX(${b.left - a.left}px) scaleX(${b.width / a.width})`] }, { duration: f.moving() ? 300 / speed : 0, easing: 'cubic-bezier(.3, 1.2, .5, 1)', fill: 'forwards' });
+    slide(pill, ['none', toward(pill.getBoundingClientRect(), to.getBoundingClientRect())]);
+  });
+  addEventListener('fluence:shown', (e) => {
+    const pill = nav?.querySelector('.pill'), was = e.detail?.pill;
+    if (!pill || !was) return;
+    const now = pill.getBoundingClientRect();
+    if (Math.abs(was.left - now.left) > 1 || Math.abs(was.width - now.width) > 1) slide(pill, [toward(now, was), 'none']);
   });
 
   // ---------- Search ----------

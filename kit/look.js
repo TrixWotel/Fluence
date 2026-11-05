@@ -236,8 +236,16 @@
   // where each kind of thing (and of folder) lives: notes in notes/, docs and sheets in data/, code files in code/
   const SPACES = { note: 'notes', doc: 'data', table: 'data', code: 'code', notes: 'notes', database: 'data' };
   const spaceOf = (x) => { const k = x.kind ?? x.tab; return typeof k === 'string' && Object.hasOwn(SPACES, k) ? SPACES[k] : 'notes'; };
+  // the logo: an app icon, a soft gradient and a sweeping white F (one drawing, for the bar, the home page and the tab's icon)
+  let logos = 0;
+  const logoMarkup = (shape = 'M100.0 50.0 99.8 72.1 99.3 79.1 98.4 84.0 97.2 87.9 95.6 91.0 93.5 93.5 91.0 95.6 87.9 97.2 84.0 98.4 79.1 99.3 72.1 99.8 50.0 100.0 27.9 99.8 20.9 99.3 16.0 98.4 12.1 97.2 9.0 95.6 6.5 93.5 4.4 91.0 2.8 87.9 1.6 84.0 0.7 79.1 0.2 72.1 0.0 50.0 0.2 27.9 0.7 20.9 1.6 16.0 2.8 12.1 4.4 9.0 6.5 6.5 9.0 4.4 12.1 2.8 16.0 1.6 20.9 0.7 27.9 0.2 50.0 0.0 72.1 0.2 79.1 0.7 84.0 1.6 87.9 2.8 91.0 4.4 93.5 6.5 95.6 9.0 97.2 12.1 98.4 16.0 99.3 20.9 99.8 27.9Z') => { const id = `fl${++logos}`; return `<svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="${id}a" x1="22" y1="0" x2="78" y2="100" gradientUnits="userSpaceOnUse"><stop stop-color="#86a4ff"/><stop offset=".55" stop-color="#6a6cf4"/><stop offset="1" stop-color="#9d5ff0"/></linearGradient><linearGradient id="${id}b" x1="50" y1="0" x2="50" y2="58" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><path d="${shape}" fill="url(#${id}a)"/><path d="${shape}" fill="url(#${id}b)"/><g fill="none" stroke-width="11" stroke-linecap="round"><g stroke="#231a7a" stroke-opacity=".28" transform="translate(0 2.6)"><path d="M34 77V47c0-15 11-23 36-23"/><path d="M34 68c0-13 9-20 28-20"/></g><g stroke="#fff"><path d="M34 77V47c0-15 11-23 36-23"/><path d="M34 68c0-13 9-20 28-20"/></g></g></svg>`; };
+  const logo = () => { const t = document.createElement('template'); t.innerHTML = logoMarkup(); return t.content.firstChild; };
+  if (window === window.top && document.head) {
+    document.head.append(Object.assign(document.createElement('link'), { rel: 'icon', type: 'image/svg+xml', href: `data:image/svg+xml,${encodeURIComponent(logoMarkup())}` }),
+      Object.assign(document.createElement('link'), { rel: 'apple-touch-icon', href: new URL('kit/logo-180.png', root).href }));
+  }
   window.fluentio = {
-    settings: s, site, DEFAULTS, FONTS, root, read, write, el, svg, icon, key, spacesOn: SPACES_ON,
+    settings: s, site, DEFAULTS, FONTS, root, read, write, el, svg, icon, logo, key, spacesOn: SPACES_ON,
     wait: (promise) => { waits.push(Promise.resolve(promise).catch(() => {})); return promise; },
     link: (href) => new URL(String(href || ''), root).href,
     moving: () => s.animations !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -263,26 +271,53 @@
 
   // ---------- changing pages without a blink ----------
   // A page that goes takes its sound with it, and the next one takes a moment to draw. So the next page opens in a hidden
-  // frame, while this one stays open under it holding the song (kit/music/player.js). Once that page is drawn, with nothing
-  // left to fade in, it takes the place of what's showing in one step. From then on pages change in frames like that.
+  // frame, while this one stays open under it holding the song (kit/music/player.js). When that page is drawn, covers and
+  // all, it takes over: its top bar and player are in the same place as the last page's, so they don't move, and what's
+  // between them crosses over, the old fading out as the new rises in. From then on pages change in frames like that.
   // Reloading starts afresh, and a browser without the Navigation API changes pages as usual.
   const pagePath = (url) => { const path = new URL(url).pathname; return url.startsWith(root) && (!/\.[a-z0-9]+$/i.test(path) || /\.html$/i.test(path)); };
   const going = (url) => dispatchEvent(new CustomEvent('fluence:going', { detail: url }));
+  const BARS = '.topbar, #music-bar', speed = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1;
   if (above) {
     const me = window.frameElement, pause = (ms) => new Promise((done) => setTimeout(done, ms));
+    document.documentElement.classList.add('arriving');
     // the address and the title are the whole window's, once this page is the one showing
     const tell = () => { if (me?.id !== 'page-frame') return; try { above.history.replaceState(null, '', location.href); if (document.title) above.document.title = document.title; } catch {} };
     for (const name of ['pushState', 'replaceState']) { const real = history[name]; history[name] = function (...args) { const out = real.apply(this, args); tell(); return out; }; }
     addEventListener('hashchange', tell);
     addEventListener('DOMContentLoaded', () => new MutationObserver(tell).observe(document.querySelector('title') || document.head, { childList: true, characterData: true, subtree: true }));
-    const settled = () => { for (const a of document.getAnimations()) { try { if (a.effect?.getComputedTiming().iterations !== Infinity) a.finish(); } catch {} } };
+    // what would rise in or fade in as the page opens waits until it's shown, except the bars and covers, which are just there
+    const opening = () => document.getAnimations().filter((a) => { const t = a.effect?.getComputedTiming(); return t && t.iterations !== Infinity && a.playState !== 'finished'; });
+    const hold = () => {
+      for (const a of opening()) {
+        try { if (!a.animationName || a.effect.target?.closest?.(`${BARS}, .m-art`)) a.finish(); else { a.pause(); a.currentTime = 0; } } catch {}
+      }
+    };
     addEventListener('load', async () => {
       await Promise.race([Promise.all(waits), pause(700)]);
-      settled();
+      // (the pictures you'd see straight away)
+      const seen = [...document.images].filter((i) => { const r = i.getBoundingClientRect(); return !i.complete && r.width && r.bottom > 0 && r.top < innerHeight; });
+      await Promise.race([Promise.all(seen.map((i) => new Promise((done) => { i.addEventListener('load', done, { once: true }); i.addEventListener('error', done, { once: true }); }))), pause(300)]);
+      hold();
       await Promise.race([new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))), pause(150)]);
-      settled();
+      hold();
       above.fluentioHost.show(me);
     });
+    // shown: everything rises in, quicker and closer together than when the site first opens, so there's never an empty page
+    addEventListener('fluence:shown', () => {
+      hold();
+      const moving = window.fluentio.moving();
+      for (const a of opening()) {
+        try {
+          if (!moving) { a.finish(); continue; }
+          const t = a.effect.getComputedTiming();
+          a.effect.updateTiming({ delay: Math.min(90, t.delay * .25), duration: Math.min(t.duration, 300) });
+          a.play();
+        } catch {}
+      }
+      if (moving) for (const kid of document.body.children) if (!kid.matches(`${BARS}, .sky, script`)) kid.animate({ opacity: [0, 1] }, { duration: 220 / speed(), delay: 40 / speed(), easing: 'ease-out', fill: 'backwards' });
+    });
+    addEventListener('fluence:settled', () => document.documentElement.classList.remove('arriving'));
     window.navigation?.addEventListener('navigate', (e) => {
       const url = e.destination.url;
       if (e.destination.sameDocument || !e.cancelable || e.downloadRequest != null || e.formData) return;
@@ -312,12 +347,15 @@
       show(frame) {
         if (frame !== next) return;   // (a page reloading itself, or one no longer wanted)
         next = null;
-        const was = showing();
-        if (was) was.remove();
-        else {
+        const was = showing(), moving = window.fluentio.moving();
+        let last = document, pill = null;
+        try { if (was) last = was.contentDocument; pill = last.querySelector('.spaces .pill')?.getBoundingClientRect(); } catch {}
+        if (was) {
+          was.removeAttribute('id');
+          try { was.contentWindow.dispatchEvent(new Event('fluence:gone')); } catch {}
+        } else {
           try { window.fluentioSong?.sleep?.(); } catch {}
           document.documentElement.style.overflow = 'hidden';
-          for (const kid of document.body.children) if (kid !== frame) kid.style.display = 'none';
           // Back or Forward: the frame goes along when it can, and otherwise the page comes in a frame of its own
           addEventListener('popstate', () => setTimeout(() => {
             const now = showing();
@@ -333,11 +371,23 @@
         try {
           history[frame.dataset.push ? 'pushState' : 'replaceState'](null, '', frame.contentWindow.location.href);
           document.title = frame.contentDocument.title;
-          frame.contentWindow.dispatchEvent(new Event('fluence:shown'));
+          frame.contentWindow.dispatchEvent(new CustomEvent('fluence:shown', { detail: { pill } }));
           frame.contentWindow.focus();
         } catch {
           if (frame.dataset.push) history.pushState(null, '', frame.dataset.url);
         }
+        // the last page: its bars go at once, as the new page has them, and the rest fades out under the new one
+        const kids = (() => { try { return [...last.body.children].filter((k) => k !== frame && !k.matches('iframe, .sky, script')); } catch { return []; } })();
+        const done = () => {
+          if (was) was.remove(); else for (const kid of document.body.children) if (kid !== frame && kid.tagName !== 'IFRAME') kid.style.display = 'none';
+          try { frame.contentWindow.dispatchEvent(new Event('fluence:settled')); } catch {}
+        };
+        if (!moving) return done();
+        for (const kid of kids) {
+          if (kid.matches(BARS)) kid.style.visibility = 'hidden';
+          else kid.animate({ opacity: [1, 0] }, { duration: 130 / speed(), easing: 'ease-out', fill: 'forwards' });
+        }
+        setTimeout(done, 150 / speed());
       },
     };
     window.navigation.addEventListener('navigate', (e) => {

@@ -540,6 +540,6 @@ if (nowWanted || place?.hash) history.replaceState(null, '', place?.hash || '#so
 render(true);
 if (place && lost) { history.replaceState(null, '', '#songs'); render(true); }
 else if (place) scrollTo(0, place.y || 0);
-tint();
+window.fluentio?.wait(tint());
 load();
 if (nowWanted) setTimeout(openNow, 300);

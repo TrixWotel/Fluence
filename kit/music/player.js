@@ -5,7 +5,7 @@
 // speakers lets pages move with the music.
 import * as gh from './github.js';
 import * as store from './store.js';
-import { el, svg, time, art, read, write, state, song, local, save, coverUrl, toast, styles, hash, events as libraryEvents } from './library.js';
+import { el, svg, time, art, read, write, state, song, local, save, coverUrl, toast, styles, hash, home, events as libraryEvents } from './library.js';
 
 const f = window.fluentio;
 const KEY = 'fluentio.music.player';
@@ -14,8 +14,7 @@ const ext = (path) => (path.match(/\.([a-z0-9]+)$/i)?.[1] || 'mp3').toLowerCase(
 export const events = new EventTarget();
 const tell = (what) => events.dispatchEvent(new Event(what));
 
-// where the song lives: this page, or the page this one is in a frame over
-const home = (() => { try { return window !== window.top && window.top.fluentioHost ? window.top : window; } catch { return window; } })();
+// the song lives on the page that stays open, which may be this one
 const first = !home.fluentioSong;
 if (first) { home.fluentioSong = { audio: new home.Audio() }; home.fluentioSong.audio.preload = 'auto'; }
 if (home === window) home.fluentioSong.sleep = sleep;
@@ -137,6 +136,7 @@ let asleep = false;
 function sleep() { keep(); asleep = true; deaf(); cancelAnimationFrame(raf); }
 addEventListener('pagehide', () => { if (asleep) return; keep(); if (home !== window) deaf(); });
 addEventListener('fluence:going', keep);
+addEventListener('fluence:gone', sleep);   // (the next page has taken over, and this one's fading out)
 // shown at last: what the page before did meanwhile counts
 addEventListener('fluence:shown', () => {
   const now = read(KEY, {});

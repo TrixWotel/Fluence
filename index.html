@@ -39,6 +39,7 @@
     .hero > * { animation: rise var(--t3) var(--ease) backwards; }
     .hello { margin: 0 0 4px; color: var(--text); font-size: clamp(1rem, 2.2vw, 1.15rem); font-weight: 650; letter-spacing: -0.01em; }
     .title-row { display: flex; flex-wrap: wrap; justify-content: var(--anchor); align-items: baseline; gap: 2px 14px; }
+    .title-row .logo { align-self: center; width: clamp(2.1rem, min(5.5vw, 6.6vh), 3rem); height: clamp(2.1rem, min(5.5vw, 6.6vh), 3rem); margin-right: -2px; filter: drop-shadow(0 4px 10px rgb(60 50 180 / .35)); }
     .name {
       margin: 0; width: fit-content; font-size: clamp(1.9rem, min(5vw, 6vh), 2.7rem); line-height: 1.08; font-weight: 800; letter-spacing: -0.04em;
       background: linear-gradient(100deg, var(--text) 0 38%, var(--accent) 48%, var(--accent-2) 56%, var(--text) 66% 100%) 0 center / 200% auto;
@@ -182,6 +183,7 @@
       const f = window.fluentio, s = f.settings, { el, svg, link } = f, $ = (id) => document.getElementById(id);
       document.title = s.name;
       $('name').textContent = s.name;
+      $('name').before(f.logo());
       $('tagline').textContent = s.tagline;
       // your visits (one counts after half an hour away, so a reload keeps the welcome's words), topics learned and best
       // scores in every test, by subject, and the newest best (a test like the ones in class, practice or a test)

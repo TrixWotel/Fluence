@@ -4,6 +4,8 @@
 import * as gh from './github.js';
 import * as store from './store.js';
 
+// the page that stays open while others come and go in frames over it (kit/look.js)
+export const home = (() => { try { return window !== window.top && window.top.fluentioHost ? window.top : window; } catch { return window; } })();
 const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 export { read, write };
@@ -107,26 +109,39 @@ addEventListener('storage', (e) => {
 });
 
 // ---------- covers: the song's own picture, or one made from its name ----------
-const covers = new Map();   // sha → object URL (or a promise of one)
+// Their addresses are kept by the page that stays open, so the next page has them at once and a picture never has to come
+// in after its page. The ones on this device get found in the background, ready for pages that show a lot of them.
+const covers = (home.fluentioCovers ??= new Map());   // sha → object URL
+const coming = new Map();                             // sha → a promise of one, on this page
+const keepCover = (sha, blob) => { const url = home.URL.createObjectURL(blob); covers.set(sha, url); return url; };
 export function coverUrl(s) {
   const sha = s?.coverSha;
   if (!sha) return Promise.resolve('');
-  if (!covers.has(sha)) covers.set(sha, (async () => {
+  if (covers.has(sha)) return Promise.resolve(covers.get(sha));
+  if (!coming.has(sha)) coming.set(sha, (async () => {
     let blob = await store.get(sha);
     if (!blob && state.conn) { try { blob = await gh.download(state.conn, sha); store.put(sha, blob); } catch { blob = null; } }
-    if (!blob) { covers.delete(sha); return ''; }
-    const url = URL.createObjectURL(blob);
-    covers.set(sha, url);
-    return url;
+    coming.delete(sha);
+    return blob ? keepCover(sha, blob) : '';
   })());
-  const c = covers.get(sha);
-  return typeof c === 'string' ? Promise.resolve(c) : c;
+  return coming.get(sha);
 }
+setTimeout(async () => {
+  for (const { coverSha: sha } of state.lib.songs) {
+    if (!sha || covers.has(sha)) continue;
+    const blob = await store.get(sha);
+    if (blob && !covers.has(sha)) keepCover(sha, blob);
+  }
+}, 300);
 export const shade = (seed) => { const h = hash(seed) % 360; return `linear-gradient(135deg, hsl(${h} 70% 58%), hsl(${(h + 48) % 360} 65% 48%))`; };
 export function art(s, { key = s?.album || s?.title || '', label = s?.album || s?.title || '', size = 44 } = {}) {
-  const box = el('div', { className: 'm-art', style: `--gen:${shade(key)};--s:${size}px` });
+  const known = s?.coverSha && covers.get(s.coverSha);
+  const box = el('div', { className: 'm-art', style: `--gen:${known ? 'transparent' : shade(key)};--s:${size}px` });
+  const picture = (url, fresh) => box.append(el('img', { src: url, alt: '', loading: 'lazy', decoding: 'sync', className: fresh ? 'fresh' : '' }));
+  if (known) { picture(known, false); return box; }
   const letters = el('span', { className: 'letters' }, label.replace(/[^\p{L}\p{N} ]/gu, '').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '♪');
   box.append(letters);
-  if (s?.coverSha) coverUrl(s).then((url) => { if (url) { letters.remove(); box.append(el('img', { src: url, alt: '', loading: 'lazy' })); } });
+  // (a page that's still out of sight waits for it: kit/look.js)
+  if (s?.coverSha) window.fluentio?.wait(coverUrl(s).then((url) => { if (url) { letters.remove(); picture(url, true); } }));
   return box;
 }
