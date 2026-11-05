@@ -115,7 +115,9 @@
     /* Question of the day: answer it right here */
     .tile.wide2 { grid-column: auto; }
     .qd-text { font-size: 1.06rem; }
-    .qd-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 6px; }
+    /* the columns are as wide as the longest answer (--w, measured below), so as many fit as can; one too long even for a whole row wraps */
+    .qd-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--w, 84px)), 1fr)); gap: 6px; }
+    .qd-choice span { min-width: 0; overflow-wrap: anywhere; }
     .qd-choice { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: calc(var(--radius) * .7); background: var(--bg); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color var(--t1), background var(--t2), transform var(--t2) var(--spring); }
     .qd-choice:hover:not(:disabled) { border-color: var(--c); transform: translateY(-1px); }
     .qd-choice:disabled { cursor: default; }
@@ -321,6 +323,12 @@
             }
             box.replaceChildren(head('spark', 'Question of the day'), el('p', { className: 'muted small' }, `${subject.emoji || ''} ${subject.title} · ${q.topic}`.trim()),
               html('p', 'qd-text', q.text), area, result, el('a', { className: 'qd-more', href: `${link(subject.link || folder + '/')}#${id}/${n}` }, 'See it with the working →'));
+            if (a.kind === 'choice') {
+              const kids = [...area.children];
+              kids.forEach((b) => { b.style.width = 'max-content'; });
+              area.style.setProperty('--w', `${Math.max(84, ...kids.map((b) => b.offsetWidth + 1))}px`);
+              kids.forEach((b) => { b.style.width = ''; });
+            }
             if (done) settle(done.given, done.right);
           }).catch(() => box.replaceChildren(head('spark', 'Question of the day'), el('p', { className: 'muted' }, 'Today’s question didn’t load. Try the subjects in Modules.'))));
           return box;
