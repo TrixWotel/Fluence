@@ -94,8 +94,7 @@ html.has-bar body { padding-top: var(--bar-h); }
   background: color-mix(in srgb, var(--bg) 76%, transparent); backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4);
   border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent); view-transition-name: topbar;
 }
-.topbar .brand { justify-self: start; display: inline-flex; align-items: center; gap: 9px; color: var(--text); text-decoration: none; font-weight: 700; font-size: 1.08rem; letter-spacing: -0.02em; white-space: nowrap; }
-.topbar .logo { width: 24px; height: 24px; flex: none; filter: drop-shadow(0 1px 2px rgb(0 0 0 / .25)); }
+.topbar .brand { justify-self: start; color: var(--text); text-decoration: none; font-weight: 700; font-size: 1.08rem; letter-spacing: -0.02em; white-space: nowrap; }
 .spaces { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--card) 55%, transparent); border: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
 .spaces a { position: relative; isolation: isolate; display: flex; align-items: center; padding: 5px 14px; border-radius: 999px; color: var(--muted); text-decoration: none; white-space: nowrap; transition: color var(--t1); }
 .spaces .i { display: none; width: 18px; height: 18px; }
@@ -117,7 +116,7 @@ html.has-bar body { padding-top: var(--bar-h); }
 .gear .i { transition: transform var(--t2) var(--spring); }
 .gear:hover .i { transform: rotate(90deg); }
 @media (max-width: 680px) { .find span, .find kbd { display: none; } .find { width: 34px; padding: 0; justify-content: center; } .spaces a { padding: 5px 10px; } }
-@media (max-width: 500px) { .topbar { grid-template-columns: auto 1fr auto; padding: 0 10px; } .topbar .brand span { display: none; } .spaces { justify-self: start; } }
+@media (max-width: 500px) { .topbar { grid-template-columns: 1fr auto; padding: 0 10px; } .topbar .brand { display: none; } .spaces { justify-self: start; } }
 /* (five spaces by name don't fit across a phone, so there each is its icon) */
 @media (max-width: 560px) { .spaces a { padding: 6px 11px; } .spaces .i { display: block; } .spaces .space-name { display: none; } }
 

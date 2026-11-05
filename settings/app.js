@@ -163,6 +163,12 @@ function look() {
         b.style.setProperty('--b', pair[1]);
         return b;
       }))),
+    (() => {
+      const now = el('span', { className: 'logo-now' }, f.logo(s.logoColor));
+      return set('Logo color', 'The icon on the browser’s tab, which changes as you pick.', now,
+        colorInput(s.logoColor || '#6a6cf4', (v) => { s.logoColor = v; save(); now.replaceChildren(f.logo(v)); }, 'Logo color'),
+        el('button', { type: 'button', className: 'btn', onclick: () => { s.logoColor = f.site.logoColor; save(); draw(); } }, 'Reset'));
+    })(),
     set('Font', '',
       el('div', { className: 'fonts' }, seg([['system', 'System', f.FONTS.system], ['rounded', 'Rounded', f.FONTS.rounded], ['serif', 'Serif', f.FONTS.serif], ['mono', 'Mono', f.FONTS.mono]], s.font, (v) => { s.font = v; save(); }, 'Font'))),
     (() => {
@@ -225,8 +231,23 @@ function home() {
     set('Text', 'The page stays in the middle of the window. This is where its words and buttons sit: along its left edge, in the middle, or along its right edge. Left and Right take what’s inside the tiles along too. Center leaves that on the left.',
       seg([['left', 'Left'], ['center', 'Center'], ['right', 'Right']], s.homeAlign || 'center', (v) => { s.homeAlign = v; save(); }, 'Where the home page’s text sits')),
     set('Tiles', 'Which show on the home page, and in what order.', tiles),
+    daysOff(),
     set('Quick buttons', 'The Quick tile’s buttons: a name, and where each goes.', quick,
       el('button', { type: 'button', className: 'btn', onclick: () => { s.quick.push({ title: 'New button', link: f.spacesOn ? 'notes/' : 'study/' }); save(); draw(); panels.querySelector('#home .quick-list li:last-child input')?.select(); } }, svg('plus'), 'Add a button')));
+}
+
+// your days off (settings.js has the list), and the calendar link that can bring them to Fluent's Calendar: only if you add it there
+function daysOff() {
+  const list = s.daysOff.filter((d) => d.name && d.from);
+  const day = (t) => new Date(`${t}T12:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return el('div', {},
+    set('Days off', 'Your days off, with the next holidays on the Today tile.', toggle(s.showDaysOff, (v) => { s.showDaysOff = v; save(); }, 'Days off on the Today tile')),
+    el('details', { className: 'more' }, el('summary', {}, 'The days off'),
+      el('ul', { className: 'days-off' }, list.map((d) => el('li', {}, `${d.emoji || '🏖️'} ${d.name}`, el('small', {}, d.to && d.to !== d.from ? `${day(d.from)} to ${day(d.to)}` : day(d.from)))))),
+    set('Fluent’s Calendar', 'Fluence and Fluent’s Calendar stay separate unless you connect them. To see these days off there too, add this link in Fluent’s Settings → Calendar → Other Calendars. Removing it there disconnects them.',
+      el('button', { type: 'button', className: 'btn', onclick: async () => {
+        try { await navigator.clipboard.writeText(f.link('days-off.ics')); toast('Copied. Now paste it in Fluent’s Settings'); } catch { toast(f.link('days-off.ics')); }
+      } }, svg('copy'), 'Copy the link')));
 }
 
 function names() {

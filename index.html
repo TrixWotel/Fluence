@@ -275,7 +275,8 @@
         today: () => {
           const d = new Date(now), start = new Date(d.getFullYear(), 0, 1), days = Math.round((midnight(now) - start) / 86400000) + 1;
           const of = new Date(d.getFullYear(), 1, 29).getMonth() === 1 ? 366 : 365, soon = el('ul', { className: 'list' });
-          welcomed.then(({ upcoming }) => soon.replaceChildren(...upcoming(d, 3).map((h) => el('li', {}, el('span', {}, `${h.emoji} ${h.name}`, el('small', {}, h.days === 0 ? 'today' : h.days === 1 ? 'tomorrow' : `in ${h.days} days`)))))).catch(() => {});
+          const when = (h) => { const n = h.days === 0 ? (h.left > 0 ? `through ${h.to.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'today') : h.days === 1 ? 'tomorrow' : `in ${h.days} days`; return h.off ? `off ${n}` : n; };
+          welcomed.then(({ upcoming }) => soon.replaceChildren(...upcoming(d, 3, s.showDaysOff ? s.daysOff : []).map((h) => el('li', {}, el('span', {}, `${h.emoji} ${h.name}`, el('small', {}, when(h))))))).catch(() => {});
           return tile('', 'var(--accent-2)', head('calendar', d.toLocaleDateString('en-US', { weekday: 'long' })),
             el('div', { className: 'date' }, el('b', {}, d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })), el('span', { className: 'muted small' }, `Day ${days} of ${of}`)),
             el('div', { className: 'meter', role: 'img', 'aria-label': `Day ${days} of ${of}` }, el('div', { style: `width:${Math.round((100 * days) / of)}%` })),

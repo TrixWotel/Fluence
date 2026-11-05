@@ -4,7 +4,7 @@
 // score, days in a row, how long you've been away, topics learned). The wording changes from visit to visit. welcome(facts) touches no page, so it can be tried for any day:
 //   facts = { now: Date, visits: { count, streak, away (whole days since the last visit, or null the first time) },
 //             last: { topic, href, at } or null, learned (topics learned in all), best: { test, text, at } or null }
-// and it returns { hello, line, link: { text, href } or null }. upcoming() lists the next few holidays.
+// and it returns { hello, line, link: { text, href } or null }. upcoming() lists the next few holidays and days off.
 const DAY = 86400000;
 const midnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const daysBetween = (a, b) => Math.round((midnight(b) - midnight(a)) / DAY);
@@ -120,11 +120,15 @@ export function welcome({ now = new Date(), visits = { count: 1, streak: 1, away
   const line = [dated, ...said].slice(0, said.length ? 2 : 1).join(' ');
   return { hello, line, link };
 }
-// the next few holidays from today (today's own counts, as 0 days): { name, emoji, days }, soonest first, for the home
-// page's Today tile
-export function upcoming(now = new Date(), count = 3) {
+// the next few holidays and your days off from today (today's own counts, as 0 days): { name, emoji, days }, soonest
+// first, for the home page's Today tile. A day off (settings.js's daysOff) also has off: true, its last day (to), and
+// how many days until then (left)
+export function upcoming(now = new Date(), count = 3, daysOff = []) {
   const y = now.getFullYear();
+  const day = (text) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text || ''); return m ? new Date(+m[1], m[2] - 1, +m[3]) : null; };
+  const off = daysOff.map((d) => ({ name: d.name, emoji: d.emoji || '🏖️', off: true, from: day(d.from), to: day(d.to || d.from) })).filter((h) => h.name && h.from && h.to)
+    .map((h) => ({ ...h, days: Math.max(0, daysBetween(now, h.from)), left: daysBetween(now, h.to) })).filter((h) => h.left >= 0);
   return [...holidays(y), ...holidays(y + 1)]
     .map((h) => ({ name: h.hello.replace(/^(Happy|Merry) /, '').replace(/!$/, ''), emoji: h.emoji, days: daysBetween(now, h.day) }))
-    .filter((h) => h.days >= 0).sort((a, b) => a.days - b.days).slice(0, count);
+    .filter((h) => h.days >= 0).concat(off).sort((a, b) => a.days - b.days).slice(0, count);
 }

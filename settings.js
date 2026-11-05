@@ -13,6 +13,7 @@ window.FLUENTIO_SETTINGS = {
   // the name at the top of the home page, and the line under it
   name: 'Fluence',
   tagline: 'Web stack workspace',
+  logoColor: '',           // the icon on the browser's tab: any color, or '' for the usual blue and violet
   greeting: true,          // the welcome on the home page: a greeting, and a line that changes with the day and what you’ve done
 
   // 'auto' follows the device's light or dark mode, 'light' or 'dark' always uses that one
@@ -75,6 +76,20 @@ window.FLUENTIO_SETTINGS = {
   homeLayout: 'auto',
   // where the home page's words and buttons sit: 'left', 'center' or 'right' (the page itself stays in the middle of the window)
   homeAlign: 'center',
+  // your days off, with the next holidays on the home page's Today tile: a name, an emoji, the first day and (if it's more
+  // than one) the last. days-off.ics, next to this file, is the same list as a calendar link: change both
+  showDaysOff: true,
+  daysOff: [
+    { name: 'All Souls’ Day', emoji: '🕯️', from: '2026-11-02' },
+    { name: 'Republic Proclamation Day', emoji: '🇧🇷', from: '2026-11-15' },
+    { name: 'Black Awareness Day', emoji: '✊', from: '2026-11-20' },
+    { name: 'Founding of São Paulo', emoji: '🏙️', from: '2027-01-25' },
+    { name: 'Carnival', emoji: '🎭', from: '2027-02-08', to: '2027-02-12' },
+    { name: 'Good Friday', emoji: '✝️', from: '2027-03-26' },
+    { name: 'Tiradentes', emoji: '🇧🇷', from: '2027-04-21' },
+    { name: 'Labor Day', emoji: '🛠️', from: '2027-05-01' },
+    { name: 'Corpus Christi', emoji: '⛪', from: '2027-05-27', to: '2027-05-28' },
+  ],
   // the buttons on the Quick tile (a link can also be a whole web address)
   quick: [
     { title: 'New note', link: 'notes/#new/note' },

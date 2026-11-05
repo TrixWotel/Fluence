@@ -47,7 +47,7 @@
     nav = el('nav', { className: 'spaces', 'aria-label': 'Spaces' });
     find = el('button', { type: 'button', className: 'find', onclick: () => openFind() }, svg('search'), el('span', {}, 'Search'), el('kbd'));
     drawNav();
-    const brand = el('a', { className: 'brand', href: f.link('./') }, f.logo(), el('span', { 'data-fill': 'name' }, f.settings.name));
+    const brand = el('a', { className: 'brand', href: f.link('./'), 'data-fill': 'name' }, f.settings.name);
     const gear = el('a', { className: 'gear' + (where() === 'settings' ? ' on' : ''), href: f.link('settings/'), title: 'Settings', 'aria-label': 'Settings' }, svg('settings'));
     document.body.prepend(el('header', { className: 'topbar' }, brand, nav, el('div', { className: 'tools' }, find, gear)));
     document.documentElement.classList.add('has-bar');
@@ -64,10 +64,12 @@
   };
   const toward = (a, b) => `translateX(${b.left - a.left}px) scaleX(${b.width / a.width})`;
   addEventListener('fluence:going', (e) => {
-    const i = nav ? spaces().findIndex((x) => x.id === where(e.detail)) : -1, to = nav?.children[i], from = nav?.querySelector('a.on'), pill = from?.querySelector('.pill');
+    const i = nav ? spaces().findIndex((x) => x.id === where(e.detail)) : -1, to = nav?.children[i], from = nav?.querySelector('a.on'), pill = nav?.querySelector('.pill');
     if (!to || !pill || to === from) return;
-    from.classList.remove('on'); to.classList.add('on');
-    slide(pill, ['none', toward(pill.getBoundingClientRect(), to.getBoundingClientRect())]);
+    from?.classList.remove('on'); to.classList.add('on');
+    // (from wherever it's got to, if you've clicked again on its way: it stays in the name it started in)
+    const own = pill.parentElement.getBoundingClientRect();
+    slide(pill, [toward(own, pill.getBoundingClientRect()), toward(own, to.getBoundingClientRect())]);
   });
   addEventListener('fluence:shown', (e) => {
     const pill = nav?.querySelector('.pill'), was = e.detail?.pill;

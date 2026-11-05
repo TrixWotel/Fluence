@@ -10,7 +10,7 @@
   const above = (() => { try { return window !== window.top && window.top.fluentioHost ? window.top : null; } catch { return null; } })();   // the page holding this one in a frame (below)
   const waits = [];                                  // what a page is still bringing in, that it wants to show when it's shown
   const DEFAULTS = {
-    name: 'Fluence', tagline: 'Web stack workspace', greeting: true, theme: 'auto',
+    name: 'Fluence', tagline: 'Web stack workspace', greeting: true, logoColor: '', theme: 'auto',
     colors: {
       light: { accent: '#2f6fed', accent2: '#9b5cf6', background: '#f6f7f9', card: '#ffffff', text: '#1b1f24', muted: '#5b6470', line: '#e3e6ea', right: '#2da44e', wrong: '#e5534b', second: '#e8743b' },
       dark: { accent: '#6c9bff', accent2: '#b48cff', background: '#0f1115', card: '#171a21', text: '#e8eaee', muted: '#9aa3ae', line: '#262b35', right: '#3fb950', wrong: '#f85149', second: '#f0a04b' },
@@ -22,7 +22,7 @@
     font: 'system', corners: 14, style: 'glow', textSize: 16, animations: true, speed: 1, floatingColors: true,
     animationsIn: { data: true, code: true, notes: true },
     keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', music: 'Ctrl+3', data: 'Ctrl+4', code: 'Ctrl+5', notes: 'Ctrl+6' },
-    home: ['workspace', 'music', 'study', 'progress', 'today', 'question', 'data', 'quick'], homeLayout: 'auto', homeAlign: 'center',
+    home: ['workspace', 'music', 'study', 'progress', 'today', 'question', 'data', 'quick'], homeLayout: 'auto', homeAlign: 'center', showDaysOff: true, daysOff: [{ name: '', emoji: '', from: '', to: '' }],
     quick: [
       { title: 'New note', link: 'notes/#new/note' },
       { title: 'New sheet', link: 'data/#new/table' },
@@ -144,7 +144,13 @@
       if (lap > 0) i.style.animationDelay = `${-((Date.now() / 1000) % lap)}s`;
     }
   };
-  const changed = () => { window.fluentio.settings = s; apply(); fill(); sky(); dispatchEvent(new CustomEvent('fluentio:settings')); };
+  const changed = () => {
+    window.fluentio.settings = s; apply(); fill(); sky();
+    // (the tab's icon is the whole window's: a page in a frame reaches it through the storage event, on the page holding it)
+    const icon = window === window.top && document.querySelector('link[rel="icon"]');
+    if (icon && icon.getAttribute('href') !== tabIcon()) icon.setAttribute('href', tabIcon());
+    dispatchEvent(new CustomEvent('fluentio:settings'));
+  };
 
   // building things: el('a', { className, href, 'aria-label': … }, …children), and an icon as an element
   const el = (tag, props = {}, ...kids) => {
@@ -236,12 +242,14 @@
   // where each kind of thing (and of folder) lives: notes in notes/, docs and sheets in data/, code files in code/
   const SPACES = { note: 'notes', doc: 'data', table: 'data', code: 'code', notes: 'notes', database: 'data' };
   const spaceOf = (x) => { const k = x.kind ?? x.tab; return typeof k === 'string' && Object.hasOwn(SPACES, k) ? SPACES[k] : 'notes'; };
-  // the logo: an app icon, a soft gradient and a sweeping white F (one drawing, for the bar, the home page and the tab's icon)
+  // the logo: an app icon, a soft gradient (blue to violet, or your color from Settings) and a sweeping F. It's the browser tab's icon, and no page shows it but Settings, beside its color
   let logos = 0;
-  const logoMarkup = (shape = 'M100.0 50.0 99.8 72.1 99.3 79.1 98.4 84.0 97.2 87.9 95.6 91.0 93.5 93.5 91.0 95.6 87.9 97.2 84.0 98.4 79.1 99.3 72.1 99.8 50.0 100.0 27.9 99.8 20.9 99.3 16.0 98.4 12.1 97.2 9.0 95.6 6.5 93.5 4.4 91.0 2.8 87.9 1.6 84.0 0.7 79.1 0.2 72.1 0.0 50.0 0.2 27.9 0.7 20.9 1.6 16.0 2.8 12.1 4.4 9.0 6.5 6.5 9.0 4.4 12.1 2.8 16.0 1.6 20.9 0.7 27.9 0.2 50.0 0.0 72.1 0.2 79.1 0.7 84.0 1.6 87.9 2.8 91.0 4.4 93.5 6.5 95.6 9.0 97.2 12.1 98.4 16.0 99.3 20.9 99.8 27.9Z') => { const id = `fl${++logos}`; return `<svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="${id}a" x1="22" y1="0" x2="78" y2="100" gradientUnits="userSpaceOnUse"><stop stop-color="#86a4ff"/><stop offset=".55" stop-color="#6a6cf4"/><stop offset="1" stop-color="#9d5ff0"/></linearGradient><linearGradient id="${id}b" x1="50" y1="0" x2="50" y2="58" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><path d="${shape}" fill="url(#${id}a)"/><path d="${shape}" fill="url(#${id}b)"/><g fill="none" stroke-width="11" stroke-linecap="round"><g stroke="#231a7a" stroke-opacity=".28" transform="translate(0 2.6)"><path d="M34 77V47c0-15 11-23 36-23"/><path d="M34 68c0-13 9-20 28-20"/></g><g stroke="#fff"><path d="M34 77V47c0-15 11-23 36-23"/><path d="M34 68c0-13 9-20 28-20"/></g></g></svg>`; };
-  const logo = () => { const t = document.createElement('template'); t.innerHTML = logoMarkup(); return t.content.firstChild; };
+  const shape = 'M100.0 50.0 99.8 72.1 99.3 79.1 98.4 84.0 97.2 87.9 95.6 91.0 93.5 93.5 91.0 95.6 87.9 97.2 84.0 98.4 79.1 99.3 72.1 99.8 50.0 100.0 27.9 99.8 20.9 99.3 16.0 98.4 12.1 97.2 9.0 95.6 6.5 93.5 4.4 91.0 2.8 87.9 1.6 84.0 0.7 79.1 0.2 72.1 0.0 50.0 0.2 27.9 0.7 20.9 1.6 16.0 2.8 12.1 4.4 9.0 6.5 6.5 9.0 4.4 12.1 2.8 16.0 1.6 20.9 0.7 27.9 0.2 50.0 0.0 72.1 0.2 79.1 0.7 84.0 1.6 87.9 2.8 91.0 4.4 93.5 6.5 95.6 9.0 97.2 12.1 98.4 16.0 99.3 20.9 99.8 27.9Z';
+  const logoMarkup = (color = s.logoColor, id = 'fl') => { const tint = color && CSS.supports('color', color) ? color : '', pale = tint && light(tint); return `<svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="${id}a" x1="22" y1="0" x2="78" y2="100" gradientUnits="userSpaceOnUse">${tint ? `<stop stop-color="${tint}"/>` : '<stop stop-color="#86a4ff"/><stop offset=".55" stop-color="#6a6cf4"/><stop offset="1" stop-color="#9d5ff0"/>'}</linearGradient><linearGradient id="${id}b" x1="50" y1="0" x2="50" y2="58" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" stop-opacity=".24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><linearGradient id="${id}c" x1="50" y1="40" x2="50" y2="100" gradientUnits="userSpaceOnUse"><stop stop-opacity="0"/><stop offset="1" stop-opacity=".2"/></linearGradient></defs><path d="${shape}" fill="url(#${id}a)"/><path d="${shape}" fill="url(#${id}b)"/>${tint ? `<path d="${shape}" fill="url(#${id}c)"/>` : ''}<g fill="none" stroke-width="11" stroke-linecap="round"><g stroke="${tint ? (pale ? '#fff' : '#000') : '#231a7a'}" stroke-opacity=".28" transform="translate(0 2.6)"><path d="M34 77V47c0-15 11-23 36-23"/><path d="M34 68c0-13 9-20 28-20"/></g><g stroke="${pale ? '#1b1f24' : '#fff'}"><path d="M34 77V47c0-15 11-23 36-23"/><path d="M34 68c0-13 9-20 28-20"/></g></g></svg>`; };
+  const logo = (color) => { const t = document.createElement('template'); t.innerHTML = logoMarkup(color, `fl${++logos}`); return t.content.firstChild; };
+  const tabIcon = () => `data:image/svg+xml,${encodeURIComponent(logoMarkup())}`;
   if (window === window.top && document.head) {
-    document.head.append(Object.assign(document.createElement('link'), { rel: 'icon', type: 'image/svg+xml', href: `data:image/svg+xml,${encodeURIComponent(logoMarkup())}` }),
+    document.head.append(Object.assign(document.createElement('link'), { rel: 'icon', type: 'image/svg+xml', href: tabIcon() }),
       Object.assign(document.createElement('link'), { rel: 'apple-touch-icon', href: new URL('kit/logo-180.png', root).href }));
   }
   window.fluentio = {
@@ -280,7 +288,9 @@
   const BARS = '.topbar, #music-bar', speed = (doc = document) => parseFloat(getComputedStyle(doc.documentElement).getPropertyValue('--speed')) || 1;
   if (above) {
     const me = window.frameElement, pause = (ms) => new Promise((done) => setTimeout(done, ms));
-    document.documentElement.classList.add('arriving');
+    // (a page reloading itself in its frame is showing already, so nothing waits to be shown)
+    const showing = me?.id === 'page-frame';
+    if (!showing) document.documentElement.classList.add('arriving');
     // the address and the title are the whole window's, once this page is the one showing
     const tell = () => { if (me?.id !== 'page-frame') return; try { above.history.replaceState(null, '', location.href); if (document.title) above.document.title = document.title; } catch {} };
     for (const name of ['pushState', 'replaceState']) { const real = history[name]; history[name] = function (...args) { const out = real.apply(this, args); tell(); return out; }; }
@@ -294,6 +304,7 @@
       }
     };
     addEventListener('load', async () => {
+      if (showing) return;
       await Promise.race([Promise.all(waits), pause(700)]);
       // (the pictures you'd see straight away)
       const seen = [...document.images].filter((i) => { const r = i.getBoundingClientRect(); return !i.complete && r.width && r.bottom > 0 && r.top < innerHeight; });
@@ -323,6 +334,8 @@
       if (e.destination.sameDocument || !e.cancelable || e.downloadRequest != null || e.formData) return;
       // leaving the site takes the whole window
       if (!url.startsWith(root)) { e.preventDefault(); above.location.href = url; return; }
+      // the page you're on, clicked: you're here already, and if another was on its way, you've changed your mind
+      if (e.navigationType === 'replace' && url === location.href) { e.preventDefault(); going(url); above.fluentioHost.stay?.(); return; }
       if (e.navigationType !== 'push' || !pagePath(url)) return;
       e.preventDefault();
       going(url);
@@ -332,6 +345,7 @@
     let next = null;
     const showing = () => document.getElementById('page-frame');
     const host = window.fluentioHost = {
+      stay() { next?.remove(); next = null; },
       open(url, push = true) {
         if (next?.dataset.url === url) return;
         next?.remove();
@@ -393,7 +407,9 @@
     };
     window.navigation.addEventListener('navigate', (e) => {
       const url = e.destination.url;
-      if (e.destination.sameDocument || !e.cancelable || e.downloadRequest != null || e.formData || e.navigationType !== 'push' || !pagePath(url)) return;
+      if (e.destination.sameDocument || !e.cancelable || e.downloadRequest != null || e.formData) return;
+      if (e.navigationType === 'replace' && url === location.href) { e.preventDefault(); going(url); host.stay(); return; }
+      if (e.navigationType !== 'push' || !pagePath(url)) return;
       e.preventDefault();
       going(url);
       host.open(url);
