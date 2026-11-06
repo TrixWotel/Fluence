@@ -302,6 +302,8 @@ async function theirs(id, state) {
   if (opened) setTimeout(() => api.updateScene({ appState: { openMenu: null } }), 60);
 }
 const doneWriting = () => document.querySelector('.excalidraw-wysiwyg')?.blur();
+// (Excalidraw ignores a paste or a copy unless it has the focus, so it gets it whenever nothing else on the page wants it)
+const toBoard = () => { if (!document.activeElement || document.activeElement === document.body) document.querySelector('.excalidraw')?.focus({ preventScroll: true }); };
 let now = {}, chips = {}, dots = [];       // (what's selected or next: its style, for the buttons that go round)
 function drawTools() {
   const wanted = Array.isArray(f.settings.boardTools) ? f.settings.boardTools : USUAL_TOOLS;
@@ -334,7 +336,7 @@ function makeTools() {
   chips.dash.innerHTML = path(ICON.dashed);
   tray.replaceChildren(...dots, el('span', { className: 'st-gap' }), ...Object.values(chips));
   // (a click on these leaves the keyboard with the board: a button holding on to it would go off again at the next Space)
-  for (const box of [tools, tray]) box.addEventListener('mousedown', (e) => { e.preventDefault(); window.focus(); });
+  for (const box of [tools, tray]) box.addEventListener('mousedown', (e) => { e.preventDefault(); window.focus(); toBoard(); });
   drawTools();
   showFull();
 }
@@ -435,6 +437,8 @@ async function start() {
   const scheme = () => { document.documentElement.classList.toggle('st-dark', dark()); selectionColor(); };
   scheme();
   makeTools();
+  toBoard();
+  addEventListener('focus', toBoard);
   setTimeout(doWhatsAsked, 150);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { scheme(); render(); });
   // Settings changed (in another tab, or just now), or a font arrived late
