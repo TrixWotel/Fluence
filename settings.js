@@ -73,7 +73,8 @@ window.FLUENTIO_SETTINGS = {
   // which tiles the home page shows (it fits one screen, so three of them, with the rest a click away): 'auto' picks them
   // by what you've been doing and the time of day, or always 'classic' (the tiles above, in their order), 'study',
   // 'music' or 'calm'
-  homeLayout: 'auto',
+  // ('assistant' has no tiles until you ask: it says what it notices, and offers what would help)
+  homeLayout: 'assistant',
   // where the home page's words and buttons sit: 'left', 'center' or 'right' (the page itself stays in the middle of the window)
   homeAlign: 'center',
   // your days off, with the next holidays on the home page's Today tile: a name, an emoji, the first day and (if it's more

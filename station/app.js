@@ -55,7 +55,7 @@ async function listing(s) {
 }
 
 // ---------- the board ----------
-let ex = null, api = null, seen = -1, dirty = false, pushing = null, again = false, timer = 0, firstChange = 0, lastHead = '', sentFiles = new Set(), library = null, libraryDirty = false, view = {}, localTimer = 0;
+let ex = null, api = null, seen = -1, dirty = false, pushing = null, again = false, timer = 0, firstChange = 0, lastHead = '', sentFiles = new Set(), library = null, remoteLibrary = null, libraryDirty = false, view = {}, localTimer = 0;
 const VIEW = ['scrollX', 'scrollY', 'zoom'];
 const pickView = (a) => Object.fromEntries(VIEW.filter((k) => a[k] !== undefined).map((k) => [k, a[k]]));
 const sceneText = (elements) => JSON.stringify({ type: 'excalidraw', version: 2, source: location.origin, elements, appState: view, files: {} }, null, 1);
@@ -130,16 +130,19 @@ function push() {
 }
 // what's on GitHub, into the board
 async function take(s, there) {
+  let remote = [];
   if (there.files.has(SCENE)) {
     const doc = await blob(s, there.files.get(SCENE));
     if (Array.isArray(doc?.elements)) {
       const elements = fit(merged(doc.elements));
       api.updateScene({ elements, captureUpdate: ex.CaptureUpdateAction?.NEVER });
       seen = ex.getSceneVersion(elements) + Object.keys(api.getFiles()).length;
+      remote = doc.elements;
     }
   }
   await bringFiles(s, there);
   lastHead = there.head;
+  return remote;
 }
 // the pictures on the board that aren't here yet
 async function bringFiles(s, there) {
@@ -307,11 +310,12 @@ const toBoard = () => { if (!document.activeElement || document.activeElement ==
 let now = {}, chips = {}, dots = [];       // (what's selected or next: its style, for the buttons that go round)
 function drawTools() {
   const wanted = Array.isArray(f.settings.boardTools) ? f.settings.boardTools : USUAL_TOOLS;
-  const button = ([type, title]) => Object.assign(iconButton(type, title, () => { doneWriting(); api.setActiveTool({ type }); }), { name: type });
+  const button = ([type, title]) => Object.assign(iconButton(type, title, () => { doneWriting(); api?.setActiveTool({ type }); }), { name: type });
   const gap = () => el('span', { className: 'st-gap' }), mine = TOOLS.filter(([type]) => wanted.includes(type)).map(button);
   // (a keyboard has its own undo and redo: only a touch screen needs buttons for them)
   const touch = matchMedia('(pointer: coarse)').matches ? [gap(), iconButton('undo', 'Undo', () => { doneWriting(); pressZ(false); }), iconButton('redo', 'Redo', () => { doneWriting(); pressZ(true); })] : [];
   tools.replaceChildren(button(['selection', 'Select (V)']), ...(mine.length ? [gap(), ...mine] : []), ...touch);
+  if (api) paintTools(api.getAppState()); else tools.firstChild.classList.add('on');
 }
 // all of Excalidraw's own tools in place of these, when Settings says so
 function showFull() {
@@ -335,9 +339,6 @@ function makeTools() {
   chips.fill.innerHTML = path(ICON.fill);
   chips.dash.innerHTML = path(ICON.dashed);
   tray.replaceChildren(...dots, el('span', { className: 'st-gap' }), ...Object.values(chips));
-  // (a click on these leaves the keyboard with the board: a button holding on to it would go off again at the next Space)
-  for (const box of [tools, tray]) box.addEventListener('mousedown', (e) => { e.preventDefault(); window.focus(); toBoard(); });
-  drawTools();
   showFull();
 }
 // what Settings' buttons for the board ask for: they bring you here to do it
@@ -394,31 +395,34 @@ function paintTools(app) {
 addEventListener('keydown', (e) => { if (f.siteKey?.(e)) e.stopImmediatePropagation(); }, true);
 // (Settings can turn off the menu a right-click brings up on the board)
 addEventListener('contextmenu', (e) => { if (f.settings.boardMenu === false && board.contains(e.target)) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+// GitHub's copy, behind the one that's already open: what's new there comes in, and what didn't get there last time goes up
+async function catchUp(s, here) {
+  const there = await listing(s), moved = there.head && there.head !== lastHead;
+  let remote = [];
+  if (moved) {
+    if (there.files.has(LIBRARY)) {
+      const items = (await blob(s, there.files.get(LIBRARY)))?.libraryItems;
+      if (items) { remoteLibrary = items; library = items; await api.updateLibrary({ libraryItems: items }); }
+    }
+    remote = await take(s, there);
+  } else await bringFiles(s, there).catch(() => {});
+  const mine = api.getSceneElementsIncludingDeleted();
+  const ahead = moved ? mine.some((e) => { const r = remote.find((x) => x.id === e.id); return !r || r.version < e.version; }) : !there.files.has(SCENE) && mine.length > 0;
+  if (here?.pending || ahead) dirty = true; else say('Saved', 'done');
+}
 async function start() {
   say('Opening the board…', 'busy');
-  const [lib, React, { createRoot }] = await Promise.all([import(LIBRARY_URL), import('react'), import('react-dom/client')]);
+  // this browser's copy comes first, so the board opens straight away: GitHub's comes in behind it
+  const allPictures = store('readonly', (st) => st.getAllKeys()).then(async (keys) => { const out = {}; for (const k of keys) if (String(k).startsWith('file:')) { const file = await get(k); out[file.id] = file; } return out; }).catch(() => ({}));
+  const [lib, React, { createRoot }, here, savedLibrary, pictures] = await Promise.all([import(LIBRARY_URL), import('react'), import('react-dom/client'), get('scene').catch(() => null), get('library').catch(() => null), allPictures]);
   ex = lib;
   let font = wantedFont();
   await useFont(font);
-  const here = await get('scene').catch(() => null), s = connection();
+  const s = connection();
   view = here?.view || {};
-  // what's on GitHub, to start from along with what's here
-  let there = null, remote = [], remoteLibrary = null, problem = '';
-  if (s) {
-    try {
-      there = await listing(s);
-      if (there.files.has(SCENE)) remote = (await blob(s, there.files.get(SCENE)))?.elements || [];
-      if (there.files.has(LIBRARY)) remoteLibrary = (await blob(s, there.files.get(LIBRARY)))?.libraryItems || null;
-    } catch (e) { problem = explain(e, s); }
-  }
-  // (each element's newer version: what's here may be ahead, if a page closed before it could save)
-  const newest = new Map();
-  for (const e of [...remote, ...(here?.elements || [])]) { const was = newest.get(e.id); if (!was || e.version > was.version || (e.version === was.version && e.versionNonce < was.versionNonce)) newest.set(e.id, e); }
-  const elements = fit(ex.restoreElements([...newest.values()].sort((a, b) => (String(a.index) < String(b.index) ? -1 : String(a.index) > String(b.index) ? 1 : 0)), null));
-  library = remoteLibrary || (await get('library').catch(() => null)) || [];
-  const pictures = {};
-  await store('readonly', (st) => st.getAllKeys()).then(async (keys) => { for (const k of keys) if (String(k).startsWith('file:')) { const file = await get(k); pictures[file.id] = file; } }).catch(() => {});
-  lastHead = there?.head || '';
+  const elements = fit(ex.restoreElements(here?.elements || [], null));
+  library = savedLibrary || [];
+  lastHead = here?.head || '';
   let render = null;
   await new Promise((ready) => {
     const root = createRoot(board), h = React.createElement, { MainMenu } = ex;
@@ -445,12 +449,8 @@ async function start() {
   addEventListener('fluentio:settings', async () => { scheme(); render(); drawTools(); showFull(); if (wantedFont() !== font) { font = wantedFont(); await useFont(font); refit(true); } });
   document.fonts.addEventListener('loadingdone', () => refit());
   seen = ex.getSceneVersion(api.getSceneElementsIncludingDeleted()) + Object.keys(api.getFiles()).length;
-  if (s && there) { await bringFiles(s, there).catch(() => {}); }
-  // anything that didn't reach GitHub last time, or that this copy has and GitHub doesn't, goes up now
-  const behind = !!s && !problem && (here?.pending || elements.some((e) => { const r = remote.find((x) => x.id === e.id); return !r || r.version < e.version; }));
-  if (problem) say(`Saved in this browser. ${problem}`, 'bad');
-  else if (!s) say('Saved in this browser.', '', ['Connect GitHub', '../music/']);
-  else if (behind) { dirty = true; firstChange = Date.now(); schedule(); } else say('Saved', 'done');
+  if (!s) say('Saved in this browser.', '', ['Connect GitHub', '../music/']);
+  else pushing = catchUp(s, here).catch((e) => { say(`Saved in this browser. ${explain(e, s)}`, 'bad'); }).finally(() => { pushing = null; again = false; if (dirty) { firstChange ||= Date.now(); schedule(); } });
   // a page going keeps what it has, and tries to send it; if that doesn't finish, the next page sends it
   const leaving = () => { saveHere(); if (dirty && connection()) push(); };
   addEventListener('pagehide', leaving);
@@ -459,9 +459,13 @@ async function start() {
   addEventListener('focus', look);
   setInterval(look, 60000);
 }
-// (the site waits a moment for the board before it changes pages, so the board can appear with the rest of the page)
-f.wait(start().catch((e) => {
+// the toolbar is here from the first moment, so the page is whole as soon as it shows, and the board fades in behind it
+drawTools();
+tools.hidden = !!f.settings.boardFull;
+// (a click on these leaves the keyboard with the board: a button holding on to it would go off again at the next Space)
+for (const box of [tools, tray]) box.addEventListener('mousedown', (e) => { e.preventDefault(); window.focus(); toBoard(); });
+start().catch((e) => {
   console.error(e);
   say('The board couldn’t open. It needs the internet to start.', 'bad');
   board.replaceChildren(el('div', { className: 'st-failed' }, el('p', {}, 'Your drawings are safe. The board itself comes from the web, and it didn’t load.'), el('button', { type: 'button', className: 'btn primary', onclick: () => location.reload() }, 'Try again')));
-}));
+});

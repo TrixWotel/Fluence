@@ -194,7 +194,7 @@ html:not(.music-playing) .m-bars i { animation-play-state: paused; }
 .m-tile-now b { font-size: 1.12rem; }
 .m-tile-now .t > span { color: var(--muted); font-size: .92rem; }
 .m-tile-now .m-seek { margin-top: 6px; grid-template-columns: 36px 1fr 36px; }
-.m-mini { list-style: none; margin: 0 -8px; padding: 0; display: grid; gap: 2px; }
+.m-mini { list-style: none; margin: 0 -8px; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
 .m-mini button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border: 0; border-radius: calc(var(--radius) * .6); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: background var(--t1), transform var(--t2) var(--ease); }
 .m-mini button:hover { background: color-mix(in srgb, var(--c, var(--accent)) 10%, transparent); transform: translateX(3px); }
 .m-mini .t { min-width: 0; flex: 1; }

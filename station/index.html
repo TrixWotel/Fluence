@@ -10,6 +10,8 @@
   <script src="../settings.js"></script>
   <script src="../kit/look.js"></script>
   <script src="../kit/bar.js"></script>
+  <link rel="modulepreload" href="app.js">
+  <link rel="modulepreload" href="../kit/music/github.js">
   <link rel="stylesheet" href="../kit/site.css">
   <link rel="stylesheet" href="https://esm.sh/@excalidraw/excalidraw@0.18.1/dist/prod/index.css">
   <style>
@@ -24,7 +26,7 @@
     /* the board appears like any other page: your drawings fade in (a fade only: Excalidraw measures where the board is as it
        opens, and a board on the move would throw off every click), the toolbar rises with its tools one after another, and the
        styles rise each time they show */
-    #board .excalidraw { animation: fade-in var(--t3) var(--ease) backwards; }
+    #board .excalidraw { animation: fade-in var(--t2) var(--ease) backwards; }
     @keyframes st-rise { from { opacity: 0; transform: translateX(-50%) translateY(12px); } }
     .st-bar { animation: st-rise var(--t3) var(--ease) backwards; }
     .st-tray { animation: st-rise var(--t2) var(--ease) backwards; }

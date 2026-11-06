@@ -22,7 +22,7 @@
     font: 'system', corners: 14, style: 'glow', textSize: 16, animations: true, speed: 1, floatingColors: true,
     animationsIn: { data: true, code: true, notes: true },
     keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', station: 'Ctrl+3', music: 'Ctrl+4', data: 'Ctrl+5', code: 'Ctrl+6', notes: 'Ctrl+7' },
-    home: ['workspace', 'music', 'study', 'progress', 'today', 'question', 'data', 'quick'], homeLayout: 'auto', homeAlign: 'center', showDaysOff: true, daysOff: [{ name: '', emoji: '', from: '', to: '' }],
+    home: ['workspace', 'music', 'study', 'progress', 'today', 'question', 'data', 'quick'], homeLayout: 'assistant', homeAlign: 'center', showDaysOff: true, daysOff: [{ name: '', emoji: '', from: '', to: '' }],
     quick: [
       { title: 'New note', link: 'notes/#new/note' },
       { title: 'New sheet', link: 'data/#new/table' },
@@ -309,17 +309,29 @@
         try { if (!a.animationName || a.effect.target?.closest?.(`${BARS}, .m-art`)) a.finish(); else { a.pause(); a.currentTime = 0; } } catch {}
       }
     };
-    addEventListener('load', async () => {
-      if (showing) return;
-      await Promise.race([Promise.all(waits), pause(700)]);
-      // (the pictures you'd see straight away)
-      const seen = [...document.images].filter((i) => { const r = i.getBoundingClientRect(); return !i.complete && r.width && r.bottom > 0 && r.top < innerHeight; });
-      await Promise.race([Promise.all(seen.map((i) => new Promise((done) => { i.addEventListener('load', done, { once: true }); i.addEventListener('error', done, { once: true }); }))), pause(300)]);
+    // the page starts showing soon after the click, whatever it's still bringing in: a change of page shouldn't feel like
+    // loading, and what isn't here by then rises in as it comes
+    const SOON = 150, began = performance.now(), soon = () => pause(Math.max(0, SOON - (performance.now() - began)));
+    let told = false;
+    const ready = async () => {
+      if (told || showing) return;
+      told = true;
       hold();
       await Promise.race([new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))), pause(150)]);
       hold();
       above.fluentioHost.show(me);
+    };
+    addEventListener('load', async () => {
+      if (showing) return;
+      await Promise.race([Promise.all(waits), soon()]);
+      // (the pictures you'd see straight away)
+      const seen = [...document.images].filter((i) => { const r = i.getBoundingClientRect(); return !i.complete && r.width && r.bottom > 0 && r.top < innerHeight; });
+      await Promise.race([Promise.all(seen.map((i) => new Promise((done) => { i.addEventListener('load', done, { once: true }); i.addEventListener('error', done, { once: true }); }))), soon()]);
+      ready();
     });
+    // (code that's slow to arrive doesn't hold it up, once there's a bar to show with it)
+    const tooLong = () => { if (told || showing) return; if (document.querySelector(BARS)) ready(); else setTimeout(tooLong, 40); };
+    setTimeout(tooLong, SOON);
     // shown: everything rises in, quicker and closer together than when the site first opens, so there's never an empty page
     addEventListener('fluence:shown', () => {
       hold();

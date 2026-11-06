@@ -212,8 +212,8 @@ export function examPaper({ app, exam, n, key, store, back, name, lessonLink, ti
         el('p', { className: 'muted' }, `${pct}%. ${draft.final.best ? 'A new best! ' : best ? `Your best: ${best.text}. ` : ''}It took ${clockText(draft.spent)}.`),
         el('p', { className: 'muted tally' }, t.byQ.map(([g, o], i) => `Question ${i + 1}: ${g} of ${o}`).join(' · ')),
         el('div', { className: 'start' }, el('a', { className: 'btn primary', href: again() }, 'Take another test'), el('a', { className: 'btn', href: back }, name)),
-        topics.length ? el('div', { className: 'work-on' }, el('h3', {}, 'What to work on'),
-          el('ul', { className: 'kinds' }, ...topics.map((tp) => el('li', {}, lessonLink(tp) ? el('a', { href: lessonLink(tp) }, tp) : tp)))) : null);
+        ...(topics.length ? [el('div', { className: 'work-on' }, el('h3', {}, 'What to work on'),
+          el('ul', { className: 'kinds' }, ...topics.map((tp) => el('li', {}, lessonLink(tp) ? el('a', { href: lessonLink(tp) }, tp) : tp))))] : []));
     } else {
       summary.replaceChildren(
         el('p', { className: 'score' }, `${t.score} / ${t.of}`),

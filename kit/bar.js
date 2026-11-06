@@ -45,6 +45,22 @@
   };
   f.bar = () => {
     if (!document.body || document.querySelector('body > .topbar')) return;
+    // where you've been and how long you've been at it, for the home page's assistant ('fluentio:', so it stays in this browser
+    // and isn't saved with your progress): once a page is showing, and each minute while you're using it
+    const mark = () => {
+      try {
+        const t = Date.now(), here = location.pathname.slice(new URL(f.root).pathname.length).split('/')[0], s = !here || here.endsWith('.html') ? 'home' : here, was = f.read('fluentio:trail') || {}, log = Array.isArray(was.log) ? was.log : [], end = log.at(-1);
+        if (end?.s === s && t - (end.e || end.t) < 5 * 60000) end.e = t; else log.push({ s, t, e: t });
+        f.write('fluentio:trail', { log: log.slice(-80), seen: { ...was.seen, [s]: t } });
+      } catch {}
+    };
+    if (window.frameElement) addEventListener('fluence:shown', mark, { once: true }); else mark();
+    let used = Date.now();
+    for (const type of ['pointerdown', 'keydown', 'wheel']) addEventListener(type, () => { used = Date.now(); }, { capture: true, passive: true });
+    setInterval(() => {
+      const inCharge = window.frameElement ? window.frameElement.id === 'page-frame' : !document.getElementById('page-frame');
+      if (inCharge && !document.hidden && Date.now() - used < 5 * 60000) mark();
+    }, 60000);
     nav = el('nav', { className: 'spaces', 'aria-label': 'Spaces' });
     find = el('button', { type: 'button', className: 'find', onclick: () => openFind() }, svg('search'), el('span', {}, 'Search'), el('kbd'));
     drawNav();
@@ -53,7 +69,11 @@
     document.body.prepend(el('header', { className: 'topbar' }, brand, nav, el('div', { className: 'tools' }, find, gear)));
     document.documentElement.classList.add('has-bar');
     // the music player, when there's a song to carry on with (Music's page and the home page bring it themselves)
-    if ((f.read('fluentio.music.player') || {}).queue?.length && document.body.dataset.music !== 'off') f.wait(import(f.link('kit/music/player.js')).then((m) => m.mount()).catch(() => {}));
+    if ((f.read('fluentio.music.player') || {}).queue?.length && document.body.dataset.music !== 'off') {
+      // (asked for all at once, not one after another as each finds it needs the next)
+      for (const m of ['player', 'library', 'github', 'store']) document.head.append(el('link', { rel: 'modulepreload', href: f.link(`kit/music/${m}.js`) }));
+      f.wait(import(f.link('kit/music/player.js')).then((m) => m.mount()).catch(() => {}));
+    }
   };
   addEventListener('fluentio:settings', () => nav && drawNav());
   // the mark slides across as soon as you go somewhere, and the next page's mark carries on from where it got to (kit/look.js)
@@ -176,6 +196,8 @@
   }
   const go = (href) => { closeFind(true); if (href !== location.href) location.href = href; };
   f.find = openFind;
+  // the same search, for the home page's assistant
+  f.findIn = (text, n = 4) => { const q = text.trim().toLowerCase(); return q ? everything(q).map((e, i) => ({ e, i, s: score(e, q) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s || a.i - b.i).slice(0, n).map((x) => x.e) : []; };
 
   // the keys: Search (and / too, when you're not typing), and the three spaces. A key without Ctrl, Alt or Meta only
   // counts when you're not typing, so it can't get in the way of writing

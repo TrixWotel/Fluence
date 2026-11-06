@@ -8,6 +8,7 @@
   <script src="settings.js"></script>
   <script src="kit/look.js"></script>
   <script src="kit/bar.js"></script>
+  <script src="kit/assistant.js"></script>
   <link rel="stylesheet" href="kit/site.css">
   <style>
     main { width: 100%; max-width: 1080px; margin: 0 auto; padding: clamp(14px, 4vh, 44px) 20px clamp(12px, 2.4vh, 24px); flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
@@ -57,7 +58,7 @@
     .bento { display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); grid-auto-flow: row dense; gap: 14px; margin-top: clamp(14px, 2.6vh, 26px); }
     .bento > * { animation-delay: calc((var(--n, 0) * 70ms + 200ms) / var(--speed)); }
     .tile {
-      --c: var(--accent); display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 18px 20px;
+      --c: var(--accent); display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; overflow: hidden auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 18px 20px;
       background: color-mix(in srgb, var(--card) 86%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
       border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); box-shadow: var(--shadow);
     }
@@ -146,7 +147,7 @@
       box-shadow: var(--shadow), 0 0 calc(10px + var(--level) * 50px) calc(var(--level) * 8px) color-mix(in srgb, var(--accent) calc(var(--level) * 40%), transparent); }
     .tile.music.feature > .tile-head { flex: 1 0 100%; }
     .tile.music.feature > .now { flex: 1 1 340px; display: grid; gap: 10px; align-content: start; }
-    .tile.music.feature > .side { flex: 1 1 260px; display: grid; gap: 8px; align-content: start; }
+    .tile.music.feature > .side { flex: 1 1 260px; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-content: start; }
     .tile.music.feature .m-tile-now .m-art { --s: clamp(84px, 14vh, 132px); border-radius: 20px; }
     .tile.music.feature .m-tile-now b { font-size: 1.5rem; letter-spacing: -0.02em; }
     .tile.music .side h3 { margin: 0; font-size: .78rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); }
@@ -161,6 +162,49 @@
     .layouts .chip { padding: 3px 10px; font: inherit; font-size: .86rem; cursor: pointer; }
     .layouts .chip .i { width: 14px; height: 14px; }
     @media (max-width: 560px) { .tile.music.feature, .tile.wide { grid-column: auto; } .welcome a { white-space: normal; } }
+
+    /* the assistant: what it notices, what it offers, and a place to tell it what you want */
+    main.layout-assistant { max-width: 680px; }
+    .aide { display: grid; gap: 14px; }
+    .aide-orb { width: 40px; height: 40px; border-radius: 50%; justify-self: var(--anchor); background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--accent) 35%, #fff), var(--accent) 48%, var(--accent-2)); box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 45%, transparent); animation: rise var(--t3) var(--ease) backwards, aide-breathe calc(4.5s / var(--speed)) ease-in-out infinite; }
+    @keyframes aide-breathe { 50% { transform: scale(1.09); } }
+    .aide-hello { margin: 0; color: var(--muted); font-size: .98rem; text-align: var(--anchor-text); animation: fade-in var(--t2) var(--ease) backwards; }
+    .aide-line { margin: 0; font-size: clamp(1.3rem, 3.1vw, 1.8rem); line-height: 1.3; font-weight: 650; letter-spacing: -.02em; text-align: var(--anchor-text); text-wrap: pretty; }
+    .aide-line .w { display: inline-block; animation: rise var(--t2) var(--ease) backwards; animation-delay: calc(var(--n) * 16ms / var(--speed)); }
+    .aide-options { display: grid; gap: 8px; margin-top: 4px; }
+    .aide-option { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 14px 11px 11px; color: inherit; font: inherit; text-align: left; text-decoration: none; cursor: pointer; background: color-mix(in srgb, var(--card) 86%, transparent); border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); transition: border-color var(--t1), transform var(--t2) var(--spring), background var(--t1); }
+    .aide-option:hover { border-color: var(--accent); transform: translateX(3px); }
+    .aide-option:active { transform: scale(.99); }
+    .aide-option > .i { flex: none; color: var(--muted); }
+    .aide-ic { flex: none; display: grid; place-items: center; width: 38px; height: 38px; font-size: 1.15rem; color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, var(--card)); border-radius: calc(var(--radius) * .8); }
+    .aide-ic .i { width: 19px; height: 19px; }
+    .aide-text { flex: 1; min-width: 0; display: grid; gap: 1px; line-height: 1.3; }
+    .aide-text b { font-weight: 620; overflow-wrap: anywhere; }
+    .aide-text small { color: var(--muted); font-size: .88rem; }
+    .aide-key { flex: none; display: grid; place-items: center; width: 22px; height: 22px; font: inherit; font-size: .76rem; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; }
+    .aide-other { justify-self: start; padding: 2px 4px; font: inherit; font-size: .88rem; color: var(--muted); cursor: pointer; background: none; border: 0; }
+    .aide-other:hover { color: var(--text); text-decoration: underline; }
+    .aide-other[hidden] { display: none; }
+    main.anchor-center .aide-other { justify-self: center; }
+    main.anchor-right .aide-other { justify-self: end; }
+    .aide-thread { display: grid; gap: 14px; }
+    .aide-thread:empty { display: none; }
+    .aide-turn { display: grid; gap: 8px; scroll-margin: 72px 0 112px; animation: rise var(--t2) var(--ease) backwards; }
+    .aide-you { justify-self: end; max-width: 85%; margin: 0; padding: 5px 12px; color: var(--muted); background: color-mix(in srgb, var(--text) 7%, transparent); border-radius: 14px; overflow-wrap: anywhere; }
+    .aide-say { margin: 0; font-weight: 550; }
+    .aide-turn .tile { overflow: visible; }
+    .aide-ask { display: flex; align-items: center; gap: 6px; padding: 5px 5px 5px 16px; background: color-mix(in srgb, var(--card) 86%, transparent); border: 1px solid var(--line); border-radius: 999px; transition: border-color var(--t1), box-shadow var(--t2); }
+    .aide-ask:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+    .aide-input { flex: 1; min-width: 0; padding: 6px 0; font: inherit; color: inherit; background: none; border: 0; outline: 0; }
+    .aide-input::placeholder { color: var(--muted); }
+    .aide-send { flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; color: var(--on-accent, #fff); cursor: pointer; background: var(--accent); border: 0; border-radius: 50%; }
+    .aide-send .i { width: 16px; height: 16px; }
+    .aide-chips { display: flex; flex-wrap: wrap; justify-content: var(--anchor); gap: 6px; }
+    .aide-chips .chip { padding: 3px 11px; font: inherit; font-size: .86rem; color: var(--muted); cursor: pointer; }
+    .aide-chips .chip:hover { color: var(--text); }
+    .aide-first.stagger > * { animation-delay: calc((var(--n, 0) * 45ms + 240ms) / var(--speed)); }
+    .aide > .aide-ask, .aide > .aide-chips, .aide > .aide-other { animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(340ms / var(--speed)); }
+    @media (max-width: 560px) { .aide-key { display: none; } }
   </style>
 </head>
 <body>
@@ -176,6 +220,7 @@
       <article class="card tile"><a class="tile-head" href="study/">📚 Modules</a><p class="muted">Tests, lessons and practice in five subjects.</p></article>
     </section>
     <div class="layouts" id="layouts"></div>
+    <section class="aide" id="aide" aria-label="Your assistant" hidden></section>
   </main>
   <script>
     // the home page from the settings (look.js has filled in what settings.js leaves out): the greeting, the name, and
@@ -215,7 +260,7 @@
       const tunes = f.read('fluentio.music.library') || {}, playing = f.read('fluentio.music.player') || {}, songs = Array.isArray(tunes.songs) ? tunes.songs : [];
       const on = songs.find((x) => x && x.id === (playing.queue || [])[playing.at]);
       const music = songs.length ? { title: on?.title || '', artist: on?.artist || '', playing: !!(on && playing.playing), songs: songs.length, liked: songs.filter((x) => x && x.liked).length } : null;
-      if (s.greeting) {
+      if (s.greeting && s.homeLayout !== 'assistant') {
         welcomed.then(({ welcome }) => {
           const w = welcome({ now: new Date(now), visits, last: f.last(), learned, best, name: s.name, music });
           $('hello').textContent = w.hello;
@@ -235,7 +280,7 @@
       const midnight = (t) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
       // the layout: Auto picks one for the time of day (study things in the morning, your tiles in the afternoon, music
       // in the evening and at weekends, and calm at night); Settings can fix one
-      const LAYOUTS = { auto: null, classic: null, study: ['question', 'study', 'today', 'progress', 'music', 'quick'], music: ['music', 'study', 'question', 'today', 'progress', 'quick'], calm: ['music', 'today', 'quick'] };
+      const LAYOUTS = { assistant: null, auto: null, classic: null, study: ['question', 'study', 'today', 'progress', 'music', 'quick'], music: ['music', 'study', 'question', 'today', 'progress', 'quick'], calm: ['music', 'today', 'quick'] };
       const hourNow = new Date(now).getHours(), weekend = [0, 6].includes(new Date(now).getDay());
       const autoLayout = hourNow >= 22 || hourNow < 5 ? 'calm' : hourNow < 11 ? 'study' : hourNow >= 17 || weekend ? 'music' : 'classic';
       const layout = s.homeLayout && LAYOUTS[s.homeLayout] && s.homeLayout !== 'auto' ? s.homeLayout : s.homeLayout === 'classic' ? 'classic' : autoLayout;
@@ -396,9 +441,9 @@
       if (!f.spacesOn) { delete TILES.workspace; delete TILES.data; }
       // which tiles: as many as fit in one row (three, two on a smaller screen, one on a phone), picked by what you've
       // been doing (Auto), or in the order of the layout chosen in Settings → Home; the rest wait under them, a click away
-      const main = document.querySelector('main');
-      document.documentElement.classList.add('home-fit');
-      main.className = `layout-${layout} anchor-${['left', 'right'].includes(s.homeAlign) ? s.homeAlign : 'center'}`;
+      const main = document.querySelector('main'), aide = s.homeLayout === 'assistant' && f.assistant;
+      if (!aide) document.documentElement.classList.add('home-fit');
+      main.className = `layout-${aide ? 'assistant' : layout} anchor-${['left', 'right'].includes(s.homeAlign) ? s.homeAlign : 'center'}`;
       document.body.classList.toggle('calm', layout === 'calm');
       const mode = ['classic', 'study', 'music', 'calm'].includes(s.homeLayout) ? s.homeLayout : 'auto';
       const evening = hourNow >= 18 || hourNow < 5, morning = hourNow >= 5 && hourNow < 12;
@@ -431,9 +476,16 @@
         const rest = order.filter((k) => !shown.includes(k));
         $('layouts').replaceChildren(rest.length ? el('div', { className: 'also' }, 'Also:', rest.map((k) => el('button', { type: 'button', className: 'chip', title: `Show ${NAME[k]} here`, onclick: () => draw([k, ...shown.filter((x) => x !== k)]) }, svg(TILE_ICON[k] || 'plus'), NAME[k] || k))) : '');
       };
-      draw(order);
-      for (const q of ['(min-width: 900px)', '(min-width: 561px)']) matchMedia(q).addEventListener('change', () => draw(shown.length ? [...shown, ...order.filter((k) => !shown.includes(k))] : order));
-      if (layout === 'calm') {
+      if (aide) {
+        // (its tiles come in when you ask for one)
+        for (const part of [document.querySelector('.hero'), $('tiles'), $('layouts')]) part.style.display = 'none';
+        $('aide').hidden = false;
+        f.assistant.draw($('aide'), { tiles: TILES, welcomed });
+      } else {
+        draw(order);
+        for (const q of ['(min-width: 900px)', '(min-width: 561px)']) matchMedia(q).addEventListener('change', () => draw(shown.length ? [...shown, ...order.filter((k) => !shown.includes(k))] : order));
+      }
+      if (layout === 'calm' && !aide) {
         const tick = () => { $('clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
         tick(); $('clock').hidden = false; setInterval(tick, 15000);
       }

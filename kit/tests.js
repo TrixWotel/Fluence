@@ -168,7 +168,7 @@ export function testsPage({ tests }) {
   const keep = (t) => { if (saving()) store.set(t.bank.id + '.learn', progressOf(t)); };
   const setSaving = (on) => {
     store.set('learn.save', on);
-    for (const t of tests) if (on) keep(t); else try { localStorage.removeItem(`fluentio.${t.bank.id}.learn`); } catch {}
+    for (const t of tests) if (on) keep(t); else try { localStorage.removeItem(`fluentio.${t.bank.id}.learn`); localStorage.removeItem(`fluentio.${t.bank.id}.lastRun`); } catch {}
   };
   const learnedIn = (p) => Object.values(p).filter((s) => s.learned).length;
   // the order to learn in: the page's units, then any topic they leave out; without units, one list (easier first)
@@ -551,7 +551,7 @@ export function testsPage({ tests }) {
   }
   function learn(t, which) {
     const goal = t.learn?.goal ?? GOAL;
-    const order = sequence(t), { byTopic } = kindsOf(t), mixed = which === 'all', k = +which;
+    const order = sequence(t), { byTopic } = kindsOf(t), mixed = which === 'all', named = (() => { try { return order.indexOf(decodeURIComponent(which)); } catch { return -1; } })(), k = named >= 0 ? named : +which;
     if (!mixed && !(Number.isInteger(k) && k >= 0 && k < order.length)) return go(`#${t.bank.id}/learn`);
     const topic = mixed ? null : order[k], lesson = (name) => t.learn?.lessons?.[name];
     titled(`Learn ${topic ?? t.name}`);
@@ -772,6 +772,8 @@ export function testsPage({ tests }) {
       return mine.length ? `${u.unit} ${mine.filter((i) => right[i]).length} of ${mine.length}` : null;
     }).filter(Boolean);
     run = null;
+    // (the home page's assistant offers to go over what you missed)
+    if (saving() && list.length >= 5) store.set(`${t.bank.id}.lastRun`, { name: t.name, short: `${fmt(score)} of ${of}`, text, missed: missed.slice(0, 8), at: Date.now() });
     window.scrollTo(0, 0);
     show(
       el('a', { className: 'back', href: '#' + t.bank.id }, '← ' + t.name),
