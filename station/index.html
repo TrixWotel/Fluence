@@ -21,6 +21,13 @@
     /* Excalidraw's own interface stays out of sight: this page has its own */
     html:not(.st-full) .excalidraw :is(.layer-ui__wrapper, .App-top-bar, .App-bottom-bar, .FixedSideContainer, .scroll-back-to-content) { display: none !important; }
     .excalidraw .LoadingMessage { display: none; }
+    /* the board appears like any other page: your drawings fade in (a fade only: Excalidraw measures where the board is as it
+       opens, and a board on the move would throw off every click), the toolbar rises with its tools one after another, and the
+       styles rise each time they show */
+    #board .excalidraw { animation: fade-in var(--t3) var(--ease) backwards; }
+    @keyframes st-rise { from { opacity: 0; transform: translateX(-50%) translateY(12px); } }
+    .st-bar { animation: st-rise var(--t3) var(--ease) backwards; }
+    .st-tray { animation: st-rise var(--t2) var(--ease) backwards; }
     /* what you select and drag, in the theme's color (station/app.js works it out) */
     .excalidraw { --color-selection: var(--st-selection, var(--accent)) !important; }
     .st-bar, .st-tray { position: fixed; z-index: 5; left: 50%; transform: translateX(-50%); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--line); box-shadow: var(--shadow); }
@@ -58,7 +65,7 @@
   <div id="board"></div>
   <div id="status" class="st-status" role="status"></div>
   <div id="tray" class="st-tray" hidden></div>
-  <div id="tools" class="st-bar" role="toolbar" aria-label="Drawing tools" hidden></div>
+  <div id="tools" class="st-bar stagger" role="toolbar" aria-label="Drawing tools" hidden></div>
   <script type="module" src="app.js"></script>
 </body>
 </html>

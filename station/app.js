@@ -459,8 +459,9 @@ async function start() {
   addEventListener('focus', look);
   setInterval(look, 60000);
 }
-start().catch((e) => {
+// (the site waits a moment for the board before it changes pages, so the board can appear with the rest of the page)
+f.wait(start().catch((e) => {
   console.error(e);
   say('The board couldn’t open. It needs the internet to start.', 'bad');
   board.replaceChildren(el('div', { className: 'st-failed' }, el('p', {}, 'Your drawings are safe. The board itself comes from the web, and it didn’t load.'), el('button', { type: 'button', className: 'btn primary', onclick: () => location.reload() }, 'Try again')));
-});
+}));
