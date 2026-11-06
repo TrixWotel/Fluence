@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Math Tests · Fluence</title>
-  <meta name="description" content="Triangle angle questions and AMC 10 practice, with hundreds of variants and a worked solution for each.">
+  <meta name="description" content="Triangle angle questions, and AMC 10 and AMC 12 practice, with hundreds of variants and a worked solution for each.">
   <script src="../settings.js"></script>
   <script src="../kit/look.js"></script>
   <script src="../kit/bar.js"></script>
@@ -17,7 +17,7 @@
     <header id="top">
       <a class="back" href="../study/">← <span data-fill="studyTitle">Study</span></a>
       <h1>📐 Math Tests</h1>
-      <p class="lead">Triangle angles and AMC 10 practice. Every question comes in hundreds of variants, each with a worked solution.</p>
+      <p class="lead">Triangle angles, and AMC 10 and AMC 12 practice. Every question comes in hundreds of variants, each with a worked solution.</p>
     </header>
     <div id="app"><noscript>These tests need JavaScript.</noscript></div>
   </main>
@@ -27,8 +27,20 @@
     import { amc } from './amc.js';
     import { triangleLearning } from './triangles-lessons.js';
     import { amcLearning } from './amc-lessons.js';
+    import { amc12 } from './amc12.js';
+    import { amc12Learning } from './amc12-lessons.js';
 
     const list = (...items) => { const ul = document.createElement('ul'); ul.innerHTML = items.map((i) => `<li>${i}</li>`).join(''); return ul; };
+
+    const strategy = () => list(
+          '<b>Blank or guess.</b> A right answer is worth 6 points, a blank 1.5 and a wrong one 0. A blind guess among five choices is worth 6/5 = 1.2 on average, less than a blank, but once you rule out two choices a guess is worth 6/3 = 2.',
+          '<b>Pace yourself.</b> The real test is 75 minutes for 25 problems, easier ones first. Save time on the early problems, skip one that stalls you, and come back to it at the end.',
+          '<b>Try the choices.</b> When an answer is easy to test, put the choices back into the problem. They are in increasing order, so start with (C) and you know which way to go.',
+          '<b>Small cases first.</b> When a problem is huge (2,025 terms, 100 people), work out the first few cases by hand and look for the pattern or the cycle.',
+          '<b>Pick friendly numbers.</b> If the answer can’t depend on something the problem leaves open, like a price or the side of a square, choose an easy value such as 100 or 1.',
+          '<b>What must the answer be?</b> Its last digit, whether it is even, a factor it must have, or its rough size can rule out choices quickly.',
+          '<b>Draw it to scale.</b> In geometry, a careful sketch of your own shows which choices are possible and often comes close to the answer.',
+          '<b>Read the last line again.</b> Check what is asked (x, or 2x + 1?) and words like at least, at most, different, positive and integer.');
 
     testsPage({ tests: [
       {
@@ -49,16 +61,17 @@
         order: (n) => amc.make(n).rank,
         blurb: 'Contest-style problems with five choices, and tests scored like the real AMC 10.',
         asideName: 'Contest strategy',
-        aside: () => list(
-          '<b>Blank or guess.</b> A right answer is worth 6 points, a blank 1.5 and a wrong one 0. A blind guess among five choices is worth 6/5 = 1.2 on average, less than a blank, but once you rule out two choices a guess is worth 6/3 = 2.',
-          '<b>Pace yourself.</b> The real test is 75 minutes for 25 problems, easier ones first. Save time on the early problems, skip one that stalls you, and come back to it at the end.',
-          '<b>Try the choices.</b> When an answer is easy to test, put the choices back into the problem. They are in increasing order, so start with (C) and you know which way to go.',
-          '<b>Small cases first.</b> When a problem is huge (2,025 terms, 100 people), work out the first few cases by hand and look for the pattern or the cycle.',
-          '<b>Pick friendly numbers.</b> If the answer can’t depend on something the problem leaves open, like a price or the side of a square, choose an easy value such as 100 or 1.',
-          '<b>What must the answer be?</b> Its last digit, whether it is even, a factor it must have, or its rough size can rule out choices quickly.',
-          '<b>Draw it to scale.</b> In geometry, a careful sketch of your own shows which choices are possible and often comes close to the answer.',
-          '<b>Read the last line again.</b> Check what is asked (x, or 2x + 1?) and words like at least, at most, different, positive and integer.'),
+        aside: strategy,
         about: 'Original problems in the style of the AMC 10 (the real ones belong to the MAA): 157 topics in algebra, number theory, counting, probability and geometry, at every level from problem 1 to problem 25 (each problem ranked against real contests, the hardest needing an idea and several steps), each asked several different ways, many modelled on past contests up to the 2025 AMC 10A and 10B with new numbers. A test is 25 problems unless you choose another number, with 3 minutes a problem. Answer in any order and change your mind; nothing is marked until you finish.',
+      },
+      {
+        bank: amc12, name: 'AMC 12 Practice', amc: true, contest: 'AMC 12', learn: amc12Learning,
+        // how hard a problem is: where it would sit in a real AMC 12
+        order: (n) => amc12.make(n).rank,
+        blurb: 'The AMC 12: logs, trig, complex numbers and polynomials on top of the AMC 10’s harder problems, with tests scored like the real thing.',
+        asideName: 'Contest strategy',
+        aside: strategy,
+        about: 'Original problems in the style of the AMC 12 (the real ones belong to the MAA). 24 topics only the AMC 12 tests, in logs, trig, complex numbers, polynomials, conics and solids, join the AMC 10’s harder topics, moved down the paper as they are on the real contests: an AMC 10 problem 6 is about an AMC 12 problem 1. Scored the same way: 6 points for right, 1.5 for blank, 0 for wrong, with 75 minutes for 25 problems.',
       },
     ] });
   </script>

@@ -36,5 +36,6 @@ const TOPICS = {
   ...hardAlgebra, ...hardNumber, ...hardCounting, ...hardProbability, ...hardGeometry, ...hardShapes,
   ...topMiddle, ...topAlgebra, ...topNumber, ...topCounting, ...topGeometry,
 };
+export { TOPICS };
 export const PER_TOPIC = 12;
 export const amc = bank('amc10', Object.values(TOPICS).map(family), Object.keys(TOPICS).length * PER_TOPIC);
