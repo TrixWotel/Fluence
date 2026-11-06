@@ -250,6 +250,31 @@ function daysOff() {
       } }, svg('copy'), 'Copy the link')));
 }
 
+// the board: its font (each name shown in its own font, just those letters of each, to keep it light), its tools and menus,
+// and buttons for the board itself, which go there to do it
+function station() {
+  if (!f.BOARD_FONTS) return null;        // (a browser can hold on to an older kit/look.js for a few minutes after the site changes)
+  const names = f.BOARD_FONTS, href = f.fontSheet(names, [...new Set(names.join(''))].join(''));
+  if (!document.querySelector(`link[href="${href}"]`)) document.head.append(el('link', { rel: 'stylesheet', href }));
+  const TOOLS = [['freedraw', 'Pen'], ['rectangle', 'Box'], ['diamond', 'Diamond'], ['ellipse', 'Circle'], ['arrow', 'Arrow'], ['line', 'Line'], ['text', 'Text'], ['eraser', 'Eraser'], ['hand', 'Move around']];
+  const tools = () => (Array.isArray(s.boardTools) ? s.boardTools : f.DEFAULTS.boardTools);
+  const ask = (what) => { try { sessionStorage.setItem('fluence.station.do', what); } catch {} };
+  const go = (what, label) => el('a', { className: 'btn', href: f.link('station/'), onclick: () => ask(what) }, label);
+  const clearRow = el('div');
+  return el('section', { className: 'panel', id: 'station' }, el('h2', {}, s.stationTitle),
+    set('Font', 'The words on your board. It changes all of them at once. The fonts other than System come from Google Fonts.',
+      el('div', { className: 'fonts' }, seg(names.map((n) => [n, n, n === 'System' ? 'system-ui' : `"${n}"`]), names.includes(s.boardFont) ? s.boardFont : names[0], (v) => { s.boardFont = v; save(); }, 'The board’s font'))),
+    set('Tools', 'Which show on the toolbar, after Select. Their keys work either way: each one’s tip says its key.',
+      el('div', { className: 'pairs' }, TOOLS.map(([id, name]) => el('label', { className: 'pair' },
+        toggle(tools().includes(id), (on) => { s.boardTools = TOOLS.map((t) => t[0]).filter((t) => (t === id ? on : tools().includes(t))); save(); }, name), name)))),
+    set('Right-click menu', 'The menu you get when you right-click the board, with copy, paste, send to back and more. Off, a right-click on the board does nothing.', toggle(s.boardMenu !== false, (v) => { s.boardMenu = v; save(); }, 'Right-click menu')),
+    set('All of Excalidraw’s tools', 'Its own toolbars and menus, in place of the small toolbar.', toggle(!!s.boardFull, (v) => { s.boardFull = v; save(); }, 'All of Excalidraw’s tools')),
+    set('The board', 'To add a picture, drop or paste it on the board. On the board, ⌘Z undoes, ⇧⌘Z redoes, and ? shows every key.',
+      el('div', { className: 'pairs' }, go('fit', 'Show all my drawings'), go('actual', 'Zoom to 100%'), go('picture', 'Save as a picture'),
+        el('button', { type: 'button', className: 'btn', onclick: () => confirmIn(clearRow, 'Clear the whole board? You can undo it straight after.', 'Clear it', () => { ask('clear'); location.href = f.link('station/'); }) }, 'Clear the board')),
+      clearRow));
+}
+
 function names() {
   return el('section', { className: 'panel', id: 'names' }, el('h2', {}, 'Names'),
     set('Modules', 'The subjects’ page: its name in the bar, on its page and on the home page.', text(s.studyTitle, (v) => { s.studyTitle = v; save(); }, 'Modules’ name')),
@@ -482,7 +507,7 @@ function everywhere() {
 if (!f.spacesOn) document.getElementById('jump-github')?.remove();
 function draw() {
   const y = scrollY;
-  panels.replaceChildren(...[look(), colors(), motion(), home(), names(), keys(), data(), f.spacesOn && gitHub(), everywhere()].filter(Boolean));
+  panels.replaceChildren(...[look(), colors(), motion(), home(), station(), names(), keys(), data(), f.spacesOn && gitHub(), everywhere()].filter(Boolean));
   scrollTo(0, y);
 }
 draw();

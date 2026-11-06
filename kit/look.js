@@ -31,7 +31,7 @@
     dataTitle: 'Data',
     codeTitle: 'Code',
     notesTitle: 'Notes',
-    stationTitle: 'Station',
+    stationTitle: 'Station', boardFont: 'Inter', boardTools: ['freedraw', 'rectangle', 'diamond', 'ellipse', 'arrow', 'text'], boardMenu: true, boardFull: false,
     musicTitle: 'Music',
     studyTitle: 'Modules',
     studyIntro: 'Pick a subject. Take a test, learn it one topic at a time, or practise any question.',
@@ -50,6 +50,10 @@
     serif: 'ui-serif, "New York", Georgia, "Times New Roman", serif',
     mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
   };
+
+  // Station's fonts: each from Google Fonts, but for System, the device's own. fontSheet's text, if given, asks for only those letters
+  const BOARD_FONTS = ['Inter', 'System', 'DM Sans', 'Manrope', 'Poppins', 'Space Grotesk', 'IBM Plex Sans', 'Lora', 'JetBrains Mono', 'Caveat'];
+  const fontSheet = (names, text) => `https://fonts.googleapis.com/css2?${names.filter((n) => n !== 'System').map((n) => `family=${n.replace(/ /g, '+')}`).join('&')}&display=swap${text ? `&text=${encodeURIComponent(text)}` : ''}`;
 
   // settings over others: an object merges key by key, a list is replaced by one of the same kind of thing, and
   // anything else must be the same kind to replace one (so a typo falls back to what was there)
@@ -255,7 +259,7 @@
       Object.assign(document.createElement('link'), { rel: 'apple-touch-icon', href: new URL('kit/logo-180.png', root).href }));
   }
   window.fluentio = {
-    settings: s, site, DEFAULTS, FONTS, root, read, write, el, svg, icon, logo, key, spacesOn: SPACES_ON,
+    settings: s, site, DEFAULTS, FONTS, BOARD_FONTS, fontSheet, root, read, write, el, svg, icon, logo, key, spacesOn: SPACES_ON,
     wait: (promise) => { waits.push(Promise.resolve(promise).catch(() => {})); return promise; },
     link: (href) => new URL(String(href || ''), root).href,
     moving: () => s.animations !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,

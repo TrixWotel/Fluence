@@ -108,6 +108,10 @@ window.FLUENTIO_SETTINGS = {
 
   // Music (the music/ page): its name in the bar and on its page
   stationTitle: 'Station',
+  boardFont: 'Inter',      // Station's font: 'Inter', 'System', 'DM Sans', 'Manrope', 'Poppins', 'Space Grotesk', 'IBM Plex Sans', 'Lora', 'JetBrains Mono' or 'Caveat'
+  boardTools: ['freedraw', 'rectangle', 'diamond', 'ellipse', 'arrow', 'text'],   // on its toolbar, after Select; 'line', 'eraser' and 'hand' can go here too
+  boardMenu: true,         // the menu a right-click brings up on the board
+  boardFull: false,        // true for all of Excalidraw's own tools in place of the small toolbar
   musicTitle: 'Music',
 
   // Modules (the study/ page): its title, the line under it, and its subjects in this order (color is the subject's
