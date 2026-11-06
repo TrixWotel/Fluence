@@ -126,5 +126,6 @@ window.FLUENTIO_SETTINGS = {
     { emoji: '🚀', title: 'Physics', text: 'Kinematics, motion in a straight line, vectors and projectiles: tests like the ones in class, and practice.', link: 'physics/', color: '#e8743b' },
     { emoji: '🇪🇸', title: 'Spanish', text: '1,100 words in 25 themes, and the preterite and the imperfect.', link: 'spanish/', color: '#e5484d' },
     { emoji: '🏰', title: 'History', text: 'The Middle Ages and the Wars of Religion, as stories where you make the choices, with notes and tests.', link: 'history/', color: '#b7791f' },
+    { emoji: '✍️', title: 'English', text: 'Essays: learn how a good one works, a step at a time, then write your own and check it.', link: 'english/', color: '#0ea5b7' },
   ],
 };

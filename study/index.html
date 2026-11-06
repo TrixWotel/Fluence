@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Modules · Fluence</title>
-  <meta name="description" content="Geography, Math, Science, Physics, Spanish and History: tests, lessons and practice.">
+  <meta name="description" content="Geography, Math, Science, Physics, Spanish, History and English: tests, lessons and practice.">
   <script src="../settings.js"></script>
   <script src="../kit/look.js"></script>
   <script src="../kit/bar.js"></script>
@@ -61,12 +61,13 @@
       <a class="card subject" href="../physics/"><span class="tile">🚀</span><span class="info"><b>Physics</b><span class="text">Kinematics, motion in a straight line, vectors and projectiles: tests like the ones in class, and practice.</span></span><span class="go">→</span></a>
       <a class="card subject" href="../spanish/"><span class="tile">🇪🇸</span><span class="info"><b>Spanish</b><span class="text">Vocabulary, the preterite and the imperfect.</span></span><span class="go">→</span></a>
       <a class="card subject" href="../history/"><span class="tile">🏰</span><span class="info"><b>History</b><span class="text">The Middle Ages and the Wars of Religion, as stories where you make the choices.</span></span><span class="go">→</span></a>
+      <a class="card subject" href="../english/"><span class="tile">✍️</span><span class="info"><b>English</b><span class="text">Essays: learn how a good one works, a step at a time, then write your own and check it.</span></span><span class="go">→</span></a>
     </nav>
   </main>
   <script>
     // what this browser remembers of each subject: best scores and topics learned (the test pages keep them)
     const read = (key) => { try { return JSON.parse(localStorage.getItem('fluentio.' + key)); } catch { return null; } };
-    const BANKS = { math: ['triangles', 'amc10', 'amc12'], science: ['heat'], physics: ['kinematics', 'motion', 'vectors', 'projectiles'], spanish: ['vocab', 'preterite', 'imperfect'], history: ['middleages', 'wars'] };
+    const BANKS = { math: ['triangles', 'amc10', 'amc12'], science: ['heat'], physics: ['kinematics', 'motion', 'vectors', 'projectiles'], spanish: ['vocab', 'preterite', 'imperfect'], history: ['middleages', 'wars'], english: ['essays'] };
     const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
     function progress(folder) {
       if (folder === 'geography') { const best = read('geo.best'), n = best ? Object.keys(best).length : 0; return n ? `${plural(n, 'map')} with a best score` : ''; }

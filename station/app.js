@@ -200,7 +200,7 @@ async function useFont(name) {
   // (the font, if it comes quickly: a page shouldn't wait long for one, and fit() puts things right when it arrives)
   await Promise.race([
     Promise.all([addFont(name), addFont(CODE_FONT)]).then(() => Promise.all([document.fonts.load(`20px ${mainStack}`), document.fonts.load(`20px "${CODE_FONT}"`)])).catch(() => {}),
-    new Promise((later) => setTimeout(later, 1500)),
+    new Promise((later) => setTimeout(later, 250)),
   ]);
 }
 // words take the room their font needs. Excalidraw measured them in the font of the day they were written, and cuts off
@@ -226,12 +226,24 @@ function refit(redraw = false) {
 // ---------- the theme's color, for what you select and drag ----------
 // Excalidraw reads it from --color-selection. On a dark board a filter turns its whole canvas over (it inverts by 93%, then
 // turns the hue halfway round), so there it needs the color that the filter turns into the theme's
+// Excalidraw has its purple written into its code for the dots on lines and arrows (the ends, the middles and what marks them when
+// you point at one) and for the faint fill of the box you drag. It sets those as these exact words, so they're swapped as they're
+// set, on the canvas that draws them and no other: what you've drawn, in any color, is on another canvas.
+const PURPLES = [['#5e5ad8', 1], ['rgba(134, 131, 226, 0.9)', 0.9], ['rgba(177, 151, 252, 0.7)', 0.7], ['rgba(105, 101, 219, 0.4)', 0.4], ['rgba(0, 0, 200, 0.04)', 0.07]];
+let painted = {};
+for (const side of ['fillStyle', 'strokeStyle']) {
+  const real = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, side);
+  Object.defineProperty(CanvasRenderingContext2D.prototype, side, { ...real, set(value) { real.set.call(this, (typeof value === 'string' && this.canvas?.classList?.contains('interactive') && painted[value]) || value); } });
+}
 function selectionColor() {
+  painted = {};
   ruler.fillStyle = '#6965db';
   ruler.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
   const c = ruler.fillStyle, [r, g, b] = c[0] === '#' ? [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16) / 255) : c.match(/[\d.]+/g).slice(0, 3).map((n) => n / 255);
   const wanted = !dark() ? [r, g, b] : [-0.574 * r + 1.43 * g + 0.144 * b, 0.426 * r + 0.43 * g + 0.144 * b, 0.426 * r + 1.43 * g - 0.856 * b].map((v) => Math.min(1, Math.max(0, (0.93 - v) / 0.86)));
   document.documentElement.style.setProperty('--st-selection', `#${wanted.map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('')}`);
+  const rgb = wanted.map((v) => Math.round(v * 255)).join(', ');
+  painted = Object.fromEntries(PURPLES.map(([was, alpha]) => [was, alpha === 1 ? `rgb(${rgb})` : `rgba(${rgb}, ${alpha})`]));
 }
 
 // ---------- our own tools: Excalidraw's are hidden ----------
@@ -410,10 +422,12 @@ async function catchUp(s, here) {
   const ahead = moved ? mine.some((e) => { const r = remote.find((x) => x.id === e.id); return !r || r.version < e.version; }) : !there.files.has(SCENE) && mine.length > 0;
   if (here?.pending || ahead) dirty = true; else say('Saved', 'done');
 }
+const boardStyles = new Promise((ready) => { const sheet = document.getElementById('board-css'); if (!sheet || sheet.media === 'all') ready(); else sheet.addEventListener('load', ready, { once: true }); });
 async function start() {
   say('Opening the board…', 'busy');
   // this browser's copy comes first, so the board opens straight away: GitHub's comes in behind it
   const allPictures = store('readonly', (st) => st.getAllKeys()).then(async (keys) => { const out = {}; for (const k of keys) if (String(k).startsWith('file:')) { const file = await get(k); out[file.id] = file; } return out; }).catch(() => ({}));
+  await Promise.race([boardStyles, new Promise((later) => setTimeout(later, 4000))]);
   const [lib, React, { createRoot }, here, savedLibrary, pictures] = await Promise.all([import(LIBRARY_URL), import('react'), import('react-dom/client'), get('scene').catch(() => null), get('library').catch(() => null), allPictures]);
   ex = lib;
   let font = wantedFont();

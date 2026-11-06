@@ -1,11 +1,12 @@
-# Puts the whole site online whenever any branch changes: space is the main page (with kit/, the test runner the
-# Math, Science, Physics, Spanish and History tests share), and each other branch is served in its own folder:
-# /geography, /math, /science, /physics, /spanish and /history. This same file is on every branch, since a push runs the pushed branch's copy.
+# Puts the whole site online: space is the main page (with kit/, the test runner the Math, Science, Physics, Spanish and History
+# tests share), and each other branch is served in its own folder: /geography, /math, /science, /physics, /spanish, /history and
+# /english. It runs from this branch, the one the site's deploy rules allow. A push to any other branch only asks this one to
+# deploy (that's what their copy of this file does), so a new subject needs adding here and nowhere else.
 name: Deploy the site
 
 on:
   push:
-    branches: [space, geography, math, science, physics, spanish, history]
+    branches: [space]
   workflow_dispatch:
 
 permissions:
@@ -67,12 +68,18 @@ jobs:
           ref: history
           path: history
 
+      - name: Get the English module (english branch)
+        uses: actions/checkout@v7
+        with:
+          ref: english
+          path: english
+
       - name: Put the site together
         run: |
           mkdir -p _site
           cp -R main/. _site/
-          for b in geography math science physics spanish history; do mkdir -p "_site/$b" && cp -R "$b/." "_site/$b/"; done
-          for d in _site _site/geography _site/math _site/science _site/physics _site/spanish _site/history; do rm -rf "$d/.git" "$d/.github" "$d/README.md" "$d/LICENSE"; done
+          for b in geography math science physics spanish history english; do mkdir -p "_site/$b" && cp -R "$b/." "_site/$b/"; done
+          for d in _site _site/geography _site/math _site/science _site/physics _site/spanish _site/history _site/english; do rm -rf "$d/.git" "$d/.github" "$d/README.md" "$d/LICENSE"; done
           find _site -type f | sort
 
       - uses: actions/configure-pages@v6

@@ -11,7 +11,7 @@
   const BANKS = [
     ['triangles', 'math', 'Triangle Angles'], ['amc10', 'math', 'AMC 10 Practice'], ['amc12', 'math', 'AMC 12 Practice'], ['heat', 'science', 'Heat Capacity'],
     ['kinematics', 'physics', 'Kinematics'], ['motion', 'physics', 'Motion in a Straight Line'], ['vectors', 'physics', 'Vectors'], ['projectiles', 'physics', 'Projectile Motion'],
-    ['vocab', 'spanish', 'Spanish Vocabulary'], ['preterite', 'spanish', 'The Preterite'], ['imperfect', 'spanish', 'The Imperfect'], ['middleages', 'history', 'The Middle Ages'], ['wars', 'history', 'The Wars of Religion'],
+    ['vocab', 'spanish', 'Spanish Vocabulary'], ['preterite', 'spanish', 'The Preterite'], ['imperfect', 'spanish', 'The Imperfect'], ['middleages', 'history', 'The Middle Ages'], ['wars', 'history', 'The Wars of Religion'], ['essays', 'english', 'Essay Writing'],
   ].map(([id, folder, name]) => ({ id, folder, name }));
   const WITH_CLASS_TESTS = new Set(['science', 'physics', 'history']);
   const midnight = (t) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
@@ -47,13 +47,13 @@
     const audio = (() => { try { return (window.top.fluentioSong || window.fluentioSong)?.audio || null; } catch { return null; } })();
     return {
       now, hour: new Date(now).getHours(), banks, last: f.last(), seen: trail.seen || {}, session: Math.round((now - began) / MINUTE), mostly: mostly && mostly[1] >= 10 * MINUTE ? mostly[0] : null,
-      answered: (read('fluentio.today') || {}).day === new Date(now).toDateString(), chapters: (read('fluentio.chapters') || {}).done || {},
+      answered: (read('fluentio.today') || {}).day === new Date(now).toDateString(), chapters: (read('fluentio.chapters') || {}).done || {}, essays: Object.values(read('fluentio.essays.list') || {}),
       music: { count: all.length, liked: all.filter((x) => x && x.liked).length, current, playing: !!current && (audio ? !audio.paused : !!saved.playing) },
     };
   }
-  const place = (b, rest = '') => link(`${b.folder}/#${b.id}${rest}`);
-  const topicLink = (b, topic) => place(b, `/learn/${encodeURIComponent(topic)}`);
-  const PAGES = { math: 'math', science: 'science', physics: 'physics', spanish: 'Spanish', geography: 'geography', history: 'history', study: 'Modules', music: 'Music', station: 'Station' };
+  const place = (b, rest = '') => (b.id === 'essays' ? link('english/') : link(`${b.folder}/#${b.id}${rest}`));
+  const topicLink = (b, topic) => (b.id === 'essays' ? link(`english/learn.html#${encodeURIComponent(topic)}`) : place(b, `/learn/${encodeURIComponent(topic)}`));
+  const PAGES = { math: 'math', science: 'science', physics: 'physics', spanish: 'Spanish', geography: 'geography', history: 'history', english: 'English', study: 'Modules', music: 'Music', station: 'Station' };
 
   // the music, when something's asked of it
   const tunes = async () => {
@@ -81,6 +81,9 @@
       if (!count && !d.done) continue;
       out.push({ icon: 'study', title: d.done ? `Finish marking Test ${d.n}` : `Finish Test ${d.n}`, why: `${b.name}. ${d.done ? 'It’s handed in, and the marking is waiting.' : `${plural(count, 'answer')} so far.`}`, href: place(b, `/exam/${d.n}`), score: 96, notice: `you have a ${b.name} test half done`, ask: 'Want to finish it?' });
     }
+    // an essay you've started and haven't marked yet
+    const essay = seen.essays.filter((e) => Object.keys(e.marks || {}).length < 6 && (e.text || '').trim().split(/\s+/).length >= 10).sort((a, b) => b.edited - a.edited)[0];
+    if (essay) out.push({ emoji: '✍️', title: 'Finish your essay', why: `${essay.title || 'Your own question'}. ${plural(essay.text.trim().split(/\s+/).length, 'word')} so far, from ${agoWords(essay.edited, now)}.`, href: link(`english/write.html#e/${essay.id}`), score: now - essay.edited < 3 * DAY ? 90 : 60, notice: 'you have an essay half written', ask: 'Want to finish it?' });
     if (seen.last) {
       const l = seen.last, days = (now - (l.at || 0)) / DAY, topic = l.topic || l.test || 'your topic', all = (l.total || 0) > 0 && (l.learned || 0) >= l.total;
       if (!all) out.push({ icon: 'study', title: `Pick up ${topic}`, why: `${l.test ? `${l.test}. ` : ''}${l.total ? `${l.learned || 0} of ${l.total} done. ` : ''}You were here ${agoWords(l.at || 0, now)}.`, href: l.href, score: days < 1 ? 92 : days < 3 ? 86 : days < 14 ? 62 : 40, notice: `you left off on ${topic} ${agoWords(l.at || 0, now)}`, ask: 'Want to carry on?' });
@@ -106,11 +109,14 @@
     const drew = seen.seen.station;
     out.push(drew && now - drew < 7 * DAY ? { icon: 'station', title: 'Back to your board', why: `You were on it ${agoWords(drew, now)}.`, href: link('station/'), score: now - drew < DAY ? 50 : 36 } : { icon: 'station', title: 'Sketch something on your board', why: 'An idea, a flowchart, anything.', href: link('station/'), score: 16 });
     if (!Object.keys(seen.chapters).some((k) => k.startsWith('wars/'))) out.push({ emoji: '⚔️', title: 'Start The Wars of Religion', why: 'Five chapters, told as a story.', href: link('history/chapters.html#wars'), score: 30 });
+    const writing = by('essays');
+    if (!Object.keys(writing.learn).length && !seen.essays.length) out.push({ emoji: '✍️', title: 'Try essay writing', why: 'How essays work, a step at a time, then write your own.', href: link('english/'), score: 31 });
+    else if (!essay && !seen.essays.some((e) => now - e.edited < 14 * DAY)) out.push({ emoji: '✍️', title: 'Write an essay', why: 'Plan it, write it and check it, or bring your own question from class.', href: link('english/write.html'), score: 39 });
     const ten = by('amc10'), twelve = by('amc12');
     if ((Object.keys(ten.learn).length || ten.best) && !Object.keys(twelve.learn).length && !twelve.best) out.push({ icon: 'study', title: 'Try AMC 12 practice', why: 'Logs, trig and complex numbers, on top of what you know from the AMC 10.', href: place(twelve), score: 42 });
     const tested = banks.filter((b) => b.best?.text && now - b.best.when > 7 * DAY).sort((a, b) => b.best.when - a.best.when)[0];
     if (tested) out.push({ icon: 'chart', title: `Beat your best on ${tested.name}`, why: `It’s ${tested.best.text}, from ${agoWords(tested.best.when, now)}.`, href: place(tested, '/test'), score: 44 });
-    if (!seen.last && !banks.some((b) => Object.keys(b.learn).length)) out.push({ icon: 'study', title: `Pick a subject in ${f.settings.studyTitle}`, why: 'Math, science, physics, Spanish, history and geography.', href: link('study/'), score: 52 });
+    if (!seen.last && !banks.some((b) => Object.keys(b.learn).length)) out.push({ icon: 'study', title: `Pick a subject in ${f.settings.studyTitle}`, why: 'Math, science, physics, Spanish, history, English and geography.', href: link('study/'), score: 52 });
     out.sort((a, b) => b.score - a.score);
     // (what it's about to bring up goes first, so the first thing offered is the thing it asks about)
     const k = out.findIndex((x) => x.notice);
@@ -129,15 +135,19 @@
   // ---------- when you tell it something ----------
   const COURSE_WORDS = [
     [/\bamc ?12\b/, 'amc12'], [/\bamc\b|\bamc ?10\b|\bcontest/, 'amc10'], [/\btriangle/, 'triangles'], [/\bheat\b/, 'heat'], [/\bkinematic/, 'kinematics'], [/\bmotion\b/, 'motion'], [/\bvector/, 'vectors'], [/\bprojectile/, 'projectiles'],
-    [/\bvocab/, 'vocab'], [/\bpreterite/, 'preterite'], [/\bimperfect/, 'imperfect'], [/\bmiddle ages\b|\bmedieval\b|\bvikings?\b|\bcrusades?\b|\bblack death\b/, 'middleages'], [/\bwars? of religion\b|\bthirty years\b|\bdefenestration\b|\bbartholomew\b|\bwestphalia\b/, 'wars'],
+    [/\bvocab/, 'vocab'], [/\bpreterite/, 'preterite'], [/\bimperfect/, 'imperfect'], [/\bmiddle ages\b|\bmedieval\b|\bvikings?\b|\bcrusades?\b|\bblack death\b/, 'middleages'], [/\bwars? of religion\b|\bthirty years\b|\bdefenestration\b|\bbartholomew\b|\bwestphalia\b/, 'wars'], [/\bessays?\b|\bthesis\b|\bbody paragraphs?\b|\bconclusions?\b|\bintroductions?\b/, 'essays'],
   ];
-  const FOLDER_WORDS = [[/\bmath(s|ematics)?\b/, 'math'], [/\bscience\b/, 'science'], [/\bphysics\b/, 'physics'], [/\bspanish\b/, 'spanish'], [/\bhistory\b/, 'history'], [/\bgeograph|\bcountries\b|\bcapitals\b|\bmaps?\b/, 'geography']];
-  const courseOptions = (b) => [
+  const FOLDER_WORDS = [[/\bmath(s|ematics)?\b/, 'math'], [/\bscience\b/, 'science'], [/\bphysics\b/, 'physics'], [/\bspanish\b/, 'spanish'], [/\bhistory\b/, 'history'], [/\benglish\b/, 'english'], [/\bgeograph|\bcountries\b|\bcapitals\b|\bmaps?\b/, 'geography']];
+  const courseOptions = (b) => (b.id === 'essays' ? [
+    { icon: 'study', title: 'Learn how essays work', why: 'One idea at a time, with things to try.', href: link('english/learn.html') },
+    { emoji: '✍️', title: 'Write an essay', why: 'Plan it, write it, check it, and compare it with a model.', href: link('english/write.html') },
+    { icon: 'doc', title: 'Bring your own question', why: 'Got an essay for class? Paste the question in.', href: link('english/write.html#own') },
+  ] : [
     ...(b.folder === 'history' ? [{ icon: 'study', title: `Read ${b.name} as a story`, why: 'A chapter at a time, where you make the choices.', href: link(`history/chapters.html#${b.id}`) }] : []),
     { icon: 'study', title: `Learn ${b.name}`, why: 'A topic at a time, with lessons.', href: place(b, '/learn') },
     { icon: 'spark', title: `Test yourself on ${b.name}`, why: b.best?.text ? `Your best is ${b.best.text}.` : 'Mixed questions, then a score.', href: place(b, '/test') },
     ...(WITH_CLASS_TESTS.has(b.folder) ? [{ icon: 'doc', title: 'A test like the ones in class', why: 'Longer questions, marked against a mark scheme.', href: place(b, '/exam') }] : []),
-  ];
+  ]);
   function answer(text, seen, reply, go) {
     const t = text.toLowerCase().replace(/[’']/g, '').replace(/[?!.,]+$/, '').trim(), courses = COURSE_WORDS.filter(([re]) => re.test(t)).map(([, id]) => seen.banks.find((b) => b.id === id));
     const test = /\b(test|quiz|exam)\b/.test(t), teach = /\b(learn|study|teach|explain|lesson|notes?)\b/.test(t), openIt = /^(open|go to|go|take me to|show me|show)\b/.test(t);
@@ -163,7 +173,7 @@
     if (/\bmusic\b|\bsongs?\b/.test(t)) return openIt ? go('Opening Music.', link('music/')) : reply('Here’s your music.', { tile: 'music' });
     // what's on, what to do, and how it's going
     if (/\btoday\b|\btomorrow\b|\bdate\b|\bday off\b|\bdays off\b|\bholiday|\bcalendar\b|\bschool\b/.test(t) && !test && !/\b(should|can|could) i\b/.test(t)) return reply('Here’s today, and what’s coming up.', { tile: 'today' });
-    if (/\bwhat (should|can|could) i\b|\bwhat (to do|now|next)\b|\bwhats next\b|^what do i do\b|\banything to do\b|\bsuggest|\bhelp\b|\bbored\b|\bidk\b|\bdunno\b|\bnot sure\b/.test(t)) return reply('Here’s what I’d do, in order.', { options: suggestions(seen).slice(0, 4) });
+    if (!courses.length && /\bwhat (should|can|could) i\b|\bwhat (to do|now|next)\b|\bwhats next\b|^what do i do\b|\banything to do\b|\bsuggest|\bhelp\b|\bbored\b|\bidk\b|\bdunno\b|\bnot sure\b/.test(t)) return reply('Here’s what I’d do, in order.', { options: suggestions(seen).slice(0, 4) });
     if (/\bhow am i\b|\bprogress\b|\bstats?\b|\bstreak\b|\bscores?\b|\bdoing\b/.test(t)) return reply(progressWords(seen), { tile: 'progress' });
     if (/\bbreak\b|\btired\b|\bsleep\b|\bbed\b/.test(t)) return reply(seen.hour >= 22 || seen.hour < 5 ? 'Go to bed. It’ll all be here tomorrow.' : 'Go for it. Everything stays where you left it.');
     // somewhere to go
@@ -172,6 +182,12 @@
     // a course: straight there, when you've said what for
     if (courses.length) {
       const b = courses[0];
+      if (b.id === 'essays') {
+        if (/\b(write|writing|draft|practi[cs]e)\b/.test(t)) return go('Opening the writing room.', link('english/write.html'));
+        if (test || teach) return go('Opening How essays work.', link('english/learn.html'));
+        if (openIt) return go('Opening English.', link('english/'));
+        return reply('What would help most with essays?', { options: courseOptions(b) });
+      }
       if (test) return go(`Starting a ${b.name} test.`, place(b, '/test'));
       if (teach) return go(`Opening ${b.name}.`, place(b, '/learn'));
       if (openIt) return go(`Opening ${b.name}.`, place(b));
@@ -186,7 +202,7 @@
       if (!re.test(t)) continue;
       const here = seen.banks.filter((b) => b.folder === folder), title = f.settings.study.find((x) => String(x.link || '').replace(/^\.?\//, '').split('/')[0] === folder)?.title || cap(folder);
       if (!here.length || openIt) return go(`Opening ${title}.`, link(`${folder}/`));
-      if (here.length === 1) return reply(`What do you want to do with ${here[0].name}?`, { options: courseOptions(here[0]) });
+      if (here.length === 1) return reply(`What do you want to do in ${title}?`, { options: courseOptions(here[0]) });
       return reply(`Which part of ${title}?`, { options: here.map((b) => ({ icon: 'study', title: b.name, why: Object.keys(b.learn).length ? `${plural(Object.values(b.learn).filter((x) => x?.learned).length, 'topic')} learned.` : 'Not started yet.', href: place(b) })) });
     }
     if (/\b(modules?|subjects?|courses?)\b/.test(t)) return go(`Opening ${f.settings.studyTitle}.`, link('study/'));

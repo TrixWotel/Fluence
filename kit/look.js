@@ -42,6 +42,7 @@
       { emoji: '🚀', title: 'Physics', text: 'Kinematics, motion in a straight line, vectors and projectiles: tests like the ones in class, and practice.', link: 'physics/', color: '#e8743b' },
       { emoji: '🇪🇸', title: 'Spanish', text: '1,100 words in 25 themes, and the preterite and the imperfect.', link: 'spanish/', color: '#e5484d' },
       { emoji: '🏰', title: 'History', text: 'The Middle Ages and the Wars of Religion, as stories where you make the choices, with notes and tests.', link: 'history/', color: '#b7791f' },
+      { emoji: '✍️', title: 'English', text: 'Essays: learn how a good one works, a step at a time, then write your own and check it.', link: 'english/', color: '#0ea5b7' },
     ],
   };
   const FONTS = {
@@ -292,6 +293,16 @@
   const pagePath = (url) => { const path = new URL(url).pathname; return url.startsWith(root) && (!/\.[a-z0-9]+$/i.test(path) || /\.html$/i.test(path)); };
   const going = (url) => dispatchEvent(new CustomEvent('fluence:going', { detail: url }));
   const BARS = '.topbar, #music-bar', speed = (doc = document) => parseFloat(getComputedStyle(doc.documentElement).getPropertyValue('--speed')) || 1;
+  // the page you're leaving answers the click at once, whatever the next one has to bring in: what's between the bars dims straight
+  // away, and fades out the rest of the way when the next page takes over. So every workspace feels the same to click.
+  const DIMMED = 'fluence-leaving';
+  const middle = (doc) => [...doc.body.children].filter((kid) => !kid.matches(`${BARS}, .sky, script, iframe`));
+  const dim = () => {
+    if (!window.fluentio?.moving()) return;
+    const pace = speed();
+    for (const kid of middle(document)) if (!kid.getAnimations().some((a) => a.id === DIMMED)) kid.animate({ opacity: [1, 0.45] }, { id: DIMMED, duration: 130 / pace, easing: 'ease-out', fill: 'forwards' });
+  };
+  const undim = () => { for (const kid of middle(document)) for (const a of kid.getAnimations()) if (a.id === DIMMED) a.cancel(); };
   if (above) {
     const me = window.frameElement, pause = (ms) => new Promise((done) => setTimeout(done, ms));
     // (a page reloading itself in its frame is showing already, so nothing waits to be shown)
@@ -353,10 +364,11 @@
       // leaving the site takes the whole window
       if (!url.startsWith(root)) { e.preventDefault(); above.location.href = url; return; }
       // the page you're on, clicked: you're here already, and if another was on its way, you've changed your mind
-      if (e.navigationType === 'replace' && url === location.href) { e.preventDefault(); going(url); above.fluentioHost.stay?.(); return; }
+      if (e.navigationType === 'replace' && url === location.href) { e.preventDefault(); going(url); undim(); above.fluentioHost.stay?.(); return; }
       if (e.navigationType !== 'push' || !pagePath(url)) return;
       e.preventDefault();
       going(url);
+      dim();
       above.fluentioHost.open(url);
     });
   } else if (window === window.top && window.navigation) {
@@ -417,8 +429,11 @@
         if (!moving) return done();
         const pace = speed(last || document);
         for (const kid of kids) {
-          if (kid.matches(BARS)) kid.style.visibility = 'hidden';
-          else kid.animate({ opacity: [1, 0] }, { duration: 280 / pace, easing: 'ease-out', fill: 'forwards' });
+          if (kid.matches(BARS)) { kid.style.visibility = 'hidden'; continue; }
+          // (on from however far it's dimmed)
+          const from = kid.ownerDocument.defaultView.getComputedStyle(kid).opacity;
+          for (const a of kid.getAnimations()) if (a.id === DIMMED) a.cancel();
+          kid.animate({ opacity: [from, 0] }, { duration: 240 / pace, easing: 'ease-out', fill: 'forwards' });
         }
         setTimeout(done, 300 / pace);
       },
@@ -426,12 +441,32 @@
     window.navigation.addEventListener('navigate', (e) => {
       const url = e.destination.url;
       if (e.destination.sameDocument || !e.cancelable || e.downloadRequest != null || e.formData) return;
-      if (e.navigationType === 'replace' && url === location.href) { e.preventDefault(); going(url); host.stay(); return; }
+      if (e.navigationType === 'replace' && url === location.href) { e.preventDefault(); going(url); undim(); host.stay(); return; }
       if (e.navigationType !== 'push' || !pagePath(url)) return;
       e.preventDefault();
       going(url);
+      dim();
       host.open(url);
     });
+    // the workspaces' files, asked for ahead of time and kept fresh, so going to one doesn't wait on the network: the site's files
+    // count as new for ten minutes, and after that the browser asks about each one before it uses it
+    const warm = async (fresh) => {
+      if (navigator.connection?.saveData || document.hidden) return;
+      const asked = new Set(), ask = async (url) => { if (asked.has(url)) return null; asked.add(url); try { return await fetch(url, { cache: fresh ? 'no-cache' : 'default' }); } catch { return null; } };
+      for (const page of ['', 'study/', 'station/', 'music/']) {
+        const base = root + page, answer = await ask(base);
+        if (!answer?.ok) continue;
+        const doc = new DOMParser().parseFromString(await answer.text(), 'text/html');
+        const files = [...doc.querySelectorAll('script[src], link[rel="stylesheet"][href], link[rel="modulepreload"][href]')].map((n) => new URL(n.getAttribute('src') || n.getAttribute('href'), base).href);
+        // (what's on other sites, Excalidraw's parts, never changes: once is enough)
+        await Promise.all(files.filter((url) => !fresh || url.startsWith(root)).map(ask));
+      }
+    };
+    let warmed = 0;
+    const warmSoon = (fresh) => { warmed = Date.now(); (window.requestIdleCallback || setTimeout)(() => warm(fresh)); };
+    addEventListener('load', () => setTimeout(() => warmSoon(false), 900));
+    setInterval(() => warmSoon(true), 9 * 60000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - warmed > 9 * 60000) warmSoon(true); });
   }
 
   addEventListener('DOMContentLoaded', () => {

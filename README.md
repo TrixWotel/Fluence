@@ -4,7 +4,7 @@ My personal web playground, live at https://trixwotel.github.io/Fluence/
 
 ## Branches
 
-Every branch is one part of the site. A push to any of them puts the whole site back together and deploys it with the workflow in .github/workflows/pages.yml (the same file is on every branch).
+Every branch is one part of the site. A push to any of them puts the whole site back together and deploys it. The workflow that does that is .github/workflows/pages.yml on this branch, and every other branch's copy of that file only asks this one to deploy, since this is the branch the site's deploy rules allow. A new subject needs adding to that file here, and nowhere else.
 
 * **space** is served at the top: the home page, Modules (study/), Station (station/), Music (music/), Data, Code and Notes (data/, code/ and notes/, one app kept in workspace/) and Settings (settings/). It also holds settings.js (see below) and kit/: the look and the bar every page shares, the music player every page carries (kit/music/), and the test runner and question toolkit that the Math, Science, Physics, Spanish and History tests share, with the tests like the ones in class (kit/exam-kit.js makes and marks them, kit/exam.js shows them).
 * **geography** is served at /geography: find countries or capitals on the world map, or one continent at a time.
@@ -13,6 +13,7 @@ Every branch is one part of the site. A push to any of them puts the whole site 
 * **physics** is served at /physics: Kinematics with motion graphs (280 variants), Motion in a Straight Line (240), Vectors (240) and Projectile Motion (260), each with tests like the ones in class too.
 * **spanish** is served at /spanish: Vocabulary (1,100 words in 25 themes, 2,200 variants), the Preterite (270 variants) and the Imperfect (180 variants).
 * **history** is served at /history: each chapter is a story where you make the choices, with things to try and a quick check. It has The Middle Ages and The Wars of Religion, each with notes, tests like the ones in class (key words and dates, a source, an answer to explain) and practice asked twelve ways, such as myth or true, who am I, sorting, timelines and matching (380 variants in all).
+* **english** is served at /english: How essays work (14 short steps, each with one idea, things to try and something to write yourself), and a room for writing essays, on a prompt or your own question from class: plan it, write it (saved as you type), have the page check what can be counted, mark what can't with a rubric, and compare with a model. Rules in the browser, with no AI and nothing sent anywhere.
 
 There is no build step. The files are served as they are.
 

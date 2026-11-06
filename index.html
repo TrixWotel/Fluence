@@ -9,6 +9,7 @@
   <script src="kit/look.js"></script>
   <script src="kit/bar.js"></script>
   <script src="kit/assistant.js"></script>
+  <link rel="modulepreload" href="kit/welcome.js">
   <link rel="stylesheet" href="kit/site.css">
   <style>
     main { width: 100%; max-width: 1080px; margin: 0 auto; padding: clamp(14px, 4vh, 44px) 20px clamp(12px, 2.4vh, 24px); flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
@@ -238,8 +239,8 @@
       const fresh = !v.at || now - v.at > 30 * 60000;
       const visits = { count: (v.count || 0) + (fresh ? 1 : 0), streak: away === 0 ? v.streak || 1 : away === 1 ? (v.streak || 1) + 1 : 1, away: fresh ? away : v.away ?? null };
       f.write('fluentio.visits', { ...visits, at: now });
-      const NAMES = { triangles: 'Triangle Angles', amc10: 'the AMC 10', amc12: 'the AMC 12', heat: 'Heat Capacity', kinematics: 'Kinematics', motion: 'Motion in a Straight Line', vectors: 'Vectors', projectiles: 'Projectile Motion', vocab: 'Vocabulary', preterite: 'the preterite', imperfect: 'the imperfect', middleages: 'the Middle Ages', wars: 'the Wars of Religion' };
-      const IN = { math: ['triangles', 'amc10', 'amc12'], science: ['heat'], physics: ['kinematics', 'motion', 'vectors', 'projectiles'], spanish: ['vocab', 'preterite', 'imperfect'], history: ['middleages', 'wars'], geography: [] };
+      const NAMES = { essays: 'Essay Writing', triangles: 'Triangle Angles', amc10: 'the AMC 10', amc12: 'the AMC 12', heat: 'Heat Capacity', kinematics: 'Kinematics', motion: 'Motion in a Straight Line', vectors: 'Vectors', projectiles: 'Projectile Motion', vocab: 'Vocabulary', preterite: 'the preterite', imperfect: 'the imperfect', middleages: 'the Middle Ages', wars: 'the Wars of Religion' };
+      const IN = { math: ['triangles', 'amc10', 'amc12'], science: ['heat'], physics: ['kinematics', 'motion', 'vectors', 'projectiles'], spanish: ['vocab', 'preterite', 'imperfect'], history: ['middleages', 'wars'], english: ['essays'], geography: [] };
       const mine = {};   // id → { learned, bests }
       let learned = 0, bests = 0, best = null;
       for (const [id, name] of Object.entries(NAMES)) {

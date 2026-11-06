@@ -13,7 +13,8 @@
   <link rel="modulepreload" href="app.js">
   <link rel="modulepreload" href="../kit/music/github.js">
   <link rel="stylesheet" href="../kit/site.css">
-  <link rel="stylesheet" href="https://esm.sh/@excalidraw/excalidraw@0.18.1/dist/prod/index.css">
+  <!-- (it comes from another site, so it doesn't get to hold up the page: only the board waits for it) -->
+  <link rel="stylesheet" id="board-css" href="https://esm.sh/@excalidraw/excalidraw@0.18.1/dist/prod/index.css" media="print" onload="this.media='all'">
   <style>
     /* the board takes the whole window under the bar (and above the player, when there is one), on the site's own background */
     html, body { overflow: hidden; }
@@ -32,6 +33,18 @@
     .st-tray { animation: st-rise var(--t2) var(--ease) backwards; }
     /* what you select and drag, in the theme's color (station/app.js works it out) */
     .excalidraw { --color-selection: var(--st-selection, var(--accent)) !important; }
+    /* and everywhere else it would be Excalidraw's purple or blue: the right-click menu, and all of its tools if you've turned those on */
+    .excalidraw, .excalidraw.theme--dark {
+      --color-primary: var(--accent) !important;
+      --color-primary-darker: color-mix(in srgb, var(--accent) 85%, var(--text)) !important; --color-primary-darkest: color-mix(in srgb, var(--accent) 75%, var(--text)) !important;
+      --color-primary-hover: color-mix(in srgb, var(--accent) 85%, var(--text)) !important; --color-brand-hover: color-mix(in srgb, var(--accent) 85%, var(--text)) !important; --color-brand-active: color-mix(in srgb, var(--accent) 75%, var(--text)) !important;
+      --color-primary-light: color-mix(in srgb, var(--accent) 22%, var(--card)) !important; --color-primary-light-darker: color-mix(in srgb, var(--accent) 32%, var(--card)) !important;
+      --color-surface-primary-container: color-mix(in srgb, var(--accent) 22%, var(--card)) !important; --color-on-primary-container: var(--text) !important;
+      --select-highlight-color: var(--accent) !important; --focus-highlight-color: var(--accent) !important;
+    }
+    /* (white words wouldn't show on a white accent) */
+    .excalidraw :is(.Dialog__action-button--primary, .ttd-dialog-panel-button.excalidraw-button, .library-menu-browse-button, .library-unit__adder, .Switch.toggled) { color: var(--on-accent) !important; }
+    .excalidraw .context-menu-item:hover { color: var(--on-accent) !important; }
     .st-bar, .st-tray { position: fixed; z-index: 5; left: 50%; transform: translateX(-50%); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--line); box-shadow: var(--shadow); }
     .st-bar { bottom: var(--st-bottom, 14px); display: flex; align-items: center; gap: 1px; padding: 4px; border-radius: 14px; max-width: calc(100vw - 16px); }
     .st-bar[hidden], .st-tray[hidden], .st-chip[hidden] { display: none; }
