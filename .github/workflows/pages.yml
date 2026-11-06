@@ -1,86 +1,19 @@
-# Puts the whole site online whenever any branch changes: space is the main page (with kit/, the test runner the
-# Math, Science, Physics, Spanish and History tests share), and each other branch is served in its own folder:
-# /geography, /math, /science, /physics, /spanish and /history. This same file is on every branch, since a push runs the pushed branch's copy.
-name: Deploy the site
+# The whole site is put together and deployed from the space branch, since that's the branch the site's deploy rules allow.
+# So a push here only asks space to deploy, and that picks up this branch as it is now.
+name: Ask for a deploy
 
 on:
   push:
-    branches: [space, geography, math, science, physics, spanish, history]
-  workflow_dispatch:
+    branches: [history]
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# one deploy at a time, and none cancelled halfway
-concurrency:
-  group: pages
-  cancel-in-progress: false
+  actions: write
 
 jobs:
-  deploy:
+  ask:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Get the main page (space branch)
-        uses: actions/checkout@v7
-        with:
-          ref: space
-          path: main
-
-      - name: Get the geography tests (geography branch)
-        uses: actions/checkout@v7
-        with:
-          ref: geography
-          path: geography
-
-      - name: Get the math tests (math branch)
-        uses: actions/checkout@v7
-        with:
-          ref: math
-          path: math
-
-      - name: Get the science tests (science branch)
-        uses: actions/checkout@v7
-        with:
-          ref: science
-          path: science
-
-      - name: Get the physics tests (physics branch)
-        uses: actions/checkout@v7
-        with:
-          ref: physics
-          path: physics
-
-      - name: Get the Spanish tests (spanish branch)
-        uses: actions/checkout@v7
-        with:
-          ref: spanish
-          path: spanish
-
-      - name: Get the history tests (history branch)
-        uses: actions/checkout@v7
-        with:
-          ref: history
-          path: history
-
-      - name: Put the site together
-        run: |
-          mkdir -p _site
-          cp -R main/. _site/
-          for b in geography math science physics spanish history; do mkdir -p "_site/$b" && cp -R "$b/." "_site/$b/"; done
-          for d in _site _site/geography _site/math _site/science _site/physics _site/spanish _site/history; do rm -rf "$d/.git" "$d/.github" "$d/README.md" "$d/LICENSE"; done
-          find _site -type f | sort
-
-      - uses: actions/configure-pages@v6
-
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: _site
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+      - name: Ask the space branch to deploy
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref space
+        env:
+          GH_TOKEN: ${{ github.token }}
