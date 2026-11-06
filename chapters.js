@@ -49,9 +49,9 @@ async function list(id) {
   stage.replaceChildren(
     el('a', { className: 'back', href: './' }, '← History'),
     el('h1', { className: 'q-title' }, `${c.icon} ${c.name}`),
-    read ? el('div', { className: 'q-sofar' },
+    ...(read ? [el('div', { className: 'q-sofar' },
       el('span', { className: 'muted' }, `${read} of ${order.length} chapters finished`),
-      el('div', { className: 'q-meter', role: 'img', 'aria-label': `${read} of ${order.length} chapters finished` }, el('div', { style: `width:${Math.round((read / order.length) * 100)}%` }))) : null,
+      el('div', { className: 'q-meter', role: 'img', 'aria-label': `${read} of ${order.length} chapters finished` }, el('div', { style: `width:${Math.round((read / order.length) * 100)}%` })))] : []),
     next >= 0 ? el('a', { className: 'btn primary big q-go', href: `#${id}/${next}` }, `${read ? 'Continue' : 'Start'}: ${order[next]} ›`) : el('p', { className: 'q-clear' }, 'You’ve finished every chapter.'),
     ...learn.path.map((u) => el('section', { className: 'q-unit' },
       learn.path.length > 1 ? el('h2', {}, u.unit) : null,
