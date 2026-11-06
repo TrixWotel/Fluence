@@ -4,12 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>History · Fluence</title>
-  <meta name="description" content="The Middle Ages, from the fall of Rome to the printing press: lessons, practice and tests on the people, dates and ideas.">
+  <meta name="description" content="The Middle Ages and the Wars of Religion, in short stories where you make the choices, with notes, practice and tests.">
   <script src="../settings.js"></script>
   <script src="../kit/look.js"></script>
   <script src="../kit/bar.js"></script>
   <link rel="stylesheet" href="../kit/site.css">
   <link rel="stylesheet" href="../kit/tests.css">
+  <link rel="stylesheet" href="chapters.css">
 </head>
 <body data-title="History">
   <script>window.fluentio?.bar?.()</script>
@@ -17,7 +18,9 @@
     <header id="top">
       <a class="back" href="../study/">← <span data-fill="studyTitle">Study</span></a>
       <h1>🏰 History</h1>
-      <p class="lead">The Middle Ages, from the fall of Rome in 476 to the printing press and 1492: the people, the dates and the big ideas. Learn with lessons, practise in nine kinds of question, and take tests like the ones in class.</p>
+      <p class="lead">Read through it as a story: you make the choices people really faced, then try out what you’ve learned in each chapter.</p>
+      <div id="chapters"></div>
+      <h2 class="tests-title">Notes, practice and tests</h2>
     </header>
     <div id="app"><noscript>These tests need JavaScript.</noscript></div>
   </main>
@@ -26,13 +29,25 @@
     import { middleAges } from './middle-ages.js';
     import { middleAgesLearning, timeline } from './middle-ages-lessons.js';
     import { middleAgesExam } from './middle-ages-exam.js';
+    import { warsOfReligion } from './wars-of-religion.js';
+    import { warsLearning, warsTimeline } from './wars-of-religion-lessons.js';
+    import { warsExam } from './wars-of-religion-exam.js';
+    import { chapterCards } from './chapters-home.js';
+
+    chapterCards(document.getElementById('chapters'));
 
     testsPage({ tests: [
       {
-        bank: middleAges, name: 'The Middle Ages', length: 20, learn: middleAgesLearning, exam: middleAgesExam,
+        bank: middleAges, name: 'The Middle Ages', length: 20, learn: middleAgesLearning, exam: middleAgesExam, story: (k) => `chapters.html#middleages/${k}`,
         blurb: 'From the fall of Rome to the printing press: Charlemagne, the Vikings, feudalism, the Crusades, Magna Carta, the Black Death, the Hundred Years’ War, and the world beyond Europe. Tests like the ones in class, and practice.',
-        about: 'Practice asks nine ways: choose the answer, type a name or a year, put events in order, match people and words to what they were, true or false, choose all that fit, the odd one out, and the century. A test like the ones in class has key words and dates, a source to read and question, and an answer to explain, which you mark yourself against the mark scheme. Learning goes in time order, in five units, each topic with a short lesson.',
+        about: 'Practice asks in many ways: myth or true, who am I from clues, sort onto two sides, put events in order, match people and words to what they were, choose all that fit, the odd one out, the year and the century, as well as choosing or typing an answer. A test like the ones in class has key words and dates, a source to read and question, and an answer to explain, which you mark yourself against the mark scheme. Learning goes in time order, in five units, each topic with a short lesson.',
         asideName: 'The timeline', aside: timeline,
+      },
+      {
+        bank: warsOfReligion, name: 'The Wars of Religion', length: 20, learn: warsLearning, exam: warsExam, story: (k) => `chapters.html#wars/${k}`,
+        blurb: 'From Luther’s protest to the Peace of Westphalia: the Huguenots, the St. Bartholomew’s Day Massacre, the Defenestration of Prague and the Thirty Years’ War. Tests like the ones in class, with made-up sources to question, and practice.',
+        about: 'Practice asks in many ways: myth or true, who am I from clues, sort onto two sides, put events in order, match people and words to what they were, choose all that fit, the odd one out, the year and the century, as well as choosing or typing an answer. The tests like the ones in class add a source to question and an answer to explain.',
+        asideName: 'The timeline', aside: warsTimeline,
       },
     ] });
   </script>

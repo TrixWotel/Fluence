@@ -23,7 +23,7 @@ const BASE = [
   ] },
   { name: 'The rise of Islam', events: [E(622, 'did Muhammad move from Mecca to Medina (the Hijra)', 'The Hijra'), E(762, 'was Baghdad founded', 'Baghdad is founded')], facts: [
     ['In which city was the Prophet Muhammad born?', 'Mecca', ['Medina', 'Jerusalem', 'Baghdad', 'Damascus'], 'Muhammad was born in Mecca, in Arabia, around 570.'],
-    ['What was the Hijra of 622?', 'Muhammad’s move from Mecca to Medina, where the Islamic calendar starts', ['The first crusade', 'The founding of Baghdad', 'The fall of Constantinople', 'The building of the Hagia Sophia'], 'In 622 Muhammad and his followers moved from Mecca to Medina; the Islamic calendar counts its years from then.'],
+    ['What was the Hijra of 622?', 'Muhammad’s move from Mecca to Medina, where the Islamic calendar starts', ['The first crusade', 'The founding of Baghdad', 'The fall of Constantinople', 'The building of the Hagia Sophia'], 'In 622 Muhammad and his followers moved from Mecca to Medina. The Islamic calendar counts its years from then.'],
     ['What was the House of Wisdom in Baghdad?', 'A center of learning where scholars translated and studied Greek, Persian and Indian works', ['The main mosque in Mecca', 'A palace in Spain', 'A fortress against the crusaders', 'A market for spices'], 'Under the Abbasids, scholars in Baghdad translated and built on ancient learning in mathematics, astronomy and medicine.'],
     ['Which number system reached Europe through Arabic scholars?', 'The Hindu–Arabic numerals, 0 to 9', ['Roman numerals', 'Greek numerals', 'Babylonian numbers', 'Egyptian hieroglyphs'], 'The digits 0–9 came from India and spread to Europe through Arabic writers, replacing Roman numerals for arithmetic.'],
     ['Which caliphate made Baghdad its capital?', 'The Abbasid Caliphate', ['The Umayyad Caliphate', 'The Ottoman Empire', 'The Fatimid Caliphate', 'The Mali Empire'], 'The Abbasids took over from the Umayyads (whose capital was Damascus) and founded Baghdad in 762.'],
@@ -36,7 +36,7 @@ const BASE = [
     ['Whose followers, descended from Vikings, gave Normandy (“land of the Northmen”) its name?', 'Rollo’s', ['Charlemagne’s', 'Alfred the Great’s', 'Leif Erikson’s', 'Saladin’s'], 'In 911 the French king gave the Viking leader Rollo land in northern France, which became Normandy.'],
   ] },
   { name: 'Feudalism and the manor', events: [], facts: [
-    ['Under feudalism, what was a fief?', 'Land a lord gave to a vassal in return for loyalty and service', ['A tax paid to the Church', 'A kind of castle', 'A weapon used by knights', 'A town’s charter'], 'A fief was land granted by a lord; the vassal who held it owed loyalty and, usually, military service.'],
+    ['Under feudalism, what was a fief?', 'Land a lord gave to a vassal in return for loyalty and service', ['A tax paid to the Church', 'A kind of castle', 'A weapon used by knights', 'A town’s charter'], 'A fief was land granted by a lord. The vassal who held it owed loyalty and, usually, military service.'],
     ['Who were serfs?', 'Peasants bound to a lord’s land, who could not leave without permission', ['Knights who guarded the king', 'Merchants in a guild', 'Monks who copied books', 'Nobles who owned castles'], 'Serfs farmed the lord’s land and their own strips, owed him labor and dues, and were tied to the manor.'],
     ['What did a knight owe his lord in return for land?', 'Military service', ['A tenth of his crops', 'Nothing at all', 'Rent paid in gold', 'Work in the fields'], 'Knights held land in return for fighting for their lord, often about 40 days a year.'],
     ['What was a manor?', 'A lord’s estate: his house, the village, its fields and the people who worked them', ['A church school', 'A king’s army', 'A market town', 'A ship'], 'The manor was the center of country life: the lord’s house, the peasants’ village, fields, mill and church.'],
@@ -51,7 +51,7 @@ const BASE = [
     ['What was excommunication?', 'Being cut off from the Church and its sacraments', ['Being made a knight', 'Paying a tenth of your crops', 'Going on a pilgrimage', 'Becoming a monk'], 'Excommunication shut a person out of the Church, a powerful threat when people believed it put their soul at risk.'],
     ['What did monks do in monasteries?', 'Prayed, worked, and copied books by hand', ['Collected taxes for the king', 'Trained soldiers', 'Ran the guilds', 'Built ships'], 'Following rules like Saint Benedict’s, monks lived by prayer and work, and kept learning alive by copying books.'],
     ['What was a tithe?', 'A tenth of what people produced, given to the Church', ['A lord’s castle', 'A knight’s weapon', 'A crusade', 'A kind of prayer book'], 'Everyone was expected to give the Church a tithe, one tenth of their crops or income.'],
-    ['What was the Investiture Controversy about?', 'Whether popes or kings had the right to appoint bishops', ['Who should rule England', 'How to fight the plague', 'Where to build cathedrals', 'Who owned the Hagia Sophia'], 'Pope Gregory VII and Emperor Henry IV clashed over appointing bishops; Henry begged forgiveness at Canossa in 1077.'],
+    ['What was the Investiture Controversy about?', 'Whether popes or kings had the right to appoint bishops', ['Who should rule England', 'How to fight the plague', 'Where to build cathedrals', 'Who owned the Hagia Sophia'], 'Pope Gregory VII and Emperor Henry IV clashed over appointing bishops. Henry begged forgiveness at Canossa in 1077.'],
   ] },
   { name: 'The Norman Conquest', events: [E(1066, 'was the Battle of Hastings fought', 'The Battle of Hastings'), E(1086, 'was the Domesday Book made', 'The Domesday Book')], facts: [
     ['Who won the Battle of Hastings in 1066?', 'William, Duke of Normandy', ['Harold Godwinson', 'Harald Hardrada', 'Alfred the Great', 'Edward the Confessor'], 'William of Normandy defeated King Harold and became William I, “the Conqueror”.'],
@@ -72,7 +72,7 @@ const BASE = [
     ['Who forced King John to agree to Magna Carta?', 'His barons, the great nobles', ['The pope', 'The French king', 'The peasants', 'The Vikings'], 'Rebel barons angry at his taxes and rule made John seal Magna Carta at Runnymede.'],
     ['What was the big idea of Magna Carta?', 'Even the king had to obey the law', ['The pope ruled England', 'Everyone could vote', 'Serfs were set free', 'Taxes were banned'], 'Magna Carta said the king could not take property or punish free men except by law, an idea that grew into the rule of law.'],
     ['Where was Magna Carta sealed?', 'Runnymede, by the River Thames', ['Hastings', 'Canterbury Cathedral', 'The Tower of London', 'Westminster Abbey'], 'King John met the barons in the meadow at Runnymede, near Windsor, in June 1215.'],
-    ['What grew out of English kings needing to ask for taxes?', 'Parliament', ['The guilds', 'The Crusades', 'The monasteries', 'The Domesday Book'], 'Kings called meetings of nobles, clergy and townspeople to agree to taxes; these grew into Parliament.'],
+    ['What grew out of English kings needing to ask for taxes?', 'Parliament', ['The guilds', 'The Crusades', 'The monasteries', 'The Domesday Book'], 'Kings called meetings of nobles, clergy and townspeople to agree to taxes. These grew into Parliament.'],
   ] },
   { name: 'Towns, guilds and learning', events: [E(1088, 'was the University of Bologna founded', 'The University of Bologna is founded'), E(1163, 'was work begun on Notre-Dame in Paris', 'Work begins on Notre-Dame')], facts: [
     ['What was a guild?', 'An association of merchants or craftsmen that set prices, quality and training', ['A kind of church tax', 'A castle’s outer wall', 'A peasant’s strip of land', 'A royal army'], 'Guilds controlled a trade in a town: who could work in it, how goods were made, and what they cost.'],
@@ -90,7 +90,7 @@ const BASE = [
   ] },
   { name: 'The Hundred Years’ War', events: [E(1337, 'did the Hundred Years’ War begin', 'The Hundred Years’ War begins'), E(1415, 'was the Battle of Agincourt fought', 'The Battle of Agincourt'), E(1429, 'did Joan of Arc lift the siege of Orléans', 'Joan of Arc lifts the siege of Orléans'), E(1453, 'did the Hundred Years’ War end', 'The Hundred Years’ War ends')], facts: [
     ['Which two kingdoms fought the Hundred Years’ War?', 'England and France', ['England and Scotland', 'France and Spain', 'England and Spain', 'France and the Holy Roman Empire'], 'English kings claimed the French throne, and the two kingdoms fought on and off from 1337 to 1453.'],
-    ['Who was the French peasant girl who helped lift the siege of Orléans in 1429?', 'Joan of Arc', ['Eleanor of Aquitaine', 'Christine de Pizan', 'Queen Isabella', 'Saint Catherine'], 'Joan of Arc, guided (she said) by saints’ voices, inspired the French to victory; she was burned by the English in 1431.'],
+    ['Who was the French peasant girl who helped lift the siege of Orléans in 1429?', 'Joan of Arc', ['Eleanor of Aquitaine', 'Christine de Pizan', 'Queen Isabella', 'Saint Catherine'], 'Joan of Arc, guided (she said) by saints’ voices, inspired the French to victory. She was burned by the English in 1431.'],
     ['Which weapon won English victories at Crécy and Agincourt?', 'The longbow', ['The cannon', 'The musket', 'The catapult', 'The crossbow'], 'English longbowmen could shoot fast and far, cutting down charging French knights.'],
     ['How long did the Hundred Years’ War really last?', '116 years, from 1337 to 1453', ['Exactly 100 years', '30 years', '50 years', '200 years'], 'It ran from 1337 to 1453: 116 years, with long truces in between.'],
     ['Which English king won the Battle of Agincourt in 1415?', 'Henry V', ['Henry VIII', 'Richard I', 'Edward I', 'William I'], 'Henry V’s small, tired army beat a much bigger French one at Agincourt.'],
@@ -104,10 +104,10 @@ const BASE = [
   ] },
   { name: 'The wider medieval world', events: [E(1192, 'did Minamoto Yoritomo become shogun of Japan', 'Minamoto Yoritomo becomes shogun'), E(1206, 'was Genghis Khan proclaimed ruler of the Mongols', 'Genghis Khan rules the Mongols'), E(1324, 'did Mansa Musa make his pilgrimage to Mecca', 'Mansa Musa’s pilgrimage to Mecca'), E(1325, 'did the Aztecs found Tenochtitlan', 'The Aztecs found Tenochtitlan')], facts: [
     ['Which ruler of Mali was famous for his great wealth and his pilgrimage to Mecca in 1324?', 'Mansa Musa', ['Sundiata', 'Saladin', 'Kublai Khan', 'Mehmed II'], 'Mansa Musa of Mali traveled to Mecca with so much gold that he lowered its price in Cairo.'],
-    ['Who united the Mongol tribes and founded the Mongol Empire?', 'Genghis Khan', ['Kublai Khan', 'Attila the Hun', 'Tamerlane', 'Saladin'], 'Genghis Khan united the Mongols in 1206; his empire became the largest connected land empire in history.'],
-    ['In medieval Japan, what was the title of the military ruler who held the real power?', 'Shogun', ['Emperor', 'Samurai', 'Daimyo', 'Khan'], 'From 1192 the shogun ruled, while the emperor stayed on as a ceremonial figure; samurai were the warriors who served lords.'],
+    ['Who united the Mongol tribes and founded the Mongol Empire?', 'Genghis Khan', ['Kublai Khan', 'Attila the Hun', 'Tamerlane', 'Saladin'], 'Genghis Khan united the Mongols in 1206. His empire became the largest connected land empire in history.'],
+    ['In medieval Japan, what was the title of the military ruler who held the real power?', 'Shogun', ['Emperor', 'Samurai', 'Daimyo', 'Khan'], 'From 1192 the shogun ruled, while the emperor stayed on as a ceremonial figure. Samurai were the warriors who served lords.'],
     ['Which Chinese dynasty (960–1279) is known for movable type and using the compass at sea?', 'The Song dynasty', ['The Han dynasty', 'The Qin dynasty', 'The Ming dynasty', 'The Zhou dynasty'], 'Song China was rich in trade and invention, from movable type to paper money and the magnetic compass.'],
-    ['Which city did the Aztecs build on an island in a lake, traditionally in 1325?', 'Tenochtitlan', ['Cuzco', 'Timbuktu', 'Machu Picchu', 'Chichen Itza'], 'Tenochtitlan, on Lake Texcoco, grew into one of the largest cities in the world; Mexico City stands there today.'],
+    ['Which city did the Aztecs build on an island in a lake, traditionally in 1325?', 'Tenochtitlan', ['Cuzco', 'Timbuktu', 'Machu Picchu', 'Chichen Itza'], 'Tenochtitlan, on Lake Texcoco, grew into one of the largest cities in the world. Mexico City stands there today.'],
     ['Which Venetian traveler wrote about China under Kublai Khan?', 'Marco Polo', ['Ibn Battuta', 'Leif Erikson', 'Christopher Columbus', 'Vasco da Gama'], 'Marco Polo’s account of his years in China in the late 1200s amazed European readers.'],
   ] },
 ];
@@ -179,14 +179,14 @@ const MORE = {
     multi: [
       ['What did serfs owe their lord? Choose all that fit.', ['Work on the lord’s fields', 'A share of their crops', 'Fees to use his mill'], ['Service as a knight', 'A vote in Parliament', 'A tenth of their land each year'], 'Serfs paid in labor, in produce and in fees. Knights owed military service, and the tithe (a tenth) went to the Church, not the lord.'],
       ['What would you find on a manor? Choose all that fit.', ['The lord’s house', 'A village of peasants', 'Fields, a mill and a church'], ['A university', 'A royal parliament', 'A printing press'], 'A manor was a farming estate: the lord’s house, the village and everything it needed to feed itself.'],
-      ['What did a lord give his vassals? Choose all that fit.', ['Land (a fief)', 'Protection'], ['Weekly wages', 'A seat in Parliament', 'Freedom from all duties'], 'A lord granted land and protection; in return the vassal owed loyalty and service.'],
+      ['What did a lord give his vassals? Choose all that fit.', ['Land (a fief)', 'Protection'], ['Weekly wages', 'A seat in Parliament', 'Freedom from all duties'], 'A lord granted land and protection. In return the vassal owed loyalty and service.'],
     ],
     tf: [
       ['Serfs could leave the manor whenever they liked.', false, 'Serfs were bound to the manor and needed the lord’s permission to leave.'],
       ['A knight held land in return for military service.', true, 'Knights held fiefs in return for fighting for their lord.'],
       ['Most people in medieval Europe were knights.', false, 'About nine in ten people were peasants who farmed.'],
       ['A vassal promised loyalty to his lord.', true, 'Loyalty in return for land was the heart of the feudal bond.'],
-      ['The king was at the bottom of the feudal system.', false, 'The king was at the top; the peasants were at the bottom.'],
+      ['The king was at the bottom of the feudal system.', false, 'The king was at the top. The peasants were at the bottom.'],
     ],
   },
   'The medieval Church': {
@@ -279,7 +279,7 @@ const MORE = {
     typed: [
       ['Who built a printing press with movable type in Europe, around 1450?', ['Gutenberg', 'Johannes Gutenberg', 'Johann Gutenberg'], 'Johannes Gutenberg, in Mainz, printed books far faster than they could be copied by hand.'],
       ['Which Ottoman sultan captured Constantinople in 1453?', ['Mehmed II', 'Mehmed', 'Mehmet II', 'Mehmet', 'Mehmed the Conqueror'], 'Mehmed II broke the walls with huge cannons.'],
-      ['What was the “rebirth” of Greek and Roman learning that began in Italy called?', ['Renaissance', 'the Renaissance'], 'Renaissance means rebirth; it spread from Italian cities across Europe.'],
+      ['What was the “rebirth” of Greek and Roman learning that began in Italy called?', ['Renaissance', 'the Renaissance'], 'Renaissance means rebirth. It spread from Italian cities across Europe.'],
       ['Which city in Spain fell in 1492, ending the Reconquista?', ['Granada'], 'Ferdinand and Isabella took Granada, the last Muslim kingdom in Spain.'],
     ],
     pairs: [['Gutenberg', 'printing with movable type'], ['Mehmed II', 'took Constantinople'], ['Granada', 'last Muslim kingdom in Spain'], ['Renaissance', 'rebirth of Greek and Roman learning'], ['Ferdinand and Isabella', 'completed the Reconquista'], ['Ottoman Turks', 'made Istanbul their capital']],
@@ -292,13 +292,13 @@ const MORE = {
     typed: [
       ['Which ruler of Mali made a famous golden pilgrimage to Mecca in 1324?', ['Mansa Musa', 'Musa', 'Musa I'], 'Mansa Musa carried so much gold that he lowered its price in Cairo.'],
       ['Who united the Mongol tribes in 1206?', ['Genghis Khan', 'Chinggis Khan', 'Temujin', 'Genghis'], 'Genghis Khan, born Temujin, founded the Mongol Empire.'],
-      ['What was the title of the military ruler of medieval Japan?', ['shogun', 'the shogun'], 'From 1192 the shogun held the real power; the emperor reigned in name.'],
+      ['What was the title of the military ruler of medieval Japan?', ['shogun', 'the shogun'], 'From 1192 the shogun held the real power. The emperor reigned in name.'],
       ['Which Aztec city was built on an island in a lake?', ['Tenochtitlan', 'Tenochtitlán'], 'Tenochtitlan stood on Lake Texcoco, where Mexico City is now.'],
     ],
     pairs: [['Mansa Musa', 'ruler of Mali'], ['Genghis Khan', 'founded the Mongol Empire'], ['Kublai Khan', 'Mongol ruler of China'], ['Shogun', 'military ruler of Japan'], ['Tenochtitlan', 'Aztec city on a lake'], ['Marco Polo', 'Venetian who wrote about China']],
     multi: [
       ['Which inventions go with Song China? Choose all that fit.', ['Paper money', 'Movable type', 'The compass used at sea'], ['The longbow', 'Gothic arches', 'The motte-and-bailey castle'], 'Song China (960–1279) used paper money, movable type and the magnetic compass.'],
-      ['Which of these were outside Europe? Choose all that fit.', ['The Mali Empire', 'The Mongol Empire', 'The Aztec Empire'], ['The Frankish kingdom', 'Normandy', 'The Holy Roman Empire'], 'Mali was in West Africa, the Mongols in Asia, the Aztecs in Mexico; the others were in Europe.'],
+      ['Which of these were outside Europe? Choose all that fit.', ['The Mali Empire', 'The Mongol Empire', 'The Aztec Empire'], ['The Frankish kingdom', 'Normandy', 'The Holy Roman Empire'], 'Mali was in West Africa, the Mongols in Asia, the Aztecs in Mexico. The others were in Europe.'],
     ],
   },
 };
