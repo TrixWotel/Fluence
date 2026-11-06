@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>English · Fluence</title>
+  <meta name="description" content="Essays: learn how a good one works, a step at a time, then write your own and check it.">
+  <script src="../settings.js"></script>
+  <script src="../kit/look.js"></script>
+  <script src="../kit/bar.js"></script>
+  <link rel="modulepreload" href="steps.js">
+  <link rel="stylesheet" href="../kit/site.css">
+  <link rel="stylesheet" href="../kit/tests.css">
+  <link rel="stylesheet" href="english.css">
+</head>
+<body data-title="English">
+  <script>window.fluentio?.bar?.()</script>
+  <main class="e-page">
+    <a class="back" href="../study/">← <span data-fill="studyTitle">Study</span></a>
+    <h1>✍️ English</h1>
+    <p class="lead">Essays: learn how a good one works, a step at a time, then write your own and check it.</p>
+    <div class="e-ways" id="ways"></div>
+    <div id="more"></div>
+  </main>
+  <script type="module">
+    import { STEPS } from './steps.js';
+    const f = window.fluentio, { el } = f;
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const learn = f.read('fluentio.essays.learn') || {}, essays = Object.values(f.read('fluentio.essays.list') || {}).sort((a, b) => b.edited - a.edited);
+    const done = STEPS.filter((s) => learn[s.title]?.learned).length, next = STEPS.findIndex((s) => !learn[s.title]?.learned);
+    const finished = essays.filter((e) => Object.keys(e.marks || {}).length >= 6).length;
+    const way = (href, icon, title, blurb, score, go) => el('a', { className: 'card e-way', href },
+      el('span', { className: 'e-way-icon', 'aria-hidden': 'true' }, icon),
+      el('span', { className: 'e-way-text' }, el('b', {}, title), el('span', { className: 'muted' }, blurb), score ? el('span', { className: 'e-way-score' }, score) : null),
+      el('span', { className: 'btn primary e-way-go' }, go));
+    document.getElementById('ways').replaceChildren(
+      way('learn.html', '📘', 'How essays work', `${STEPS.length} short steps, from reading the question to the last check. Each has one idea, things to try, and something to write yourself.`, done ? `${done} of ${STEPS.length} steps done` : '', !done ? 'Start ›' : next >= 0 ? 'Continue ›' : 'Look again ›'),
+      way('write.html', '✍️', 'Write an essay', 'Pick something to write about, or bring your own question from class. Plan it, write it, and then check it, with a model to compare with.', essays.length ? plural(essays.length, 'essay') + (finished ? `, ${finished} marked` : '') : '', 'Choose ›'));
+    const draft = essays.find((e) => Object.keys(e.marks || {}).length < 6 && (e.text || '').trim());
+    if (draft) document.getElementById('more').replaceChildren(el('p', { className: 'muted' }, 'You’ve got one on the go. ', el('a', { href: `write.html#e/${draft.id}` }, 'Keep writing ›')));
+  </script>
+</body>
+</html>

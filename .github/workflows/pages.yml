@@ -1,0 +1,19 @@
+# The whole site is put together and deployed from the space branch, since that's the branch the site's deploy rules allow.
+# So a push here only asks space to deploy, and that picks up this branch as it is now.
+name: Ask for a deploy
+
+on:
+  push:
+    branches: [english]
+
+permissions:
+  actions: write
+
+jobs:
+  ask:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask the space branch to deploy
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref space
+        env:
+          GH_TOKEN: ${{ github.token }}
