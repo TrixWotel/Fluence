@@ -143,9 +143,47 @@ details[open] > :not(summary) { animation: rise var(--t2) var(--ease) backwards;
 .choice:disabled { cursor: default; }
 .choice:disabled:hover { transform: none; }
 .choice.picked:disabled:not(.right):not(.wrong) { border-color: var(--accent); }
-.match-row { display: flex; align-items: center; justify-content: space-between; gap: 8px 14px; flex-wrap: wrap; padding: 8px 10px 8px 14px; border-radius: calc(var(--radius) * .72); border: 1px solid var(--line); background: var(--bg); }
-.match-row .ml { flex: 1 1 14em; }
-.match-row .pick-in { flex: 0 1 18em; }
+/* two choices side by side */
+.choices.two { grid-template-columns: 1fr 1fr; }
+.choices.two .choice { justify-content: center; padding-block: 14px; font-weight: 600; text-align: center; }
+.choices.two .letter { display: none; }
+/* an order builds a timeline as you tap */
+.order-line { position: relative; display: grid; gap: 6px; margin: 0 0 12px 11px; padding: 2px 0 2px 22px; list-style: none; counter-reset: step; border-left: 2px solid var(--accent); }
+.order-line li { position: relative; counter-increment: step; animation: rise var(--t2) var(--ease) backwards; }
+.order-line li::before { content: counter(step); position: absolute; left: -34px; top: 50%; display: grid; place-items: center; width: 22px; height: 22px; font-size: .78rem; font-weight: 700; color: var(--on-accent, #fff); background: var(--accent); border-radius: 50%; transform: translateY(-50%); }
+.order-line .choice, .order-pile .choice { width: 100%; }
+.order-pile { display: grid; gap: 8px; }
+/* a match: a row for each, and what goes with them */
+.pair-rows { display: grid; gap: 6px; margin-bottom: 10px; }
+.pair-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 14px; width: 100%; padding: 10px 14px; font: inherit; color: inherit; text-align: left; cursor: pointer; background: var(--card); border: 1px solid var(--line); border-radius: calc(var(--radius) * .8); transition: border-color var(--t1), background var(--t1); }
+.pair-row .ml { font-weight: 600; }
+.pair-row .mr { color: var(--text); }
+.pair-row .mr.muted { color: var(--muted); font-size: .92rem; }
+.pair-row:hover:not(:disabled) { border-color: var(--accent); }
+.pair-row.on { border-color: var(--accent); background: var(--soft); }
+.pair-row.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 10%, var(--card)); }
+.pair-row.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--card)); }
+.pair-row:disabled { cursor: default; }
+.pair-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pair-chip { padding: 8px 12px; font: inherit; font-size: .95rem; color: inherit; text-align: left; cursor: pointer; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; animation: rise var(--t2) var(--ease) backwards; transition: border-color var(--t1), transform var(--t2) var(--spring); }
+.pair-chip:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-2px); }
+/* a sort: one to place at a time, and its two sides */
+.sort-item { padding: 18px 14px; font-size: 1.12rem; font-weight: 600; text-align: center; background: var(--card); border: 1px dashed var(--line); border-radius: calc(var(--radius) * .9); }
+.sort-sides, .sort-shelves { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sort-side { padding: 13px 10px; font: inherit; font-weight: 600; color: inherit; cursor: pointer; background: var(--bg); border: 1px solid var(--line); border-radius: calc(var(--radius) * .8); transition: border-color var(--t1), transform var(--t2) var(--spring); }
+.sort-side:hover { border-color: var(--accent); transform: translateY(-2px); }
+.sort-shelf { display: flex; flex-direction: column; gap: 5px; font-size: .94rem; }
+.sort-shelf > b { color: var(--muted); font-weight: 600; }
+.sort-placed { padding: 6px 10px; font: inherit; color: inherit; text-align: left; cursor: pointer; background: var(--soft); border: 1px solid transparent; border-radius: calc(var(--radius) * .6); animation: pop var(--t2) var(--spring) backwards; }
+.sort-placed:hover:not(:disabled) { border-color: var(--accent); }
+.sort-placed.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, var(--card)); }
+.sort-placed.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, var(--card)); }
+.sort-placed:disabled { cursor: default; }
+/* clues, one at a time */
+.clues { display: grid; gap: 6px; margin: 0 0 10px; padding-left: 24px; }
+.clues li { animation: rise var(--t2) var(--ease) backwards; }
+.clue-more { margin-bottom: 12px; }
+.story-link { margin: 0 0 12px; }
 .check-row { margin-top: 12px; }
 .result { margin-top: 14px; font-weight: 600; min-height: 1.4em; }
 .result.good { color: var(--good); animation: pop var(--t2) var(--spring); }

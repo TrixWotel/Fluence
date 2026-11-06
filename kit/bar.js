@@ -13,6 +13,7 @@
   const spaces = () => [
     { id: 'home', title: 'Home', href: f.link('./'), icon: 'home', key: keyFor('home') },
     { id: 'study', title: f.settings.studyTitle, href: f.link('study/'), icon: 'study', key: keyFor('study') },
+    { id: 'station', title: f.settings.stationTitle, href: f.link('station/'), icon: 'station', key: keyFor('station') },
     { id: 'music', title: f.settings.musicTitle, href: f.link('music/'), icon: 'music', key: keyFor('music') },
     { id: 'data', title: f.settings.dataTitle, href: f.link('data/'), icon: 'database', key: keyFor('data') },
     { id: 'code', title: f.settings.codeTitle, href: f.link('code/'), icon: 'code', key: keyFor('code') },
@@ -178,19 +179,22 @@
 
   // the keys: Search (and / too, when you're not typing), and the three spaces. A key without Ctrl, Alt or Meta only
   // counts when you're not typing, so it can't get in the way of writing
-  addEventListener('keydown', (e) => {
-    if (e.defaultPrevented || e.isComposing) return;
-    if (e.key === 'Escape' && box && !box.hidden) { e.preventDefault(); closeFind(); return; }
+  // (a page with keys of its own, like Station's board, asks here first: true means the key was the site's)
+  f.siteKey = (e) => {
+    if (e.defaultPrevented || e.isComposing) return false;
+    if (e.key === 'Escape' && box && !box.hidden) { e.preventDefault(); closeFind(); return true; }
     const pressed = f.key.pressed(e);
-    if (!pressed) return;
+    if (!pressed) return false;
     const typing = e.target instanceof Element && !!e.target.closest('input, textarea, select, [contenteditable]');
     const is = (name) => { const want = f.key.meant(f.settings.keys[name]); return !!want && want === pressed && (!typing || /Ctrl|Alt|Meta/.test(want)); };
     if (is('search') || (pressed === '/' && !typing)) {
       e.preventDefault();
       if (box && !box.hidden) closeFind(); else openFind();
-      return;
+      return true;
     }
     const space = spaces().find((x) => is(x.id));
-    if (space) { e.preventDefault(); go(space.href); }
-  });
+    if (space) { e.preventDefault(); go(space.href); return true; }
+    return false;
+  };
+  addEventListener('keydown', f.siteKey);
 })();

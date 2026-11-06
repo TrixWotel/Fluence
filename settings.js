@@ -65,7 +65,7 @@ window.FLUENTIO_SETTINGS = {
 
   // the keys (Settings can record new ones): Ctrl, Alt, Shift or Meta (⌘ on a Mac) with a key, like 'Ctrl+K', and ''
   // turns one off. On Windows and Linux the browser keeps Ctrl with a number for its tabs, so there Ctrl+1 works as Alt+1
-  keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', music: 'Ctrl+3', data: 'Ctrl+4', code: 'Ctrl+5', notes: 'Ctrl+6' },
+  keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', station: 'Ctrl+3', music: 'Ctrl+4', data: 'Ctrl+5', code: 'Ctrl+6', notes: 'Ctrl+7' },
 
   // the home page's tiles, in this order (take one out to hide it): 'workspace' (what you worked on last), 'music',
   // 'study', 'progress', 'today', 'question', 'data' and 'quick'
@@ -107,6 +107,7 @@ window.FLUENTIO_SETTINGS = {
   notesTitle: 'Notes',
 
   // Music (the music/ page): its name in the bar and on its page
+  stationTitle: 'Station',
   musicTitle: 'Music',
 
   // Modules (the study/ page): its title, the line under it, and its subjects in this order (color is the subject's
@@ -115,10 +116,10 @@ window.FLUENTIO_SETTINGS = {
   studyIntro: 'Pick a subject. Take a test, learn it one topic at a time, or practise any question.',
   study: [
     { emoji: '🌍', title: 'Geography', text: 'Find countries and capitals on the world map, or one continent at a time.', link: 'geography/', color: '#1f9d74' },
-    { emoji: '📐', title: 'Math', text: 'Triangle angles, and AMC 10 practice in 157 topics, from the first problems of a test to the hardest.', link: 'math/', color: '#2f6fed' },
+    { emoji: '📐', title: 'Math', text: 'Triangle angles, and AMC 10 and AMC 12 practice, from the first problems of a test to the hardest.', link: 'math/', color: '#2f6fed' },
     { emoji: '🧪', title: 'Science', text: 'Heat and energy: tests like the ones in class, and Q = mcΔT practice.', link: 'science/', color: '#8b5cf6' },
     { emoji: '🚀', title: 'Physics', text: 'Kinematics, motion in a straight line, vectors and projectiles: tests like the ones in class, and practice.', link: 'physics/', color: '#e8743b' },
     { emoji: '🇪🇸', title: 'Spanish', text: '1,100 words in 25 themes, and the preterite and the imperfect.', link: 'spanish/', color: '#e5484d' },
-    { emoji: '🏰', title: 'History', text: 'The Middle Ages, from the fall of Rome to the printing press: people, dates and big ideas.', link: 'history/', color: '#b7791f' },
+    { emoji: '🏰', title: 'History', text: 'The Middle Ages and the Wars of Religion, as stories where you make the choices, with notes and tests.', link: 'history/', color: '#b7791f' },
   ],
 };

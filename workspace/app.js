@@ -10,7 +10,7 @@
 // Links: #folder/<id> opens a folder, #note/<id> (or doc, table, code) a thing, and #new/note (or doc, table, code)
 // makes one at the top of its space. A link to something in another space goes on to that space's page.
 import { LANGS, langOf, indent, start, PAGE_SCRIPT, SAMPLE, paint, runJs, runPython, stopPython, pythonRunning, pageFrom, preview } from './code.js?v=3';
-import * as github from './sync.js?v=3';
+import * as github from './sync.js?v=4';
 
 const f = window.fluentio;
 const { el, svg } = f;

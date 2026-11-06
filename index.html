@@ -193,8 +193,8 @@
       const fresh = !v.at || now - v.at > 30 * 60000;
       const visits = { count: (v.count || 0) + (fresh ? 1 : 0), streak: away === 0 ? v.streak || 1 : away === 1 ? (v.streak || 1) + 1 : 1, away: fresh ? away : v.away ?? null };
       f.write('fluentio.visits', { ...visits, at: now });
-      const NAMES = { triangles: 'Triangle Angles', amc10: 'the AMC 10', heat: 'Heat Capacity', kinematics: 'Kinematics', motion: 'Motion in a Straight Line', vectors: 'Vectors', projectiles: 'Projectile Motion', vocab: 'Vocabulary', preterite: 'the preterite', imperfect: 'the imperfect', middleages: 'the Middle Ages' };
-      const IN = { math: ['triangles', 'amc10'], science: ['heat'], physics: ['kinematics', 'motion', 'vectors', 'projectiles'], spanish: ['vocab', 'preterite', 'imperfect'], history: ['middleages'], geography: [] };
+      const NAMES = { triangles: 'Triangle Angles', amc10: 'the AMC 10', amc12: 'the AMC 12', heat: 'Heat Capacity', kinematics: 'Kinematics', motion: 'Motion in a Straight Line', vectors: 'Vectors', projectiles: 'Projectile Motion', vocab: 'Vocabulary', preterite: 'the preterite', imperfect: 'the imperfect', middleages: 'the Middle Ages', wars: 'the Wars of Religion' };
+      const IN = { math: ['triangles', 'amc10', 'amc12'], science: ['heat'], physics: ['kinematics', 'motion', 'vectors', 'projectiles'], spanish: ['vocab', 'preterite', 'imperfect'], history: ['middleages', 'wars'], geography: [] };
       const mine = {};   // id → { learned, bests }
       let learned = 0, bests = 0, best = null;
       for (const [id, name] of Object.entries(NAMES)) {
@@ -293,7 +293,7 @@
           f.wait(Promise.all([import(link(file)), import(link('kit/tests.js'))]).then(([mod, { isRight }]) => {
             const bank = mod[name];
             let n = (Math.imul(today + 1, 2654435761) >>> 0) % bank.count + 1, q = bank.make(n);
-            for (let j = 0; j < 80 && (q.figure || !['choice', 'text', 'number'].includes(q.answer.kind)); j++) { n = (n % bank.count) + 1; q = bank.make(n); }
+            for (let j = 0; j < 80 && (q.figure || q.clues || !['choice', 'text', 'number'].includes(q.answer.kind)); j++) { n = (n % bank.count) + 1; q = bank.make(n); }
             const a = q.answer, LETTERS = 'ABCDE', key = day(now), saved = f.read('fluentio.today');
             const done = saved && saved.day === key && saved.id === id && saved.n === n ? saved : null;
             const result = el('p', { className: 'qd-result' });

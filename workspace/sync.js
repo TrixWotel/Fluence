@@ -1,6 +1,6 @@
 // Data, Code and Notes saved to a private GitHub repo too (Settings → GitHub), so every browser and Fluent workspace
 // connected to it shows the same things. The repo keeps them as files, laid out like their folders: notes/<folders>/
-// <note>.md, data/<databases>/<doc>.md and <sheet>.csv, and code/<folders>/<file>, with fluentio.json keeping what files
+// <note>.md, data/<databases>/<doc>.md and <sheet>.csv, and code/<folders>/<file>, with fluence.json keeping what files
 // can't (ids, folders, when each was made and changed, a doc's link, a Python file's input).
 // A sync gets what changed on GitHub, puts it together with what changed here (the newer change wins, and something
 // deleted on one side goes from the other unless it was changed there since), then saves the result as one commit. Text
@@ -19,7 +19,7 @@ Fluence's Data, Code and Notes, saved here by Fluence (Settings → GitHub).
 * **notes/** has your notes as Markdown, in their folders.
 * **data/** has your databases, each doc as Markdown and each sheet as CSV.
 * **code/** has your code files, in their folders.
-* **fluentio.json** keeps what the files can't: each one's id and folder, when it was made and changed, a doc's link and a Python file's input.
+* **fluence.json** keeps what the files can't: each one's id and folder, when it was made and changed, a doc's link and a Python file's input.
 
 Change a file's text here and Fluence takes the change the next time it syncs. Making, moving and renaming things happens in Fluence.
 `;
@@ -136,7 +136,7 @@ export function mergeList(base, here, there) {
   return { list, taken };
 }
 const local = () => ({ items: f.workspace.items(), folders: f.workspace.folders() });
-// GitHub's side: the branch's last commit, its files (path → blob), and fluentio.json, with a thing whose file was
+// GitHub's side: the branch's last commit, its files (path → blob), and fluence.json, with a thing whose file was
 // changed on GitHub since counted as changed then, and one whose file was deleted there counted as deleted
 async function remote(s) {
   let head;
@@ -147,7 +147,8 @@ async function remote(s) {
   const listing = await gh(s, 'GET', `/git/trees/${commit.tree.sha}?recursive=1`);
   const files = new Map(listing.tree.filter((x) => x.type === 'blob').map((x) => [x.path, x.sha]));
   let index = null;
-  if (files.has('fluentio.json')) try { index = JSON.parse(await blob(s, files.get('fluentio.json'))); } catch { index = null; }
+  const named = files.get('fluence.json') || files.get('fluentio.json');   // (its name in a repo from before Fluence was renamed)
+  if (named) try { index = JSON.parse(await blob(s, named)); } catch { index = null; }
   if (index) {
     const when = Date.parse(commit.committer?.date) || Date.now();
     index.items = (Array.isArray(index.items) ? index.items : []).filter((it) => it && typeof it.id === 'string' && files.has(it.path));
@@ -157,7 +158,7 @@ async function remote(s) {
   return { head, tree: commit.tree.sha, files, index };
 }
 const blob = async (s, sha) => fromBase64((await gh(s, 'GET', `/git/blobs/${sha}`)).content);
-// a thing as fluentio.json has it, and back (with its file's text)
+// a thing as fluence.json has it, and back (with its file's text)
 const entry = (it, path, sha) => ({ id: it.id, kind: it.kind, title: it.title, parent: it.parent || '', made: it.made, edited: it.edited, path, sha,
   ...(it.kind === 'doc' && it.link ? { link: it.link } : {}), ...(it.kind === 'code' && it.input ? { input: it.input } : {}) });
 function thing(r, text) {
@@ -209,16 +210,17 @@ async function once(s) {
   const merged = { items: list, folders: folders.list.map(folder) };
   const changed = bring(here, merged, { items: items.taken, folders: folders.taken });
 
-  // what the repo should have: each thing's file, fluentio.json, and a README if it has none
+  // what the repo should have: each thing's file, fluence.json, and a README if it has none
   const where = layout(merged), want = new Map(), sha = new Map();
   for (const it of merged.items) { const text = textOf(it), path = where.get(it.id); want.set(path, text); sha.set(path, await blobSha(text)); }
-  const index = { app: 'Fluentio', v: 1, folders: [...merged.folders].sort(byMade), items: [...merged.items].sort(byMade).map((it) => entry(it, where.get(it.id), sha.get(where.get(it.id)))) };
-  want.set('fluentio.json', `${JSON.stringify(index, null, 2)}\n`);
+  const index = { app: 'Fluence', v: 1, folders: [...merged.folders].sort(byMade), items: [...merged.items].sort(byMade).map((it) => entry(it, where.get(it.id), sha.get(where.get(it.id)))) };
+  want.set('fluence.json', `${JSON.stringify(index, null, 2)}\n`);
   if (!there.files.has('README.md')) want.set('README.md', README);
-  for (const path of ['fluentio.json', 'README.md']) if (want.has(path)) sha.set(path, await blobSha(want.get(path)));
+  for (const path of ['fluence.json', 'README.md']) if (want.has(path)) sha.set(path, await blobSha(want.get(path)));
   const tree = [...want].filter(([path]) => there.files.get(path) !== sha.get(path)).map(([path, content]) => ({ path, mode: '100644', type: 'blob', content }));
   // (a file Fluence saved before that nothing has now goes, but files put in the repo some other way stay)
   const gone = (theirs.items || []).map((x) => x.path).filter((path) => !want.has(path) && there.files.has(path));
+  if (there.files.has('fluentio.json')) gone.push('fluentio.json');
   for (const path of new Set(gone)) tree.push({ path, mode: '100644', type: 'blob', sha: null });
   const files = new Map(there.files);
   if (tree.length) {
