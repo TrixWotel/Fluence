@@ -427,13 +427,36 @@ const boardStyles = new Promise((ready) => { const sheet = document.getElementBy
 const framed = document.documentElement.classList.contains('st-module'), room = document.getElementById('room');
 let fitted = 0;
 function fitRoom() {
-  if (!framed) return;
+  if (!framed || document.documentElement.classList.contains('st-big')) return;
   const player = document.getElementById('music-bar'), bottom = player && !player.hidden ? player.getBoundingClientRect().top - 14 : innerHeight - 20;
   const height = Math.round(Math.max(340, bottom - (room.getBoundingClientRect().top + scrollY)));
   if (height === fitted) return;
   fitted = height;
   room.style.setProperty('--st-h', `${height}px`);
   api?.refresh?.();
+}
+// the button in the frame's corner: as big as the window, and back (Esc too, once nothing's selected)
+const expand = document.getElementById('expand');
+const EXPAND = { on: '<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/>', off: '<path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5"/>' };
+function big(on) {
+  const html = document.documentElement;
+  html.classList.toggle('st-big', on);
+  const words = on ? 'Back to the frame (Esc)' : 'Make it as big as the window';
+  expand.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${on ? EXPAND.off : EXPAND.on}</svg>`;
+  expand.title = words; expand.setAttribute('aria-label', words); expand.setAttribute('aria-pressed', String(on));
+  fitted = 0; fitRoom();
+  requestAnimationFrame(() => api?.refresh?.());
+}
+if (expand) {
+  big(document.documentElement.classList.contains('st-big'));
+  expand.addEventListener('mousedown', (e) => e.preventDefault());
+  expand.addEventListener('click', () => { big(!document.documentElement.classList.contains('st-big')); toBoard(); });
+  addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !document.documentElement.classList.contains('st-big')) return;
+    const st = api?.getAppState?.();
+    if (st && (Object.keys(st.selectedElementIds || {}).length || st.editingTextElement || st.newElement || st.openDialog)) return;
+    big(false);
+  }, true);
 }
 if (framed) {
   document.title = `${f.settings.stationTitle} · ${f.settings.studyTitle} · ${f.settings.name}`;

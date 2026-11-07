@@ -13,7 +13,6 @@
   const spaces = () => [
     { id: 'home', title: 'Home', href: f.link('./'), icon: 'home', key: keyFor('home') },
     { id: 'study', title: f.settings.studyTitle, href: f.link('study/'), icon: 'study', key: keyFor('study') },
-    { id: 'station', title: f.settings.stationTitle, href: f.link('station/'), icon: 'station', key: keyFor('station') },
     { id: 'music', title: f.settings.musicTitle, href: f.link('music/'), icon: 'music', key: keyFor('music') },
     { id: 'data', title: f.settings.dataTitle, href: f.link('data/'), icon: 'database', key: keyFor('data') },
     { id: 'code', title: f.settings.codeTitle, href: f.link('code/'), icon: 'code', key: keyFor('code') },
@@ -26,7 +25,7 @@
     const top = new URL(f.root).pathname, path = new URL(url).pathname;
     const first = path.startsWith(top) ? path.slice(top.length).split('/')[0] : '';
     if (first === '' || first === 'index.html') return 'home';
-    // (a page opened as one of the modules, like Station's ?in=modules, is in Modules; a module's link with ?in= doesn't claim its whole folder)
+    // (a page opened as one of the modules with ?in=modules is in Modules; a module's link with ?in= doesn't claim its whole folder)
     if (new URL(url).searchParams.get('in') === 'modules') return 'study';
     if (first === 'study' || f.settings.study.some((x) => { const to = String(x.link).replace(/^\.?\//, ''); return !/[?#]/.test(to) && to.split('/')[0] === first; })) return 'study';
     return first;

@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Station · Fluence</title>
-  <!-- (station/?in=modules is the same board, framed like the other modules: decided before anything's drawn, so it never jumps) -->
-  <script>if (new URLSearchParams(location.search).get('in') === 'modules') document.documentElement.classList.add('st-module');</script>
+  <!-- (Station is one of the modules: framed under its heading, or filling the window with ?big. Decided before anything's drawn, so it never jumps) -->
+  <script>document.documentElement.classList.add('st-module'); if (new URLSearchParams(location.search).has('big')) document.documentElement.classList.add('st-big');</script>
   <meta name="description" content="An endless whiteboard, saved in your private repo on GitHub.">
   <script type="importmap">{ "imports": { "react": "https://esm.sh/react@19.0.0", "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime", "react-dom": "https://esm.sh/react-dom@19.0.0", "react-dom/client": "https://esm.sh/react-dom@19.0.0/client" } }</script>
   <script>window.EXCALIDRAW_ASSET_PATH = 'https://esm.sh/@excalidraw/excalidraw@0.18.1/dist/prod/';</script>
@@ -26,7 +26,7 @@
     html { --st-bottom: 16px; }
     html.has-player { --st-bottom: calc(var(--player-h, 78px) + 26px); }
     .st-head { display: none; }
-    html.st-module main.st-main { width: 100%; max-width: 860px; margin: 0 auto; padding: 40px 20px 0; box-sizing: border-box; flex: 1; }
+    html.st-module main.st-main { width: 100%; max-width: 1320px; margin: 0 auto; padding: 40px 20px 0; box-sizing: border-box; flex: 1; }
     html.st-module .st-head { display: block; }
     html.st-module .st-head > * { animation: rise var(--t3) var(--ease) backwards; }
     html.st-module .st-head > :nth-child(2) { animation-delay: calc(60ms / var(--speed)); }
@@ -34,8 +34,16 @@
     .st-head h1 { font-size: 2.4rem; line-height: 1.15; letter-spacing: -0.025em; margin: 0 0 8px; }
     .st-head .lead { color: var(--muted); font-size: 1.1rem; margin: 0 0 22px; }
     .st-head .lead a { color: var(--accent); white-space: nowrap; }
-    html.st-module #room { position: relative; top: auto; left: auto; right: auto; bottom: auto; height: var(--st-h, 64vh); min-height: 340px; overflow: hidden; border: 1px solid var(--line); border-radius: calc(var(--radius) + 8px); background: color-mix(in srgb, var(--card) 72%, transparent); box-shadow: var(--shadow); --st-bottom: 12px; animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(160ms / var(--speed)); }
+    html.st-module #room { position: relative; top: auto; left: auto; right: auto; bottom: auto; height: var(--st-h, 64vh); min-height: 340px; overflow: hidden; border: 1px solid var(--line); border-radius: calc(var(--radius) + 8px); background: color-mix(in srgb, var(--bg) 88%, #000); box-shadow: var(--shadow); --st-bottom: 12px; animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(160ms / var(--speed)); }
     @media (max-width: 560px) { html.st-module main.st-main { padding-top: 28px; } .st-head h1 { font-size: 2rem; } }
+    /* as big as the window, and back */
+    html.st-big, html.st-big body { overflow: hidden; }
+    html.st-big #room { position: fixed; top: var(--bar-h); left: 0; right: 0; bottom: 0; height: auto; min-height: 0; z-index: 40; border: 0; border-radius: 0; box-shadow: none; --st-bottom: 16px; animation: none; }
+    html.st-big.has-player #room { --st-bottom: calc(var(--player-h, 78px) + 26px); }
+    .st-expand { position: absolute; z-index: 6; top: 10px; left: 10px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; color: var(--muted); cursor: pointer; background: color-mix(in srgb, var(--card) 92%, transparent); border: 1px solid var(--line); border-radius: 9px; transition: color var(--t1), border-color var(--t1); }
+    .st-expand:hover { color: var(--text); border-color: color-mix(in srgb, var(--text) 30%, var(--line)); }
+    .st-expand svg { width: 15px; height: 15px; }
+    html.st-full .st-expand { top: 62px; }
     .excalidraw, .excalidraw .excalidraw-container { background: transparent !important; }
     /* Excalidraw's own interface stays out of sight: this page has its own */
     html:not(.st-full) .excalidraw :is(.layer-ui__wrapper, .App-top-bar, .App-bottom-bar, .FixedSideContainer, .scroll-back-to-content) { display: none !important; }
@@ -97,10 +105,11 @@
     <header class="st-head" id="top">
       <a class="back" href="../study/">← <span data-fill="studyTitle">Modules</span></a>
       <h1>🎨 <span data-fill="stationTitle">Station</span></h1>
-      <p class="lead">Your whiteboard, here with your subjects. It’s the same board as the Station tab, so what you draw here is there too. <a href="./">Open it full screen ›</a></p>
+      <p class="lead">Your whiteboard, for working things out while you study: ideas, flowcharts and diagrams. The button in its corner makes it as big as the window.</p>
     </header>
     <div id="room">
       <div id="board"></div>
+      <button type="button" class="st-expand" id="expand" title="Make it as big as the window" aria-label="Make it as big as the window" aria-pressed="false"></button>
       <div id="status" class="st-status" role="status"></div>
       <div id="tray" class="st-tray" hidden></div>
       <div id="tools" class="st-bar stagger" role="toolbar" aria-label="Drawing tools" hidden></div>

@@ -279,7 +279,7 @@ function names() {
   return el('section', { className: 'panel', id: 'names' }, el('h2', {}, 'Names'),
     set('Modules', 'The subjects’ page: its name in the bar, on its page and on the home page.', text(s.studyTitle, (v) => { s.studyTitle = v; save(); }, 'Modules’ name')),
     set('Modules’ line', 'Under its name on its page.', text(s.studyIntro, (v) => { s.studyIntro = v; save(); }, 'Modules’ line', { long: true })),
-    set('Station', 'Your board: its name in the bar.', text(s.stationTitle, (v) => { s.stationTitle = v; save(); }, 'Station’s name')),
+    set('Station', 'Your board’s name, on its page.', text(s.stationTitle, (v) => { s.stationTitle = v; save(); }, 'Station’s name')),
     set('Music', 'Your songs: its name in the bar, on its page and on the home page.', text(s.musicTitle, (v) => { s.musicTitle = v; save(); }, 'Music’s name')),
     ...(!f.spacesOn ? [] : [set('Data', 'Your databases of docs and sheets: its name in the bar and on its page.', text(s.dataTitle, (v) => { s.dataTitle = v; save(); }, 'Data’s name')),
     set('Code', 'Your code: its name in the bar and on its page.', text(s.codeTitle, (v) => { s.codeTitle = v; save(); }, 'Code’s name')),
@@ -288,7 +288,7 @@ function names() {
 
 // a key you can change: click it, then press the new one. Esc keeps the old one, Delete (or Backspace) turns it off,
 // and a key another action had moves here (that one is left with none)
-const ACTIONS = () => [['search', 'Search', `Pages, subjects${f.spacesOn ? ', and your data, code and notes' : ''}. / works too, when you aren’t typing.`], ['home', 'Home', ''], ['study', s.studyTitle, ''], ['station', s.stationTitle, ''], ['music', s.musicTitle, ''], ...(f.spacesOn ? [['data', s.dataTitle, ''], ['code', s.codeTitle, ''], ['notes', s.notesTitle, '']] : [])];
+const ACTIONS = () => [['search', 'Search', `Pages, subjects${f.spacesOn ? ', and your data, code and notes' : ''}. / works too, when you aren’t typing.`], ['home', 'Home', ''], ['study', s.studyTitle, ''], ['music', s.musicTitle, ''], ...(f.spacesOn ? [['data', s.dataTitle, ''], ['code', s.codeTitle, ''], ['notes', s.notesTitle, '']] : [])];
 // (keys a browser usually keeps for itself, like ⌘T, or ⌘K in Fluent, never reach the page)
 const kept = (k) => { const t = f.key.meant(k); return /^(Shift\+)?Meta\+([0-9TWNQRLKEPSFDHMYZXCVAOG,])$/.test(t) || /^Ctrl\+(Shift\+)?Tab$/.test(t); };
 let recording = null;                               // how to stop the key being recorded

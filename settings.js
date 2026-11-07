@@ -65,7 +65,7 @@ window.FLUENTIO_SETTINGS = {
 
   // the keys (Settings can record new ones): Ctrl, Alt, Shift or Meta (⌘ on a Mac) with a key, like 'Ctrl+K', and ''
   // turns one off. On Windows and Linux the browser keeps Ctrl with a number for its tabs, so there Ctrl+1 works as Alt+1
-  keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', station: 'Ctrl+3', music: 'Ctrl+4', data: 'Ctrl+5', code: 'Ctrl+6', notes: 'Ctrl+7' },
+  keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', music: 'Ctrl+3', data: 'Ctrl+4', code: 'Ctrl+5', notes: 'Ctrl+6' },
 
   // the home page's tiles, in this order (take one out to hide it): 'workspace' (what you worked on last), 'music',
   // 'study', 'progress', 'today', 'question', 'data' and 'quick'
@@ -127,6 +127,7 @@ window.FLUENTIO_SETTINGS = {
     { emoji: '🇪🇸', title: 'Spanish', text: '1,100 words in 25 themes, and the preterite and the imperfect.', link: 'spanish/', color: '#e5484d' },
     { emoji: '🏰', title: 'History', text: 'The Middle Ages and the Wars of Religion, as stories where you make the choices, with notes and tests.', link: 'history/', color: '#b7791f' },
     { emoji: '✍️', title: 'English', text: 'Essays: learn how a good one works, a step at a time, then write your own and check it.', link: 'english/', color: '#0ea5b7' },
-    { emoji: '🎨', title: 'Station', text: 'Your whiteboard, framed like the rest: the same board as the Station tab, for working things out while you study.', link: 'station/?in=modules', color: '#d6409f' },
+    { emoji: '🎨', title: 'Station', text: 'Your whiteboard, for working things out while you study: ideas, flowcharts and diagrams.', link: 'station/', color: '#d6409f' },
+    { emoji: '📓', title: 'Journal', text: 'A few lines a day: what you did, what you learned, what’s on your mind.', link: 'journal/', color: '#c2884a' },
   ],
 };
