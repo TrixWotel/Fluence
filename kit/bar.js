@@ -45,6 +45,36 @@
   };
   f.bar = () => {
     if (!document.body || document.querySelector('body > .topbar')) return;
+    // the page's scrollbar: out of sight until you scroll or point at the right edge (kit/site.css hides the browser's own)
+    const thumb = el('div', { className: 'page-scroll', 'aria-hidden': 'true' }), page = document.documentElement;
+    document.body.append(thumb);
+    let held = false, grab = 0, lastUsed = -1e9, hide = 0, trackTop = 0, room = 0, height = 0;
+    const measure = () => {
+      const most = page.scrollHeight - page.clientHeight;
+      if (most <= 1) return false;
+      const player = document.getElementById('music-bar'), bottom = player && !player.hidden ? player.getBoundingClientRect().top : innerHeight;
+      trackTop = (document.querySelector('.topbar')?.getBoundingClientRect().bottom ?? 0) + 4;
+      const track = Math.max(60, bottom - 4 - trackTop);
+      height = Math.max(36, (track * page.clientHeight) / page.scrollHeight);
+      room = track - height;
+      thumb.style.height = `${height}px`;
+      thumb.style.top = `${trackTop + room * Math.min(1, Math.max(0, scrollY / most))}px`;
+      return true;
+    };
+    const showBar = () => {
+      if (!measure()) return thumb.classList.remove('on');
+      thumb.classList.add('on');
+      clearTimeout(hide);
+      hide = setTimeout(function later() { if (held || thumb.matches(':hover')) hide = setTimeout(later, 400); else thumb.classList.remove('on'); }, 1100);
+    };
+    // (when you're the one scrolling: a page finding its place, or going back to the top, doesn't bring it up)
+    for (const type of ['wheel', 'touchmove', 'keydown']) addEventListener(type, () => { lastUsed = performance.now(); }, { capture: true, passive: true });
+    addEventListener('scroll', () => { if (held || performance.now() - lastUsed < 500) showBar(); else if (thumb.classList.contains('on')) measure(); }, { passive: true });
+    addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && !held && innerWidth - e.clientX < 16 && e.clientY > trackTop) showBar(); }, { passive: true });
+    addEventListener('resize', () => { if (thumb.classList.contains('on')) measure(); }, { passive: true });
+    thumb.addEventListener('pointerdown', (e) => { e.preventDefault(); held = true; grab = e.clientY - thumb.getBoundingClientRect().top; thumb.setPointerCapture(e.pointerId); thumb.classList.add('held'); });
+    thumb.addEventListener('pointermove', (e) => { if (held && room > 0) scrollTo({ top: ((e.clientY - grab - trackTop) / room) * (page.scrollHeight - page.clientHeight), behavior: 'instant' }); });
+    for (const type of ['pointerup', 'pointercancel']) thumb.addEventListener(type, () => { held = false; thumb.classList.remove('held'); showBar(); });
     // where you've been and how long you've been at it, for the home page's assistant ('fluentio:', so it stays in this browser
     // and isn't saved with your progress): once a page is showing, and each minute while you're using it
     const mark = () => {

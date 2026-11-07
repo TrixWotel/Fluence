@@ -82,9 +82,13 @@ function emptyLibrary() {
     el('button', { className: 'btn primary', onclick: pickFiles }, svg('upload'), 'Choose songs'));
 }
 // a list of songs: click one to play the list from it
+// (what's on screen comes first and the rest straight after, so a long list doesn't hold up the page: the list is already as tall as
+// it's going to be, so the place you were can be scrolled back to)
+let rowsFirst = 24;
+const later = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 120 }) : setTimeout(fn, 20));
 function songList(list, { playlist = null } = {}) {
   const box = el('div', { className: 'm-songs' });
-  list.forEach((s, i) => {
+  const makeRow = (s, i) => {
     const row = el('div', { className: `m-row${s.id === player.current()?.id ? ' on' : ''}`, style: `--n:${Math.min(i, 24)}`, onclick: (e) => { if (!e.target.closest('button, a')) player.playList(list, i); } });
     row.dataset.id = s.id;
     row.append(
@@ -95,8 +99,20 @@ function songList(list, { playlist = null } = {}) {
       player.likeButton(s, 'heart'),
       el('div', { className: 'd' }, s.duration ? time(s.duration) : ''),
       el('button', { className: 'm-icon more', 'aria-label': 'More', title: 'More', onclick: (e) => songMenu(e.currentTarget, s, playlist) }, svg('more')));
-    box.append(row);
-  });
+    return row;
+  };
+  let at = Math.min(rowsFirst, list.length);
+  list.slice(0, at).forEach((s, i) => box.append(makeRow(s, i)));
+  if (at < list.length) {
+    box.style.minHeight = `${list.length * 58}px`;
+    const more = () => {
+      const end = Math.min(at + 40, list.length), part = document.createDocumentFragment();
+      for (; at < end; at++) part.append(makeRow(list[at], at));
+      box.append(part);
+      if (at < list.length) later(more); else box.style.minHeight = '';
+    };
+    later(more);
+  }
   return box;
 }
 const paintRows = () => document.querySelectorAll('#view .m-row').forEach((r) => r.classList.toggle('on', r.dataset.id === player.current()?.id));
@@ -533,11 +549,16 @@ addEventListener('keydown', (e) => {
 // ---------- go: back where you were ----------
 // coming back to Music brings you to the same tab, album, playlist or search, scrolled to the same place
 const PLACE = 'fluentio.music.place';
-addEventListener('pagehide', () => { if (!document.getElementById('page-frame')) write(PLACE, { hash: location.hash, y: scrollY }); });
+// (as you leave for another page too: the first page you opened stays open under the others, so it never closes to say so)
+const remember = () => { if (!document.getElementById('page-frame')) write(PLACE, { hash: location.hash, y: scrollY }); };
+addEventListener('pagehide', remember);
+addEventListener('fluence:going', remember);
 player.mount();
 const nowWanted = route().name === 'now', place = nowWanted || !location.hash ? read(PLACE, null) : null;
 if (nowWanted || place?.hash) history.replaceState(null, '', place?.hash || '#songs');
+rowsFirst = Math.max(24, Math.ceil(((place?.y || 0) + innerHeight) / 50) + 2);
 render(true);
+rowsFirst = 24;
 if (place && lost) { history.replaceState(null, '', '#songs'); render(true); }
 else if (place) scrollTo(0, place.y || 0);
 window.fluentio?.wait(tint());

@@ -44,11 +44,16 @@ const P = {
   x: 'M18 6 6 18M6 6l12 12', check: 'M20 6 9 17l-5-5', next2: 'M3 6h12M3 12h12M3 18h7M17 14l4 3-4 3z',
   cloud: 'M17.5 19H9a7 7 0 1 1 6.7-9h1.8a4.5 4.5 0 1 1 0 9z', expand: 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7',
 };
+const drawnIcons = new Map();   // (made once and copied: a long list has three icons a row)
 export const svg = (name, solid = false) => {
-  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', `i mi${solid ? ' solid' : ''}`); s.setAttribute('aria-hidden', 'true');
-  s.innerHTML = `<path d="${P[name]}"/>`;
-  return s;
+  const key = `${name} ${solid}`;
+  if (!drawnIcons.has(key)) {
+    const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', `i mi${solid ? ' solid' : ''}`); s.setAttribute('aria-hidden', 'true');
+    s.innerHTML = `<path d="${P[name]}"/>`;
+    drawnIcons.set(key, s);
+  }
+  return drawnIcons.get(key).cloneNode(true);
 };
 export const time = (s) => { s = Math.max(0, Math.floor(s || 0)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
 export const bytes = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`);

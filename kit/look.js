@@ -292,7 +292,7 @@
   // Reloading starts afresh, and a browser without the Navigation API changes pages as usual.
   const pagePath = (url) => { const path = new URL(url).pathname; return url.startsWith(root) && (!/\.[a-z0-9]+$/i.test(path) || /\.html$/i.test(path)); };
   const going = (url) => dispatchEvent(new CustomEvent('fluence:going', { detail: url }));
-  const BARS = '.topbar, #music-bar', speed = (doc = document) => parseFloat(getComputedStyle(doc.documentElement).getPropertyValue('--speed')) || 1;
+  const BARS = '.topbar, #music-bar, .page-scroll', speed = (doc = document) => parseFloat(getComputedStyle(doc.documentElement).getPropertyValue('--speed')) || 1;
   // the page you're leaving answers the click at once, whatever the next one has to bring in: what's between the bars dims straight
   // away, and fades out the rest of the way when the next page takes over. So every workspace feels the same to click.
   const DIMMED = 'fluence-leaving';

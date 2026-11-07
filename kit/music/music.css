@@ -87,8 +87,6 @@ html:not(.music-playing) .m-bars i { animation-play-state: paused; }
   padding: 6px 8px; border-radius: calc(var(--radius) * .8); cursor: pointer; transition: background var(--t2) var(--ease);
 }
 .enter .m-row, .m-now .m-row { animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(var(--n, 0) * 22ms / var(--speed)); }
-/* (rows out of sight aren't laid out or painted until you scroll to them, so a long list doesn't slow the page down) */
-.m-songs > .m-row { content-visibility: auto; contain-intrinsic-block-size: auto 56px; }
 .m-row:hover { background: color-mix(in srgb, var(--card) 85%, transparent); }
 .m-row.on { background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
 .m-row .n { text-align: center; color: var(--muted); font-variant-numeric: tabular-nums; font-size: .9rem; height: 20px; display: grid; place-items: center; }
