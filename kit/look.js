@@ -43,6 +43,7 @@
       { emoji: '🇪🇸', title: 'Spanish', text: '1,100 words in 25 themes, and the preterite and the imperfect.', link: 'spanish/', color: '#e5484d' },
       { emoji: '🏰', title: 'History', text: 'The Middle Ages and the Wars of Religion, as stories where you make the choices, with notes and tests.', link: 'history/', color: '#b7791f' },
       { emoji: '✍️', title: 'English', text: 'Essays: learn how a good one works, a step at a time, then write your own and check it.', link: 'english/', color: '#0ea5b7' },
+      { emoji: '🎨', title: 'Station', text: 'Your whiteboard, framed like the rest: the same board as the Station tab, for working things out while you study.', link: 'station/?in=modules', color: '#d6409f' },
     ],
   };
   const FONTS = {

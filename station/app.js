@@ -423,6 +423,25 @@ async function catchUp(s, here) {
   if (here?.pending || ahead) dirty = true; else say('Saved', 'done');
 }
 const boardStyles = new Promise((ready) => { const sheet = document.getElementById('board-css'); if (!sheet || sheet.media === 'all') ready(); else sheet.addEventListener('load', ready, { once: true }); });
+// framed like a module (station/?in=modules): the frame fills the window under the heading, down to the player if there is one
+const framed = document.documentElement.classList.contains('st-module'), room = document.getElementById('room');
+let fitted = 0;
+function fitRoom() {
+  if (!framed) return;
+  const player = document.getElementById('music-bar'), bottom = player && !player.hidden ? player.getBoundingClientRect().top - 14 : innerHeight - 20;
+  const height = Math.round(Math.max(340, bottom - (room.getBoundingClientRect().top + scrollY)));
+  if (height === fitted) return;
+  fitted = height;
+  room.style.setProperty('--st-h', `${height}px`);
+  api?.refresh?.();
+}
+if (framed) {
+  document.title = `${f.settings.stationTitle} · ${f.settings.studyTitle} · ${f.settings.name}`;
+  fitRoom();
+  addEventListener('resize', fitRoom, { passive: true });
+  new MutationObserver(fitRoom).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });   // (the player coming or going)
+  addEventListener('load', fitRoom);
+}
 async function start() {
   say('Opening the board…', 'busy');
   // this browser's copy comes first, so the board opens straight away: GitHub's comes in behind it
@@ -452,6 +471,7 @@ async function start() {
     render();
   });
   window.fluentioStation = { api, push, status: () => status.textContent };
+  fitRoom();
   const scheme = () => { document.documentElement.classList.toggle('st-dark', dark()); selectionColor(); };
   scheme();
   makeTools();
@@ -468,6 +488,7 @@ async function start() {
   // a page going keeps what it has, and tries to send it; if that doesn't finish, the next page sends it
   const leaving = () => { saveHere(); if (dirty && connection()) push(); };
   addEventListener('pagehide', leaving);
+  addEventListener('fluence:going', leaving);   // (so the board in the other layout opens with everything just drawn)
   addEventListener('fluence:gone', leaving);
   document.addEventListener('visibilitychange', () => { if (document.hidden) leaving(); else look(); });
   addEventListener('focus', look);

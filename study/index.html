@@ -62,6 +62,7 @@
       <a class="card subject" href="../spanish/"><span class="tile">🇪🇸</span><span class="info"><b>Spanish</b><span class="text">Vocabulary, the preterite and the imperfect.</span></span><span class="go">→</span></a>
       <a class="card subject" href="../history/"><span class="tile">🏰</span><span class="info"><b>History</b><span class="text">The Middle Ages and the Wars of Religion, as stories where you make the choices.</span></span><span class="go">→</span></a>
       <a class="card subject" href="../english/"><span class="tile">✍️</span><span class="info"><b>English</b><span class="text">Essays: learn how a good one works, a step at a time, then write your own and check it.</span></span><span class="go">→</span></a>
+      <a class="card subject" href="../station/?in=modules"><span class="tile">🎨</span><span class="info"><b>Station</b><span class="text">Your whiteboard, framed like the rest: the same board as the Station tab, for working things out while you study.</span></span><span class="go">→</span></a>
     </nav>
   </main>
   <script>
@@ -69,6 +70,13 @@
     const read = (key) => { try { return JSON.parse(localStorage.getItem('fluentio.' + key)); } catch { return null; } };
     const BANKS = { math: ['triangles', 'amc10', 'amc12'], science: ['heat'], physics: ['kinematics', 'motion', 'vectors', 'projectiles'], spanish: ['vocab', 'preterite', 'imperfect'], history: ['middleages', 'wars'], english: ['essays'] };
     const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    function lastOn() {
+      let t = 0;
+      try { t = JSON.parse(localStorage.getItem('fluentio:trail'))?.seen?.station || 0; } catch {}
+      if (!t) return 'Nothing on it yet';
+      const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 86400000);
+      return `Last opened ${days === 0 ? 'today' : days === 1 ? 'yesterday' : days < 7 ? `${days} days ago` : new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    }
     function progress(folder) {
       if (folder === 'geography') { const best = read('geo.best'), n = best ? Object.keys(best).length : 0; return n ? `${plural(n, 'map')} with a best score` : ''; }
       let tests = 0, learned = 0;
@@ -86,12 +94,14 @@
       $('intro').textContent = s.studyIntro;
       $('subjects').replaceChildren(...s.study.map((x) => {
         const href = link(x.link), folder = new URL(href).pathname.split('/').filter(Boolean).pop(), mine = progress(folder);
+        // (the board isn't something to finish: it says when you were last on it)
+        const board = folder === 'station' ? lastOn() : null;
         const card = el('a', { className: 'card subject', href },
           el('span', { className: 'tile', ariaHidden: 'true', textContent: x.emoji || '📘' }),
           el('span', { className: 'info' },
             el('b', { textContent: x.title || '' }),
             x.text ? el('span', { className: 'text', textContent: x.text }) : null,
-            el('span', { className: 'mine' + (mine ? ' has' : ''), textContent: mine ? `✓ ${mine}` : 'Not started yet' })),
+            el('span', { className: 'mine' + (mine ? ' has' : ''), textContent: folder === 'station' ? board : mine ? `✓ ${mine}` : 'Not started yet' })),
           el('span', { className: 'go', ariaHidden: 'true', textContent: '→' }));
         if (x.color && CSS.supports('color', x.color)) card.style.setProperty('--c', x.color);
         return card;

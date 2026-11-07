@@ -312,7 +312,7 @@
           const stat = (n, one, many) => el('div', { className: 'stat' }, el('b', {}, n.toLocaleString('en-US')), el('span', {}, n === 1 ? one : many));
           return tile('', 'var(--good)', head('chart', 'Your progress'),
             el('div', { className: 'stats' }, stat(learned, 'topic learned', 'topics learned'), stat(visits.streak, 'day in a row', 'days in a row'), stat(bests, 'best score', 'best scores')),
-            el('ul', { className: 'list' }, s.study.map((x) => {
+            el('ul', { className: 'list' }, s.study.filter((x) => IN[folderOf(x)]).map((x) => {
               const ids = IN[folderOf(x)] || [], l = ids.reduce((n, id) => n + mine[id].learned, 0), b = ids.reduce((n, id) => n + mine[id].bests, 0) + (folderOf(x) === 'geography' ? geo : 0);
               const said = [l && `${l} learned`, b && plural(b, 'best')].filter(Boolean).join(' · ') || 'Not started';
               return el('li', {}, el('a', { href: link(x.link) }, el('span', {}, `${x.emoji || ''} ${x.title || ''}`.trim()), el('small', {}, said)));

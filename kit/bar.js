@@ -26,7 +26,9 @@
     const top = new URL(f.root).pathname, path = new URL(url).pathname;
     const first = path.startsWith(top) ? path.slice(top.length).split('/')[0] : '';
     if (first === '' || first === 'index.html') return 'home';
-    if (first === 'study' || f.settings.study.some((x) => String(x.link).replace(/^\.?\//, '').split('/')[0] === first)) return 'study';
+    // (a page opened as one of the modules, like Station's ?in=modules, is in Modules; a module's link with ?in= doesn't claim its whole folder)
+    if (new URL(url).searchParams.get('in') === 'modules') return 'study';
+    if (first === 'study' || f.settings.study.some((x) => { const to = String(x.link).replace(/^\.?\//, ''); return !/[?#]/.test(to) && to.split('/')[0] === first; })) return 'study';
     return first;
   };
 
