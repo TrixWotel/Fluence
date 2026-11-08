@@ -228,7 +228,7 @@ function home() {
     set('Welcome', 'A greeting on the home page, and a line that changes with the time, the date, holidays, your music and what you’ve been doing.', toggle(s.greeting, (v) => { s.greeting = v; save(); }, 'Greeting')),
     set('Layout', 'Assistant says what it notices about what you’ve been doing, and offers what would help, with a tile when you ask for one. The others are tiles that fit one screen: Auto picks them by what you’ve been doing and the time of day, and Classic is always your tiles, in their order.',
       seg([['assistant', 'Assistant'], ['auto', 'Auto'], ['classic', 'Classic'], ['study', 'Study first'], ['music', 'Music first'], ['calm', 'Calm']], s.homeLayout || 'assistant', (v) => { s.homeLayout = v; save(); draw(); }, 'Home layout')),
-    set('Your plan', 'From the plan folder in Station: week.md has your days, deadlines.md your dates and sleep.md when it’s lights out. With the Assistant layout, Home says what’s on now and lists today, with a check for each thing you check off.',
+    set('Your plan', `From ${s.scheduleTitle}: its Week has your days, Deadlines your dates and Sleep when it’s lights out. With the Assistant layout, Home says what’s on now and lists today, with a check for each thing you check off.`,
       toggle(s.planHome !== false, (v) => { s.planHome = v; save(); }, 'Your plan on Home')),
     set('Your plan in the bar', 'What you’re due to be doing and how long it has left, on every page, and at night, when it’s lights out.', toggle(s.planBar !== false, (v) => { s.planBar = v; save(); }, 'Your plan in the bar')),
     set('Text', 'The page stays in the middle of the window. This is where its words and buttons sit: along its left edge, in the middle, or along its right edge. Left and Right take what’s inside the tiles along too. Center leaves that on the left.',
@@ -294,6 +294,7 @@ function names() {
     set('Board', 'Your whiteboard’s name, on its page.', text(s.boardTitle, (v) => { s.boardTitle = v; save(); }, 'Board’s name')),
     set('Station', 'Your notes and journal: the name on their page.', text(s.stationTitle, (v) => { s.stationTitle = v; save(); }, 'Station’s name')),
     set('Music', 'Your songs: its name in the bar, on its page and on the home page.', text(s.musicTitle, (v) => { s.musicTitle = v; save(); }, 'Music’s name')),
+    set('Schedule', 'Your plan: its name in the bar and on its page.', text(s.scheduleTitle, (v) => { s.scheduleTitle = v; save(); }, 'Schedule’s name')),
     ...(!f.spacesOn ? [] : [set('Data', 'Your databases of docs and sheets: its name in the bar and on its page.', text(s.dataTitle, (v) => { s.dataTitle = v; save(); }, 'Data’s name')),
     set('Code', 'Your code: its name in the bar and on its page.', text(s.codeTitle, (v) => { s.codeTitle = v; save(); }, 'Code’s name')),
     set('Notes', 'Your notes: its name in the bar and on its page.', text(s.notesTitle, (v) => { s.notesTitle = v; save(); }, 'Notes’ name'))]));
@@ -301,7 +302,7 @@ function names() {
 
 // a key you can change: click it, then press the new one. Esc keeps the old one, Delete (or Backspace) turns it off,
 // and a key another action had moves here (that one is left with none)
-const ACTIONS = () => [['search', 'Search', `Pages, subjects${f.spacesOn ? ', and your data, code and notes' : ''}. / works too, when you aren’t typing.`], ['home', 'Home', ''], ['study', s.studyTitle, ''], ['music', s.musicTitle, ''], ...(f.spacesOn ? [['data', s.dataTitle, ''], ['code', s.codeTitle, ''], ['notes', s.notesTitle, '']] : [])];
+const ACTIONS = () => [['search', 'Search', `Pages, subjects${f.spacesOn ? ', and your data, code and notes' : ''}. / works too, when you aren’t typing.`], ['home', 'Home', ''], ['study', s.studyTitle, ''], ['music', s.musicTitle, ''], ['schedule', s.scheduleTitle, ''], ...(f.spacesOn ? [['data', s.dataTitle, ''], ['code', s.codeTitle, ''], ['notes', s.notesTitle, '']] : [])];
 // (keys a browser usually keeps for itself, like ⌘T, or ⌘K in Fluent, never reach the page)
 const kept = (k) => { const t = f.key.meant(k); return /^(Shift\+)?Meta\+([0-9TWNQRLKEPSFDHMYZXCVAOG,])$/.test(t) || /^Ctrl\+(Shift\+)?Tab$/.test(t); };
 let recording = null;                               // how to stop the key being recorded

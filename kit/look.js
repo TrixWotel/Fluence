@@ -21,7 +21,7 @@
     },
     font: 'system', corners: 14, style: 'glow', textSize: 16, animations: true, speed: 1, floatingColors: true,
     animationsIn: { data: true, code: true, notes: true },
-    keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', music: 'Ctrl+3', data: 'Ctrl+4', code: 'Ctrl+5', notes: 'Ctrl+6' },
+    keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', music: 'Ctrl+3', schedule: 'Ctrl+4', data: 'Ctrl+5', code: 'Ctrl+6', notes: 'Ctrl+7' },
     home: ['workspace', 'music', 'study', 'progress', 'today', 'question', 'data', 'quick'], homeLayout: 'assistant', homeAlign: 'center', showDaysOff: true, daysOff: [{ name: '', emoji: '', from: '', to: '' }],
     planHome: true, planBar: true,
     quick: [
@@ -35,6 +35,7 @@
     boardTitle: 'Board', boardFont: 'Inter', boardTools: ['freedraw', 'rectangle', 'diamond', 'ellipse', 'arrow', 'text'], boardMenu: true, boardFull: false,
     stationTitle: 'Station', stationSources: true,
     musicTitle: 'Music',
+    scheduleTitle: 'Schedule',
     studyTitle: 'Modules',
     studyIntro: 'Pick a subject. Take a test, learn it one topic at a time, or practise any question.',
     study: [
@@ -460,7 +461,7 @@
     const warm = async (fresh) => {
       if (navigator.connection?.saveData || document.hidden) return;
       const asked = new Set(), ask = async (url) => { if (asked.has(url)) return null; asked.add(url); try { return await fetch(url, { cache: fresh ? 'no-cache' : 'default' }); } catch { return null; } };
-      for (const page of ['', 'study/', 'station/', 'board/', 'music/']) {
+      for (const page of ['', 'schedule/', 'study/', 'station/', 'board/', 'music/']) {
         const base = root + page, answer = await ask(base);
         if (!answer?.ok) continue;
         const doc = new DOMParser().parseFromString(await answer.text(), 'text/html');

@@ -56,53 +56,15 @@
   }
 
   // ---------- your plan ----------
-  // (kit/plan.js reads it from Station's plan folder; Settings → Home can leave it off Home)
-  const P = () => window.fluentioPlan;
-  function planNow(now = Date.now()) {
-    const p = P();
-    if (!p || f.settings.planHome === false) return null;
-    const plan = p.current();
-    if (!plan) return null;
-    const state = p.load(read);
-    return { plan, state, st: p.status(plan, state, now) };
-  }
-  const short = (it) => it.name.replace(/:.*$/, '').trim();
-  const either = (xs) => (xs.length < 2 ? xs[0] : `${xs.slice(0, -1).join(', ')} or ${xs.at(-1)}`);
-  const lower = (s) => (/^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s);
-  // what the plan says now, which is the first thing Home says when there is one: bed when it's past lights out, the
-  // night and how today went once the night starts, then what's on now, and what hasn't been checked off
-  function planWords(pl) {
-    const p = P(), st = pl.st, at = p.clock(st.m);
-    const tally = st.of ? ` ${st.done} of ${st.of} checked off today.` : '';
-    if (st.late) return { say: `It’s ${at}, past lights out.${tally}`, ask: st.left.length ? 'Check off what you did, then bed.' : 'Go to bed. Tomorrow’s here when you wake up.' };
-    if (st.night) return { say: `${st.now ? `Now: ${lower(short(st.now))}. ` : ''}Lights out by ${p.lightsWords(st.lights) || 'your bedtime'}.${tally}`, ask: !st.of ? '' : st.left.length ? 'Did you do the rest?' : 'All of it. Nice work.' };
-    if (st.now?.check && !st.now.done) return { say: `It’s ${at}, time for ${short(st.now)}. ${p.leftWords(p.left(st.now, st.m))} left.`, ask: st.now.place ? 'Want to start?' : 'Check it off when it’s done.' };
-    if (st.missed.length) return { say: `You haven’t checked off ${either(st.missed.slice(0, 2).map(short))}${st.missed.length > 2 ? ` and ${st.missed.length - 2} more` : ''} yet.`, ask: st.missed.length === 1 ? 'Did you do it?' : 'Did you do them?' };
-    const next = st.next ? ` Next: ${short(st.next)} at ${p.clock(st.next.at)}.` : '';
-    if (st.now?.check) return { say: `${cap(short(st.now))} is done.${next}`, ask: '' };
-    if (st.now) return { say: `${cap(short(st.now))} until ${p.clock(st.now.end)}.${next}`, ask: '' };
-    if (st.next) return { say: `Next on your plan: ${short(st.next)} at ${p.clock(st.next.at)}.`, ask: '' };
-    return null;
-  }
-  const hrefOf = (it) => (it.place ? (it.place.away ? it.place.href : link(it.place.href)) : null);
-  function markDone(it, on) {
-    const p = P(), pl = planNow();
-    if (!p || !pl) return null;
-    p.check(pl.state, pl.st.key, it.id, on);
-    const st = p.status(pl.plan, pl.state, Date.now());
-    p.remember(pl.state, st);
-    p.save(pl.state, f.write);
-    dispatchEvent(new CustomEvent('fluence:plan'));
-    return st;
-  }
-  function flipSwitch(sw, on) {
-    const p = P(), pl = planNow();
-    if (!p || !pl) return;
-    p.flip(pl.plan, pl.state, pl.st.date, sw.id, on);
-    p.remember(pl.state, p.status(pl.plan, pl.state, Date.now()));
-    p.save(pl.state, f.write);
-    dispatchEvent(new CustomEvent('fluence:plan'));
-  }
+  // (kit/plan.js reads it from Schedule's pages, and kit/plan-day.js says it and draws today the way Schedule does;
+  // Settings → Home can leave it off Home). What the plan says is the first thing Home says when there is one
+  const P = () => window.fluentioPlan, D = () => window.fluentioPlanDay;
+  const planNow = (now = Date.now()) => D()?.now(now, { home: true }) || null;
+  const short = (it) => D().short(it);
+  const planWords = (pl) => D().words(pl);
+  const hrefOf = (it) => D().hrefOf(it);
+  const markDone = (it, on) => D()?.markDone(it, on) || null;
+  const flipSwitch = (sw, on) => D()?.flipSwitch(sw, on);
   const tick = (it) => (reply) => { const st = markDone(it, true); reply(`Checked off ${short(it)}.${st ? ` ${st.done} of ${st.of} today.` : ''}`); };
   // what the plan offers: what's on now (where it's done, or a check), what hasn't been checked off, and what's next
   function planOptions(pl) {
@@ -117,7 +79,7 @@
   }
   const place = (b, rest = '') => (b.id === 'essays' ? link('english/') : link(`${b.folder}/#${b.id}${rest}`));
   const topicLink = (b, topic) => (b.id === 'essays' ? link(`english/learn.html#${encodeURIComponent(topic)}`) : place(b, `/learn/${encodeURIComponent(topic)}`));
-  const PAGES = { math: 'math', science: 'science', physics: 'physics', spanish: 'Spanish', geography: 'geography', history: 'history', english: 'English', journal: 'your journal', study: 'Modules', music: 'Music', station: 'Station', board: 'your board' };
+  const PAGES = { math: 'math', science: 'science', physics: 'physics', spanish: 'Spanish', geography: 'geography', history: 'history', english: 'English', journal: 'your journal', study: 'Modules', music: 'Music', station: 'Station', board: 'your board', schedule: 'your schedule' };
 
   // the music, when something's asked of it
   const tunes = async () => {
@@ -313,40 +275,8 @@
     return `${cap(bits.join(', and '))}.${best ? ` Your latest best is ${best.best.text} on ${best.name}.` : ''}`;
   }
 
-  // today's plan, under what it offers: the day in order, what's now lit, a check for each thing you check off, how far
-  // through today is (a day counts at 70%), days in a row, lights out, the next deadlines, and the plan's switches
-  function planDay(pl) {
-    const p = P(), st = pl.st, m = st.m, pct = Math.round(st.pct * 100);
-    // (what's over and wasn't to check off drops away; what's during the day with no time, once the afternoon comes)
-    const shown = st.items.filter((it) => it.check || (it.at == null ? m < 15 * 60 : it.end > m));
-    const row = (it) => {
-      const href = hrefOf(it), away = !!it.place?.away;
-      const cls = ['pd-row', it.check ? '' : 'info', it.done ? 'done' : '', st.now === it ? 'now' : ''].filter(Boolean).join(' ');
-      return el('li', { className: cls },
-        it.check
-          ? el('button', { type: 'button', className: 'pd-check', 'aria-pressed': String(!!it.done), 'aria-label': `${it.name}: ${it.done ? 'checked off' : 'not checked off'}`, title: it.done ? 'Checked off. Click to undo' : 'Check it off', onclick: () => markDone(it, !it.done) }, svg('check'))
-          : el('span', { className: 'pd-dot', 'aria-hidden': 'true' }),
-        el('time', {}, it.at == null ? '' : p.clock(it.at)),
-        el('span', { className: 'pd-name' }, href ? el('a', { href, target: away ? '_blank' : null, rel: away ? 'noopener' : null }, it.name) : it.name),
-        el('span', { className: 'pd-side' },
-          it.min ? el('small', {}, `${it.min} min`) : it.set && it.end != null ? el('small', {}, `to ${p.clock(it.end)}`) : null,
-          it.how ? el('a', { className: 'pd-how', href: link(it.how.href), title: it.how.text }, 'How?') : null));
-    };
-    const foot = [];
-    if (st.lights) foot.push(el('span', {}, 'Lights out by ', el('b', {}, p.lightsWords(st.lights))));
-    for (const x of st.deadlines.slice(0, 2)) foot.push(el('span', { title: x.what }, el('b', {}, x.what.replace(/\s*\([^)]*\)\s*$/, '')), ` ${p.dayWords(x)}`));
-    return [
-      el('div', { className: 'pd-head' },
-        el('b', {}, 'Today'), el('span', { className: 'pd-day' }, st.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })),
-        el('span', { className: 'pd-count' }, st.of ? `${st.done} of ${st.of}` : 'Nothing to check off'),
-        st.streak ? el('span', { className: 'pd-streak' }, `${st.streak} ${st.streak === 1 ? 'day' : 'days'} in a row`) : null,
-        el('a', { className: 'pd-edit', href: link(`station/#${p.FOLDER}/week`), title: 'Change your plan in Station' }, 'Edit')),
-      st.of ? el('div', { className: 'pd-meter', role: 'img', 'aria-label': `${pct}% checked off. A day counts at ${Math.round(p.GOAL * 100)}%.` }, el('i', { style: `width:${pct}%` }), el('b', { style: `left:${Math.round(p.GOAL * 100)}%` })) : null,
-      el('ol', { className: 'pd-list' }, shown.map(row)),
-      foot.length ? el('div', { className: 'pd-foot' }, foot) : null,
-      st.switches.length ? el('div', { className: 'pd-switches', role: 'group', 'aria-label': 'Changes to your plan' }, st.switches.map((s) => el('button', { type: 'button', 'aria-pressed': String(s.on), title: s.scope === 'week' ? `${s.name}, for this week` : `${s.name}, for today`, onclick: () => flipSwitch(s, !s.on) }, s.name))) : null,
-    ];
-  }
+  // today's plan, under what it offers (kit/plan-day.js, with a way on to Schedule)
+  const planDay = (pl) => D().panel(pl, { home: true });
 
   // ---------- on the page ----------
   const SHOW = 3;
@@ -423,7 +353,7 @@
     const refresh = () => { clearTimeout(soon); soon = setTimeout(again, 200); };
     addEventListener('fluence:plan', again);
     // (another page of the site checking something off)
-    addEventListener('storage', (e) => { if (e.key === P()?.KEY || e.key === 'fluentio.station') refresh(); });
+    addEventListener('storage', (e) => { if (e.key === P()?.KEY || e.key === P()?.DOCS || e.key === 'fluentio.station') refresh(); });
     setInterval(() => { if (!document.hidden && seen.plan) again(); }, 30000);
     Promise.all([import(link('kit/music/player.js')), import(link('kit/music/library.js'))]).then(([player, lib]) => {
       for (const w of ['song', 'state']) player.events.addEventListener(w, refresh);

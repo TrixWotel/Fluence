@@ -1,9 +1,10 @@
-// The bar at the top of every page: the site's name, the spaces (Home, Modules, Music, Data, Code and Notes: the one
-// you're in is marked, and the mark slides across when you go to another), Search, and Settings. Each page loads this
+// The bar at the top of every page: the site's name, the spaces (Home, Schedule, Modules, Music, Data, Code and Notes:
+// the one you're in is marked, and the mark slides across when you go to another), what's on your plan now, Search, and
+// Settings. Each page loads this
 // right after look.js and calls fluentio.bar() first thing in its <body>, so the bar is there before the page is drawn.
 // Search finds the pages, the subjects, your songs, and everything in Data, Code and Notes. While look.js has Data, Code
 // and Notes switched off, the bar, Search and the keys leave them out. The keys are the settings' (Settings can record
-// new ones): ⌃K (or /) searches, and ⌃1 to ⌃6 go to Home, Modules, Music, Data, Code and Notes from anywhere. When a
+// new ones): ⌃K (or /) searches, and ⌃1 to ⌃7 go to Home, Modules, Music, Schedule, Data, Code and Notes from anywhere. When a
 // song is playing (or waiting), the music player comes along at the bottom of every page (kit/music/player.js).
 (() => {
   const f = window.fluentio;
@@ -12,6 +13,7 @@
   const keyFor = (name) => f.key.shown(f.settings.keys[name]);   // how a key reads ('' when it's off)
   const spaces = () => [
     { id: 'home', title: 'Home', href: f.link('./'), icon: 'home', key: keyFor('home') },
+    { id: 'schedule', title: f.settings.scheduleTitle, href: f.link('schedule/'), icon: 'calendar', key: keyFor('schedule') },
     { id: 'study', title: f.settings.studyTitle, href: f.link('study/'), icon: 'study', key: keyFor('study') },
     { id: 'music', title: f.settings.musicTitle, href: f.link('music/'), icon: 'music', key: keyFor('music') },
     { id: 'data', title: f.settings.dataTitle, href: f.link('data/'), icon: 'database', key: keyFor('data') },
@@ -97,14 +99,14 @@
     drawNav();
     const brand = el('a', { className: 'brand', href: f.link('./'), 'data-fill': 'name' }, f.settings.name);
     const gear = el('a', { className: 'gear' + (where() === 'settings' ? ' on' : ''), href: f.link('settings/'), title: 'Settings', 'aria-label': 'Settings' }, svg('settings'));
-    pill = el('a', { className: 'now-pill', href: f.link('./'), hidden: true });
+    pill = el('a', { className: 'now-pill', href: f.link('schedule/'), hidden: true });
     document.body.prepend(el('header', { className: 'topbar' }, brand, nav, el('div', { className: 'tools' }, pill, find, gear)));
     document.documentElement.classList.add('has-bar');
-    // what's on your plan now, on every page (kit/plan.js, brought in once there's a plan in Station)
+    // what's on your plan now, on every page (kit/plan.js, brought in once there's a plan in Schedule)
     if (window.fluentioPlan) paintPill(); else bringPlan();
     setInterval(() => { if (!document.hidden) paintPill(); }, 30000);
     addEventListener('fluence:plan', paintPill);
-    addEventListener('storage', (e) => { if (e.key === 'fluentio.plan' || e.key === 'fluentio.station') { if (window.fluentioPlan) paintPill(); else bringPlan(); } });
+    addEventListener('storage', (e) => { if (e.key === 'fluentio.plan' || e.key === 'fluentio.schedule') { if (window.fluentioPlan) paintPill(); else bringPlan(); } });
     // the music player, when there's a song to carry on with (Music's page and the home page bring it themselves)
     if ((f.read('fluentio.music.player') || {}).queue?.length && document.body.dataset.music !== 'off') {
       // (asked for all at once, not one after another as each finds it needs the next)
@@ -115,19 +117,19 @@
   addEventListener('fluentio:settings', () => { if (nav) drawNav(); paintPill(); });
 
   // ---------- your plan, now ----------
-  // a block you're due to be doing (and how long it has left), or at night, when it's lights out; nothing otherwise.
-  // A click goes to Home, where the day is. Settings → Home can leave it out of the bar
+  // a block you're due to be doing (and how long it has left), or at night, when it's lights out; nothing otherwise, and
+  // nothing in Schedule itself, which says so already. A click goes to Schedule. Settings → Home can leave it out of the bar
   let pill = null, asked = false;
   function bringPlan() {
     if (asked || f.settings.planBar === false) return;
-    try { if (!(localStorage.getItem('fluentio.station') || '').includes('"plan/')) return; } catch { return; }
+    try { if (!(localStorage.getItem('fluentio.schedule') || '').includes('"docs"')) return; } catch { return; }
     asked = true;
     document.head.append(el('script', { src: f.link('kit/plan.js'), onload: paintPill }));
   }
   function paintPill() {
     const p = window.fluentioPlan;
     if (!pill) return;
-    const plan = p && f.settings.planBar !== false ? p.current() : null, st = plan ? p.status(plan, p.load(f.read), Date.now()) : null;
+    const plan = p && f.settings.planBar !== false && where() !== 'schedule' ? p.current() : null, st = plan ? p.status(plan, p.load(f.read), Date.now()) : null;
     let name = '', more = '', late = false;
     if (st?.late) { name = 'Past lights out'; more = p.clockAmPm(st.lights.at + st.lights.later); late = true; }
     else if (st?.night && st.lights) { name = 'Lights out'; more = p.lightsWords({ at: st.lights.at, later: 0 }); }
@@ -135,7 +137,7 @@
     pill.hidden = !name;
     if (!name) return;
     pill.classList.toggle('late', late);
-    pill.title = `${name}, ${more}. Your plan for today is on Home.`;
+    pill.title = `${name}, ${more}. Your day is in ${f.settings.scheduleTitle}.`;
     pill.setAttribute('aria-label', pill.title);
     pill.replaceChildren(el('i', { className: 'dot', 'aria-hidden': 'true' }), el('b', {}, name), el('span', {}, more));
   }

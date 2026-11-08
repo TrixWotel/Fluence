@@ -123,6 +123,46 @@ html.has-bar body { padding-top: var(--bar-h); }
 .gear:hover, .gear.on { color: var(--text); background: color-mix(in srgb, var(--card) 80%, transparent); border-color: var(--line); }
 .gear .i { transition: transform var(--t2) var(--spring); }
 .gear:hover .i { transform: rotate(90deg); }
+/* today's plan, on Home and in Schedule (kit/plan-day.js): the day in order, with one lit row for what's now */
+.plan-day { display: grid; gap: 10px; margin-top: 6px; padding: 16px 14px 14px; text-align: left; background: color-mix(in srgb, var(--card) 86%, transparent); border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(300ms / var(--speed)); }
+.plan-day[hidden] { display: none; }
+.pd-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; padding: 0 4px; }
+.pd-head > b { font-size: 1.1rem; font-weight: 650; letter-spacing: -.01em; }
+.pd-day { color: var(--muted); }
+.pd-count { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pd-streak { color: var(--good); font-weight: 600; }
+.pd-edit { color: var(--muted); font-size: .92rem; text-decoration: none; }
+.pd-edit:hover { color: var(--text); text-decoration: underline; }
+.pd-meter { position: relative; height: 5px; margin: 0 4px; border-radius: 99px; background: color-mix(in srgb, var(--text) 9%, transparent); }
+.pd-meter > i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--good); transition: width var(--t2) var(--ease); }
+.pd-meter > b { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: color-mix(in srgb, var(--muted) 75%, transparent); }
+.pd-list { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.pd-row { display: grid; grid-template-columns: 26px 3.4em minmax(0, 1fr) auto; align-items: center; gap: 6px 8px; min-height: 38px; padding: 3px 8px 3px 4px; border-radius: 10px; transition: background var(--t1); }
+.pd-row.now { background: color-mix(in srgb, var(--accent) 13%, transparent); }
+.pd-row time { color: var(--muted); font-size: .95rem; font-variant-numeric: tabular-nums; text-align: right; }
+.pd-name { min-width: 0; overflow-wrap: anywhere; line-height: 1.35; }
+.pd-name a { color: inherit; text-decoration: none; }
+.pd-name a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pd-row.info { color: var(--muted); }
+.pd-row.done .pd-name { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 55%, transparent); }
+.pd-side { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.pd-side small { color: var(--muted); font-size: .88rem; }
+.pd-how { color: var(--muted); font-size: .88rem; text-decoration: none; }
+.pd-how:hover { color: var(--text); text-decoration: underline; }
+.pd-check { justify-self: center; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; color: #fff; cursor: pointer; background: none; border: 1.5px solid color-mix(in srgb, var(--muted) 70%, transparent); border-radius: 50%; transition: background var(--t1), border-color var(--t1), transform var(--t2) var(--spring); }
+.pd-check:hover { border-color: var(--good); }
+.pd-check:active { transform: scale(.88); }
+.pd-check .i { width: 14px; height: 14px; stroke-width: 3; opacity: 0; }
+.pd-check[aria-pressed="true"] { background: var(--good); border-color: var(--good); }
+.pd-check[aria-pressed="true"] .i { opacity: 1; }
+.pd-dot { justify-self: center; width: 6px; height: 6px; border-radius: 50%; background: color-mix(in srgb, var(--muted) 55%, transparent); }
+.pd-foot { display: flex; flex-wrap: wrap; gap: 4px 18px; padding: 0 4px; color: var(--muted); font-size: .94rem; }
+.pd-foot b { color: var(--text); font-weight: 600; }
+.pd-switches { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 2px; }
+.pd-switches button { padding: 3px 11px; font: inherit; font-size: .86rem; color: var(--muted); cursor: pointer; background: none; border: 1px solid var(--line); border-radius: 999px; transition: color var(--t1), border-color var(--t1), background var(--t1); }
+.pd-switches button:hover { color: var(--text); }
+.pd-switches button[aria-pressed="true"] { color: var(--text); border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+@media (max-width: 560px) { .plan-day { padding: 14px 8px 12px; } .pd-row { gap: 6px; padding-right: 6px; grid-template-columns: 24px 3.1em minmax(0, 1fr) auto; } .pd-how { display: none; } }
 /* what's on your plan now (bar.js and kit/plan.js): the block you're due to be doing, or tonight's lights out */
 .now-pill { display: flex; align-items: center; gap: 7px; min-width: 0; height: 34px; padding: 0 12px 0 11px; color: var(--text); font-size: .9rem; white-space: nowrap; text-decoration: none; border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); background: color-mix(in srgb, var(--accent) 11%, var(--card)); transition: border-color var(--t1); }

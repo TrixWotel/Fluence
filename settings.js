@@ -65,7 +65,7 @@ window.FLUENTIO_SETTINGS = {
 
   // the keys (Settings can record new ones): Ctrl, Alt, Shift or Meta (⌘ on a Mac) with a key, like 'Ctrl+K', and ''
   // turns one off. On Windows and Linux the browser keeps Ctrl with a number for its tabs, so there Ctrl+1 works as Alt+1
-  keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', music: 'Ctrl+3', data: 'Ctrl+4', code: 'Ctrl+5', notes: 'Ctrl+6' },
+  keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', music: 'Ctrl+3', schedule: 'Ctrl+4', data: 'Ctrl+5', code: 'Ctrl+6', notes: 'Ctrl+7' },
 
   // the home page's tiles, in this order (take one out to hide it): 'workspace' (what you worked on last), 'music',
   // 'study', 'progress', 'today', 'question', 'data' and 'quick'
@@ -120,6 +120,9 @@ window.FLUENTIO_SETTINGS = {
 
   // Music (the music/ page): its name in the bar and on its page
   musicTitle: 'Music',
+
+  // Schedule (schedule/), your plan: its name in the bar and on its page
+  scheduleTitle: 'Schedule',
 
   // Modules (the study/ page): its title, the line under it, and its subjects in this order (color is the subject's
   // own color)

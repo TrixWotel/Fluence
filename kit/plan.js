@@ -1,15 +1,16 @@
-// Your plan, from the notes in Station's plan folder. They're yours: none of a plan is in the site's code.
-// week.md has your days: a section for each day or set of days ("## Monday", "## Sunday to Thursday nights"), a line for
+// Your plan, from the pages in Schedule (schedule/). They're yours: none of a plan is in the site's code.
+// Week has your days: a section for each day or set of days ("## Monday", "## Sunday to Thursday nights"), a line for
 // each thing with its time, and minutes on what you check off ("- 4:30 Homework · 90 min"). A section like "## On game
-// days" is a switch on Home that changes those days. deadlines.md has a line for each date, sleep.md when it's lights out
-// from when, and how-to-study.md a section for each kind of block, which Home quotes.
-// What you've checked off is in 'fluentio.plan', which goes with the rest of your progress, so every browser carries on
-// from the same day. Home says what's now and lists the day, and the bar shows what's now on every page.
-// A plain script: Home and the bar use window.fluentioPlan, and the tests require() it.
+// days" is a switch that changes those days. Deadlines has a line for each date, Sleep when it's lights out from when,
+// and How to study a section for each kind of block, which Home and Schedule quote.
+// The pages are in 'fluentio.schedule', and what you've checked off in 'fluentio.plan'. Both go with the rest of your
+// progress (kit/progress.js), so every browser has the same plan and carries on from the same day. Schedule shows it
+// all, Home says what's now and lists the day, and the bar shows what's now on every page.
+// A plain script: Schedule, Home and the bar use window.fluentioPlan, and the tests require() it.
 (function (root) {
   'use strict';
   const MIN = 60000, DAY = 86400000;
-  const KEY = 'fluentio.plan', FOLDER = 'plan', STATION = 'fluentio.station';
+  const KEY = 'fluentio.plan', DOCS = 'fluentio.schedule', STATION = 'fluentio.station';
   const ROLL = 5 * 60;   // (a day of the plan runs until 5 in the morning, so a late night is still that day)
   const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -102,7 +103,7 @@
   const clock = (m) => { const h = Math.floor(m / 60) % 24, mm = Math.round(m % 60); return `${h % 12 || 12}:${String(mm).padStart(2, '0')}`; };
   const clockAmPm = (m) => `${clock(m)} ${Math.floor(m / 60) % 24 < 12 ? 'AM' : 'PM'}`;
 
-  // ---------- week.md ----------
+  // ---------- Week ----------
   const LIST = /^\s*(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?(.*)$/;
   function readLine(text) {
     let t = text.trim(), start = null, end = null;
@@ -163,11 +164,12 @@
     return sections;
   }
 
-  // ---------- deadlines.md and sleep.md ----------
+  // ---------- Deadlines and Sleep ----------
+  // (each deadline knows its line, so Schedule can check it off there)
   function readDeadlines(text, ref) {
     const out = [];
     let year = null;
-    for (const line of String(text).split('\n')) {
+    for (const [n, line] of String(text).split('\n').entries()) {
       const h = /^#{1,6}\s+.*?\b(\d{4})\b/.exec(line);
       if (h) { year = +h[1]; continue; }
       const li = /^\s*(?:[-*+]|\d+[.)])\s+(?:\[( |x|X)\]\s+)?(.*)$/.exec(line);
@@ -190,9 +192,17 @@
       const y = a.y ?? year ?? yearFor(a.mo, a.d, ref), t0 = new Date(y, a.mo, a.d).getTime();
       let t1 = b ? new Date(b.y ?? y, b.mo, b.d).getTime() : t0;
       if (t1 < t0) t1 = new Date(new Date(t1).getFullYear() + 1, b.mo, b.d).getTime();
-      out.push({ t: t0, end: t1, what, done, two: !!slash });
+      out.push({ t: t0, end: t1, what, done, two: !!slash, line: n });
     }
     return out.sort((p, q) => p.t - q.t);
+  }
+  // a deadline's line checked off ("- [x] …") or not ("- [ ] …"), however it said so before
+  function markDeadline(text, n, done) {
+    const lines = String(text).split('\n'), m = /^(\s*(?:[-*+]|\d+[.)])\s+)(?:\[[ xX]\]\s+)?(.*)$/.exec(lines[n] ?? '');
+    if (!m) return text;
+    const rest = m[2].replace(/^~~(.*)~~/, '$1').replace(/\s*\((?:done|finished)\)\s*$/i, '');
+    lines[n] = `${m[1]}[${done ? 'x' : ' '}] ${rest}`;
+    return lines.join('\n');
   }
   // when it's lights out: a table (or list) of from-date and time, and a line like "Friday and Saturday nights: up to 30
   // min later"
@@ -212,7 +222,7 @@
     }
     return { rows: rows.sort((a, b) => a.t - b.t), later };
   }
-  // how-to-study.md: a section for each kind of block, quoted on Home
+  // How to study: a section for each kind of block, quoted on Home and in Schedule
   function readHow(text) {
     const out = [];
     let cur = null;
@@ -224,14 +234,66 @@
     return out.filter((x) => x.name);
   }
 
-  // ---------- the plan, from the notes ----------
+  // ---------- Schedule's pages ----------
+  // 'fluentio.schedule' is { v: 1, docs: { id: { title, text, made, at } } }: each page's Markdown, when it was made (the
+  // pages' order) and when it last changed. (So when two browsers changed the same page, kit/progress.js keeps the newer.)
+  const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+  const idOf = (title) => String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'page';
+  // a page's name: its first line when that's a "# heading", or the name it was made with
+  function titleOf(id, d) {
+    const first = /^\s*#\s+(.+?)\s*#*\s*$/m.exec(String(d?.text || '').split('\n').find((l) => l.trim()) || '');
+    const t = (first ? first[1] : typeof d?.title === 'string' ? d.title : '').replace(/[*_`]/g, '').trim();
+    return t || cap(id.replace(/-/g, ' '));
+  }
+  function loadDocs(read) {
+    let s = null;
+    try { s = read ? read(DOCS) : JSON.parse(root.localStorage.getItem(DOCS)); } catch {}
+    const docs = {};
+    if (plainObj(s?.docs)) for (const [id, d] of Object.entries(s.docs)) if (ID.test(id) && plainObj(d) && typeof d.text === 'string') docs[id] = d;
+    return { v: 1, docs };
+  }
+  function saveDocs(state, write) {
+    const out = { v: 1, docs: state.docs };
+    try { if (write) write(DOCS, out); else root.localStorage.setItem(DOCS, JSON.stringify(out)); } catch {}
+  }
+  const listDocs = (state) => Object.entries(state.docs).map(([id, d]) => ({ id, title: titleOf(id, d), text: d.text, made: +d.made || 0, at: +d.at || 0 }))
+    .sort((a, b) => a.made - b.made || a.id.localeCompare(b.id));
+  function putDoc(state, id, text, now = Date.now()) {
+    const was = plainObj(state.docs[id]) ? state.docs[id] : { made: now };
+    state.docs[id] = { ...was, text: String(text), at: now };
+    return state;
+  }
+  // a new page, after the others: its id (from its name, and a number when that one's taken)
+  function newDoc(state, title, text, now = Date.now()) {
+    const base = /^(new|today)$/.test(idOf(title)) ? `${idOf(title)}-page` : idOf(title);   // (#new and #today are Schedule's own)
+    let id = base;
+    for (let n = 2; state.docs[id]; n++) id = `${base}-${n}`;
+    const made = Math.max(now, ...Object.values(state.docs).map((d) => (+d.made || 0) + 1));
+    state.docs[id] = { title: String(title), text: text ?? `# ${title}\n\n`, made, at: now };
+    return id;
+  }
+  const dropDoc = (state, id) => { delete state.docs[id]; return state; };
+  // the pages a new schedule starts with: what each one is for, and how to write it
+  const STARTER = [
+    ['week', 'Week', '# Week\n\nA section for each day or set of days, and a line for each thing with its time. Minutes after a · mean it’s something to check off.\n\n## Weekdays\n- 7:30 Wake up, get ready\n- 8:00 School\n\n## Monday to Thursday\n- 4:00 Homework · 60 min\n- 6:00 Dinner\n- 7:00 Reading · 20 min\n- 7:30 Free\n\n## Friday\n- 4:00 Free afternoon\n\n## Weekends\n- 10:00 Practice · 45 min\n- 12:00 Lunch\n\n## Every night\n- 9:30 Phone away\n- 9:45 Read\n\n## On game days\n- 4:00 Game\n'],
+    ['deadlines', 'Deadlines', '# Deadlines\n\nA line for each date. Check one off here when it’s done.\n\n- [ ] Dec 12 Project due\n'],
+    ['sleep', 'Sleep', '# Sleep\n\nWhen it’s lights out, from when. Add a row to move it.\n\n| From | Lights out |\n| --- | --- |\n| {today} | 10:30 PM |\n\nFriday and Saturday nights: up to 30 min later.\n'],
+    ['how-to-study', 'How to study', '# How to study\n\nA section for each kind of block, named the way it is in your week. Schedule and Home show it beside that block.\n\n## Reading\nTwenty pages, then three lines on what happened.\n'],
+  ];
+  function starter(state, now = Date.now()) {
+    const today = new Date(now).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    STARTER.forEach(([id, title, text], i) => { if (!state.docs[id]) state.docs[id] = { title, text: text.replace('{today}', today), made: now + i, at: now }; });
+    return state;
+  }
+
+  // ---------- the plan, from the pages ----------
   let cache = { raw: null, plan: null };
-  function fromVault(v) {
-    const notes = (plainObj(v) && Array.isArray(v.notes) ? v.notes : []).filter((n) => n && typeof n.path === 'string' && typeof n.text === 'string');
-    const find = (name) => notes.find((n) => n.path.toLowerCase() === `${FOLDER}/${name}.md`);
+  function fromDocs(s) {
+    const docs = listDocs(loadDocs(() => s));
+    const find = (name) => docs.find((d) => d.id === name) || docs.find((d) => idOf(d.title) === name);
     const week = find('week');
     if (!week) return null;
-    const when = (n) => (n && n.edited > 1e12 ? n.edited : Date.now());
+    const when = (d) => (d && d.at > 1e12 ? d.at : Date.now());
     const ref = when(week), dl = find('deadlines'), sl = find('sleep'), how = find('how-to-study');
     const sections = readWeek(week.text);
     const switches = [];
@@ -241,16 +303,17 @@
       deadlines: dl ? readDeadlines(dl.text, when(dl)) : [],
       sleep: sl ? readSleep(sl.text, when(sl)) : { rows: [], later: null },
       how: how ? readHow(how.text) : [],
-      notes: notes.map((n) => n.path),
+      ids: { week: week.id, deadlines: dl?.id || '', sleep: sl?.id || '', how: how?.id || '' },
+      docs: docs.map(({ id, title }) => ({ id, title })),
     };
   }
-  // the plan in this browser's Station (the same plan again while its notes haven't changed)
+  // the plan in this browser's Schedule (the same plan again while its pages haven't changed)
   function current(getRaw) {
     let raw = null;
-    try { raw = getRaw ? getRaw() : root.localStorage.getItem(STATION); } catch {}
+    try { raw = getRaw ? getRaw() : root.localStorage.getItem(DOCS); } catch {}
     if (raw === cache.raw) return cache.plan;
     let plan = null;
-    if (raw && raw.includes(`"${FOLDER}/`)) try { plan = fromVault(JSON.parse(raw)); } catch {}
+    if (raw && raw.includes('"docs"')) try { plan = fromDocs(JSON.parse(raw)); } catch {}
     cache = { raw, plan };
     return plan;
   }
@@ -395,16 +458,27 @@
   const PLACES = [
     [/\bamc ?12\b/i, 'math/#amc12/learn'], [/\bamc\b.*\b(timed|test|set)\b/i, 'math/#amc10/test'], [/\bamc\b/i, 'math/#amc10/learn'],
     [/\bspanish\b|\bvocab/i, 'spanish/'], [/\bphysics\b/i, 'physics/'], [/\bscience\b/i, 'science/'], [/\bhistory\b/i, 'history/'], [/\bessays?\b|\benglish\b/i, 'english/'], [/\bgeograph/i, 'geography/'],
-    [/\bjournal\b|\breview\b/i, 'station/#today'], [/\bwhiteboard\b|\bsketch\b/i, 'board/'],
+    [/\bschedule\b/i, 'schedule/#week'], [/\bjournal\b|\breview\b/i, 'station/#today'], [/\bwhiteboard\b|\bsketch\b/i, 'board/'],
   ];
-  // where a thing on the plan is done: its own link, a note it names, or the page of the site it's about
+  // a [[link]]'s page: one of Schedule's, or a note in Station
+  function linked(plan, name) {
+    const want = String(name).trim().toLowerCase(), doc = plan.docs.find((d) => d.id === want || d.title.toLowerCase() === want || d.id === idOf(want));
+    if (doc) return `schedule/#${doc.id}`;
+    try {
+      const notes = JSON.parse(root.localStorage.getItem(STATION))?.notes, n = Array.isArray(notes) && notes.find((x) => typeof x?.path === 'string' && x.path.toLowerCase().replace(/\.md$/, '').split('/').pop() === want);
+      if (n) return `station/#${n.path.replace(/\.md$/i, '')}`;
+    } catch {}
+    return '';
+  }
+  // where a thing on the plan is done: its own link, a page it names, or the page of the site it's about
   function placeOf(plan, it) {
     if (it.link) return { href: it.link, away: true };
-    if (it.note) { const p = plan.notes.find((x) => x.toLowerCase().replace(/\.md$/, '').split('/').pop() === it.note.toLowerCase()); if (p) return { href: `station/#${p.replace(/\.md$/i, '')}` }; }
+    const to = it.note ? linked(plan, it.note) : '';
+    if (to) return { href: to };
     const hit = PLACES.find(([re]) => re.test(it.name));
     return hit ? { href: hit[1] } : null;
   }
-  // what how-to-study.md says about a block: the sentence about today ("Sunday: …", "Weeknights: …"), or its first
+  // what How to study says about a block: the sentence about today ("Sunday: …", "Weeknights: …"), or its first
   function howFor(plan, it, date) {
     const name = it.name.toLowerCase(), h = plan.how.find((x) => new RegExp(`(^|[^a-z0-9])${esc(x.name.toLowerCase())}($|[^a-z0-9])`).test(name));
     if (!h || !h.text) return null;
@@ -416,7 +490,7 @@
     let text = sentences[best].trim();
     if (best === 0 && text.length < 40 && sentences[1] && score(sentences[1]) >= 0) text += ` ${sentences[1].trim()}`;
     if (text.length > 150) text = `${text.slice(0, 150).replace(/\s+\S*$/, '')}…`;
-    return { name: h.name, text, href: `station/#${FOLDER}/how-to-study` };
+    return { name: h.name, text, href: `schedule/#${plan.ids.how}` };
   }
   function status(plan, state, now = Date.now()) {
     if (!plan) return null;
@@ -447,9 +521,10 @@
   const lightsWords = (l) => (l ? `${clockAmPm(l.at)}${l.later ? `, or ${clockAmPm(l.at + l.later)} at the latest` : ''}` : '');
 
   root.fluentioPlan = {
-    KEY, FOLDER, GOAL,
-    readWeek, readLine, readDeadlines, readSleep, readHow, fromVault, current, day, status, lightsOut, streak, dayAt,
-    load, save, check, remember, flip, switchesOn, placeOf, howFor,
+    KEY, DOCS, GOAL,
+    readWeek, readLine, readDeadlines, markDeadline, readSleep, readHow, fromDocs, current, day, status, lightsOut, streak, dayAt,
+    load, save, check, remember, flip, switchesOn, placeOf, howFor, linked,
+    loadDocs, saveDocs, listDocs, putDoc, newDoc, dropDoc, starter, titleOf, idOf,
     dayKey, dateOf, weekKey, isoWeek, daysIn, dateParts, clockAt, place, clock, clockAmPm, plural, left, leftWords, dayWords, lightsWords,
   };
   if (typeof module === 'object' && module.exports) module.exports = root.fluentioPlan;
