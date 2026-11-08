@@ -61,10 +61,19 @@
   function panel(pl, { home = false } = {}) {
     const p = P(), st = pl.st, m = st.m, pct = Math.round(st.pct * 100);
     // (what's over and wasn't to check off drops away; what's during the day with no time, once the afternoon comes)
-    const shown = st.items.filter((it) => it.check || (it.at == null ? m < 15 * 60 : it.end > m));
+    let shown = st.items.filter((it) => it.check || (it.at == null ? m < 15 * 60 : it.end > m));
+    // (school is one row: the class that's on now and where, or the rest of the day's classes)
+    const school = (it) => it.kind === 'class' && !it.check, left = shown.filter(school);
+    if (left.length > 1 || (left.length && st.items.filter(school).length > 1)) {
+      const on = left.find((it) => it === st.now), where = on?.where ? on.where.split(' · ').pop() : '';
+      const row = on ? { ...on, name: `${short(on)}${where ? `, ${where}` : ''}`, now: true } : { name: 'School', at: left[0].at, end: left.at(-1).end, set: true, check: false };
+      const i = shown.indexOf(left[0]);
+      shown = shown.filter((it) => !school(it));
+      shown.splice(i, 0, row);
+    }
     const row = (it) => {
       const href = hrefOf(it), away = !!it.place?.away;
-      const cls = ['pd-row', it.check ? '' : 'info', it.done ? 'done' : '', st.now === it ? 'now' : ''].filter(Boolean).join(' ');
+      const cls = ['pd-row', it.check ? '' : 'info', it.done ? 'done' : '', st.now === it || it.now ? 'now' : ''].filter(Boolean).join(' ');
       return el('li', { className: cls },
         it.check
           ? el('button', { type: 'button', className: 'pd-check', 'aria-pressed': String(!!it.done), 'aria-label': `${it.name}: ${it.done ? 'checked off' : 'not checked off'}`, title: it.done ? 'Checked off. Click to undo' : 'Check it off', onclick: () => markDone(it, !it.done) }, svg('check'))

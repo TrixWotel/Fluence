@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Schedule · Fluence</title>
-  <meta name="description" content="Your plan: today in order with a check for each thing you do, your week, deadlines, lights out, and how to study.">
+  <meta name="description" content="Your week by the hour: your classes on the day they're on, your own blocks to check off, deadlines and lights out, and pages for the rest of your plan.">
   <script src="../settings.js"></script>
   <script src="../kit/look.js"></script>
   <script src="../kit/bar.js"></script>
@@ -14,16 +14,13 @@
   <link rel="modulepreload" href="../station/md.js">
   <link rel="stylesheet" href="../kit/site.css">
   <style>
-    /* the heading, then the frame: your plan's pages on the left, the open one on the right */
-    main.sc-main { width: 100%; max-width: 1180px; margin: 0 auto; padding: 40px 20px 48px; box-sizing: border-box; flex: 1; }
-    .sc-head > * { animation: rise var(--t3) var(--ease) backwards; }
-    .sc-head > :nth-child(2) { animation-delay: calc(60ms / var(--speed)); }
-    .sc-head h1 { font-size: 2.4rem; line-height: 1.15; letter-spacing: -0.025em; margin: 0 0 8px; }
-    .sc-head .lead { color: var(--muted); font-size: 1.1rem; margin: 0 0 22px; max-width: 70ch; }
-    .sc { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 540px; background: var(--card); border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); overflow: hidden; animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(120ms / var(--speed)); }
+    /* a workspace, like Music: no heading, just the frame (the calendar and your pages on the left, the open one on the
+       right) under the bar */
+    main.sc-main { width: 100%; max-width: 1480px; margin: 0 auto; padding: 26px 20px 30px; box-sizing: border-box; flex: 1; }
+    .sc { display: grid; grid-template-columns: 224px minmax(0, 1fr); min-height: 540px; background: var(--card); border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); overflow: hidden; animation: rise var(--t3) var(--ease) backwards; }
     .sc-none { margin: 0; padding: 28px; color: var(--muted); }
 
-    /* the left: Today and your pages, one lit */
+    /* the left: the calendar, the pages that go with it, and the rest; one lit */
     .sc-side { display: flex; flex-direction: column; gap: 4px; padding: 16px 10px; background: color-mix(in srgb, var(--bg) 62%, var(--card)); border-right: 1px solid var(--line); }
     .sc-list { display: flex; flex-direction: column; gap: 1px; }
     .sc-row { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 2px 10px; font-size: 1.02rem; color: var(--text); text-decoration: none; border-radius: 9px; transition: background var(--t1); }
@@ -32,45 +29,144 @@
     .sc-row > svg { flex: none; width: 17px; height: 17px; color: var(--muted); }
     .sc-row.on > svg, .sc-row.today > svg { color: var(--accent); }
     .sc-label { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .sc-row small { color: var(--muted); font-size: .88rem; font-variant-numeric: tabular-nums; }
+    .sc-row small { color: var(--muted); font-size: .86rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .sc-sub { margin: 14px 10px 4px; color: var(--muted); font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
     .sc-new { display: flex; align-items: center; gap: 10px; min-height: 36px; margin-top: 6px; padding: 2px 10px; color: var(--muted); font-size: .96rem; text-decoration: none; border-radius: 9px; }
     .sc-new:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
     .sc-new > svg { width: 16px; height: 16px; }
 
     /* the right: the open page */
-    .sc-page { min-width: 0; padding: 30px 40px 36px; }
+    .sc-page { min-width: 0; padding: 24px 28px 30px; }
     .sc-page > * { max-width: 760px; }
+    .sc-page > .cal, .sc-page > .sc-today, .sc-page > .sc-wide, .sc-page > .sc-ask, .sc-page:has(> .cal, > .sc-today, > .sc-wide) > .sc-top { max-width: none; }
     .sc-page.rise > * { animation: rise var(--t2) var(--ease) backwards; }
-    .sc-top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 14px; }
+    .sc-top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 14px; }
     .sc-top h2 { margin: 0; font-size: 1.75rem; font-weight: 650; line-height: 1.2; letter-spacing: -0.015em; }
     .sc-top .grow { flex: 1; }
     .sc-top .btn { padding: 6px 14px; font-size: .95rem; }
-    .sc-muted { color: var(--muted); }
+    .sc-range { color: var(--muted); font-size: 1.02rem; font-variant-numeric: tabular-nums; }
+    .sc-step { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; font: inherit; font-size: 1.25rem; line-height: 1; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 9px; }
+    .sc-step:hover { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
+    .sc-top h2 + .sc-step { margin-left: 6px; }
+    .sc-top .sc-range + .sc-step { margin-left: -8px; }
+    .sc-top .sc-step + .sc-range { margin-left: -8px; }
 
-    /* Today: what's on now, its way in, and the day */
-    .sc-now { margin: 0 0 14px; font-size: 1.5rem; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; text-wrap: balance; }
-    .sc-act { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin: 0 0 20px; }
+    /* "which Day is it": asked once, in place */
+    .sc-ask { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 14px; padding: 10px 12px 10px 16px; font-size: 1rem; background: color-mix(in srgb, var(--accent) 9%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); border-radius: 12px; }
+    .sc-ask > span { flex: 1 1 260px; }
+    .sc-ask .btn { padding: 6px 14px; font-size: .95rem; }
+
+    /* the calendar: the days across, the hours down */
+    .cal { --axis: 54px; position: relative; overflow: hidden; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+    .cal-head, .cal-all, .cal-body { display: grid; grid-template-columns: var(--axis) repeat(var(--cols), minmax(0, 1fr)); }
+    .cal-head, .cal-all { scrollbar-gutter: stable; overflow: hidden; }
+    .cal-head { border-bottom: 1px solid var(--line); }
+    .cal-dh { display: flex; align-items: center; flex-wrap: wrap; gap: 3px 6px; min-width: 0; padding: 8px 8px 7px; border-left: 1px solid var(--line); }
+    .cal-dh .wd { color: var(--muted); font-size: .76rem; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
+    .cal-dh .dn { font-size: 1.12rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+    .cal-dh .dn.label { font-size: 1rem; }
+    .cal-dh.today .wd { color: var(--text); }
+    .cal-dh.today .dn:not(.label) { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 4px; box-sizing: border-box; color: var(--on-accent, #fff); background: var(--accent); border-radius: 999px; }
+    .cal-dh.today .dn.label { color: var(--accent); }
+    .cal-rot { margin-left: auto; padding: 2px 8px; font: inherit; font-size: .74rem; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; cursor: pointer; background: none; border: 1px solid var(--line); border-radius: 999px; transition: color var(--t1), border-color var(--t1); }
+    .cal-rot:hover { color: var(--text); border-color: color-mix(in srgb, var(--text) 30%, var(--line)); }
+    .cal-off { margin-left: auto; color: var(--muted); font-size: .74rem; white-space: nowrap; }
+    .cal-all { border-bottom: 1px solid var(--line); }
+    .cal-ad { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 5px 4px; border-left: 1px solid var(--line); }
+    .cal-ad.today, .cal-col.today { background-color: color-mix(in srgb, var(--accent) 4%, transparent); }
+    .cal-chip { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 3px 7px; font: inherit; font-size: .78rem; line-height: 1.3; text-align: left; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c, var(--accent)) 17%, var(--card)); border: 0; border-left: 3px solid var(--c, var(--accent)); border-radius: 6px; }
+    .cal-chip > span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .cal-chip.dl { --c: #e3a53d; font-weight: 600; }
+    .cal-chip.info, .cal-chip.off { --c: color-mix(in srgb, var(--muted) 70%, transparent); color: var(--muted); }
+    .cal-chip.off { cursor: default; }
+    .cal-chip.done { opacity: .5; }
+    .cal-chip.done > span { text-decoration: line-through; }
+    .cal-chip .ring { flex: none; width: 9px; height: 9px; border: 1.5px solid currentColor; border-radius: 50%; }
+    .cal-chip:hover:not(.off) { background: color-mix(in srgb, var(--c, var(--accent)) 26%, var(--card)); }
+    .cal-scroll { max-height: clamp(380px, calc(100vh - 200px), 1600px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+    .cal.fit .cal-scroll { max-height: none; }
+    .cal-body { position: relative; }
+    .cal-hours { position: relative; }
+    .cal-hours span { position: absolute; right: 8px; color: var(--muted); font-size: .72rem; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; transform: translateY(-50%); }
+    .cal-col { position: relative; min-width: 0; border-left: 1px solid var(--line); background-image: linear-gradient(to bottom, var(--line) 1px, transparent 1px); background-size: 100% var(--hour); }
+    .cal-sleep { position: absolute; left: 0; right: 0; pointer-events: none; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--text) 5%, transparent) 0 5px, transparent 5px 11px); }
+    .cal-lights { position: absolute; left: 0; right: 0; z-index: 2; pointer-events: none; border-top: 1.5px dashed color-mix(in srgb, var(--muted) 75%, transparent); }
+    .cal-lights span { position: absolute; right: 5px; top: 2px; color: var(--muted); font-size: .68rem; white-space: nowrap; }
+    .cal-now { position: absolute; left: 0; right: 0; z-index: 0; height: 2px; margin-top: -1px; pointer-events: none; background: #f0524b; }
+    .cal-dot { position: absolute; left: -6px; z-index: 5; width: 11px; height: 11px; margin-top: -5.5px; box-sizing: border-box; background: #f0524b; border: 2px solid var(--card); border-radius: 50%; }
+
+    /* a block: a class in its color, yours with a circle to check off, something with set times, or the rest of the day */
+    .cal-b { --c: var(--accent); position: absolute; z-index: 1; left: calc(3px + (100% - 6px) * var(--lane) / var(--of)); width: calc((100% - 6px) / var(--of) - 2px); box-sizing: border-box; padding: 3px 7px 3px 8px; overflow: hidden; font-size: .78rem; line-height: 1.25; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c) 21%, var(--card)); border-left: 3px solid var(--c); border-radius: 6px; transition: background var(--t1), box-shadow var(--t1); }
+    .cal-b:hover, .cal-b:focus-visible { z-index: 3; background: color-mix(in srgb, var(--c) 32%, var(--card)); outline: none; box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 60%, transparent); }
+    .cal-b > b { display: block; overflow: hidden; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+    .cal-b > small { display: block; overflow: hidden; color: color-mix(in srgb, var(--text) 72%, transparent); font-size: .72rem; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+    .cal-b time { color: color-mix(in srgb, var(--text) 70%, transparent); font-weight: 500; font-variant-numeric: tabular-nums; }
+    .cal-b.small, .cal-b.tiny { padding-top: 1px; padding-bottom: 0; }
+    .cal-b.tiny { font-size: .7rem; line-height: 1.15; }
+    .cal-b.tiny > b { font-weight: 550; }
+    .cal-b.micro { padding-top: 0; font-size: .62rem; line-height: 1.05; border-radius: 4px; }
+    .cal-b.micro .cal-ck { top: 0; width: 10px; height: 10px; border-width: 1px; }
+    .cal-b.micro .cal-ck svg { width: 8px; height: 8px; }
+    .cal-b.tall > b { display: -webkit-box; white-space: normal; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .cal-b.mine { padding-right: 24px; }
+    .cal-b.routine { --c: color-mix(in srgb, var(--muted) 45%, transparent); color: var(--muted); background: color-mix(in srgb, var(--text) 4%, var(--card)); }
+    .cal-b.routine > b { font-weight: 500; }
+    .cal-b.done { opacity: .55; }
+    .cal-b.done > b { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--text) 55%, transparent); }
+    .cal-b.now { z-index: 2; box-shadow: 0 0 0 1.5px var(--c), 0 4px 14px rgba(0, 0, 0, .25); }
+    .cal-ck { position: absolute; top: 3px; right: 4px; display: grid; place-items: center; width: 16px; height: 16px; padding: 0; color: transparent; cursor: pointer; background: none; border: 1.5px solid color-mix(in srgb, var(--text) 55%, transparent); border-radius: 50%; }
+    .cal-b.tiny .cal-ck { top: 1px; width: 13px; height: 13px; }
+    .cal-ck svg { width: 11px; height: 11px; stroke-width: 3; }
+    .cal-ck:hover:not(:disabled) { border-color: var(--text); }
+    .cal-ck[aria-pressed="true"] { color: var(--on-accent, #fff); background: var(--accent); border-color: var(--accent); }
+    .cal-ck:disabled { cursor: default; opacity: .45; }
+    .cal [data-c="teal"] { --c: #2bb3a3; } .cal [data-c="blue"] { --c: #4b8fdc; } .cal [data-c="violet"] { --c: #8f74e0; }
+    .cal [data-c="purple"] { --c: #a45cc7; } .cal [data-c="pink"] { --c: #d965a8; } .cal [data-c="red"] { --c: #d45a50; }
+    .cal [data-c="orange"] { --c: #e38a3a; } .cal [data-c="gold"] { --c: #d1aa36; } .cal [data-c="olive"] { --c: #93a83c; }
+    .cal [data-c="green"] { --c: #49ae68; } .cal [data-c="cyan"] { --c: #39b2d4; } .cal [data-c="indigo"] { --c: #6676dc; }
+    .cal [data-c="brown"] { --c: #ad7d55; } .cal [data-c="gray"] { --c: #8a8f98; }
+
+    /* the card about a block: when, where, how, and Start or check it off */
+    .cal-pop { position: fixed; z-index: 60; width: 320px; max-width: calc(100vw - 20px); box-sizing: border-box; padding: 14px 16px 16px; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 14px 44px rgba(0, 0, 0, .38); animation: rise var(--t2) var(--ease) backwards; }
+    .cal-pop.sheet { left: 10px; right: 10px; bottom: 10px; width: auto; max-width: none; }
+    .pop-top { display: flex; align-items: flex-start; gap: 10px; }
+    .pop-top b { flex: 1; font-size: 1.12rem; font-weight: 650; line-height: 1.3; }
+    .pop-x { display: grid; place-items: center; flex: none; width: 28px; height: 28px; margin: -4px -6px 0 0; padding: 0; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 8px; }
+    .pop-x:hover { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
+    .pop-x svg { width: 16px; height: 16px; }
+    .cal-pop p { margin: 6px 0 0; font-size: .95rem; line-height: 1.5; }
+    .cal-pop .pop-when { margin-top: 2px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .cal-pop .pop-how { color: var(--muted); }
+    .cal-pop .pop-how b { color: var(--text); font-weight: 600; }
+    .cal-pop .pop-how a { color: var(--accent); }
+    .pop-steps { margin: 8px 0 0; padding: 0; list-style: none; font-size: .95rem; line-height: 1.6; }
+    .pop-steps time { display: inline-block; min-width: 3.3em; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .pop-act { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .pop-act .btn { padding: 7px 14px; font-size: .95rem; }
+
+    /* Today: what's on now beside the day by the hour */
+    .sc-today { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); align-items: start; gap: 18px; }
+    .sc-card { display: grid; gap: 14px; padding: 18px; background: color-mix(in srgb, var(--bg) 40%, var(--card)); border: 1px solid var(--line); border-radius: 14px; }
+    .sc-now { margin: 0; font-size: 1.32rem; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; text-wrap: balance; }
+    .sc-act { display: grid; gap: 10px; justify-items: start; }
     .sc-act .btn { padding: 9px 18px; font-weight: 600; }
-    .sc-how { flex: 1 1 260px; margin: 0; color: var(--muted); font-size: 1rem; line-height: 1.5; }
+    .sc-how { margin: 0; color: var(--muted); font-size: .98rem; line-height: 1.5; }
     .sc-how b { color: var(--text); font-weight: 600; }
     .sc .plan-day { margin: 0; padding: 0; background: none; border: 0; animation: none; }
-    .sc-later { margin: 18px 0 0; padding: 0 4px; color: var(--muted); font-size: .98rem; line-height: 1.55; }
+    .sc-later { margin: 0; color: var(--muted); font-size: .96rem; line-height: 1.55; }
     .sc-later b { color: var(--text); font-weight: 600; }
 
-    /* Week: a day of it at a time */
-    .sc-range { color: var(--muted); font-size: 1rem; font-variant-numeric: tabular-nums; }
-    .sc-step { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; font: inherit; font-size: 1.2rem; line-height: 1; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 9px; }
-    .sc-step:hover { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
-    .sc-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 0 0 16px; }
+    /* a day at a time, on a phone */
+    .sc-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 0 0 12px; }
     .sc-days button { display: grid; justify-items: center; gap: 1px; padding: 8px 0 7px; font: inherit; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 10px; transition: background var(--t1), color var(--t1); }
-    .sc-days button b { font-size: .86rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-    .sc-days button span { font-size: 1.15rem; font-variant-numeric: tabular-nums; color: var(--text); }
-    .sc-days button:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+    .sc-days button b { font-size: .76rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+    .sc-days button span { font-size: 1.12rem; font-variant-numeric: tabular-nums; color: var(--text); }
     .sc-days button.today b { color: var(--accent); }
     .sc-days button[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 13%, transparent); }
-    .pd-ring { justify-self: center; width: 12px; height: 12px; box-sizing: border-box; border: 1.5px solid color-mix(in srgb, var(--muted) 70%, transparent); border-radius: 50%; }
-    .sc-tag { padding: 1px 8px; color: var(--muted); font-size: .8rem; border: 1px solid var(--line); border-radius: 999px; }
-    .sc-nothing { margin: 8px 4px; color: var(--muted); }
+
+    /* Classes: each week of your school's days, the way the school shows them */
+    .sc-wide { margin: 0 0 14px; }
+    .sc-tonight { margin: 0 0 14px; font-size: 1.1rem; }
 
     /* Deadlines: what's coming, soonest first, each checked off where it is */
     .sc-dl { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
@@ -84,8 +180,8 @@
     .sc-past { margin-top: 20px; }
     .sc-past summary { padding: 4px; color: var(--muted); cursor: pointer; }
     .sc-past[open] summary { margin-bottom: 6px; }
-    .sc-tonight { margin: 0 0 18px; font-size: 1.15rem; }
     .sc-gap { height: 14px; }
+    .sc-nothing { margin: 8px 4px; color: var(--muted); }
 
     /* a page, laid out (Station's Markdown) */
     .sc-md { font-size: 1.08rem; line-height: 1.65; }
@@ -129,21 +225,27 @@
     .sc-empty h2 { margin: 0; font-size: 1.6rem; font-weight: 650; }
     .sc-empty p { margin: 0; color: var(--muted); font-size: 1.05rem; line-height: 1.55; }
 
-    /* a phone: the pages go across the top */
-    @media (max-width: 760px) {
-      main.sc-main { padding: 26px 12px 32px; }
-      .sc-head h1 { font-size: 2rem; }
+    /* narrower: the pages go across the top, and Today's card above the day */
+    @media (max-width: 1180px) {
       .sc { grid-template-columns: minmax(0, 1fr); min-height: 0; }
       .sc-side { flex-direction: row; align-items: center; gap: 4px; padding: 8px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); scrollbar-width: none; }
       .sc-list { flex-direction: row; gap: 4px; }
+      .sc-sub { display: none; }
       .sc-row, .sc-new { flex: none; min-height: 36px; margin: 0; padding: 2px 12px; white-space: nowrap; }
-      .sc-row > svg, .sc-new > svg { display: none; }
       .sc-label { overflow: visible; }
-      .sc-page { padding: 20px 14px 26px; }
+      .sc-today { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 760px) {
+      main.sc-main { padding: 14px 10px 26px; }
+      .sc-row > svg, .sc-new > svg { display: none; }
+      .sc-page { padding: 18px 12px 24px; }
       .sc-top h2 { font-size: 1.45rem; }
-      .sc-now { font-size: 1.25rem; }
-      .sc-days button { padding: 7px 0 6px; }
-      .sc-days button b { font-size: .74rem; letter-spacing: .02em; }
+      .sc-now { font-size: 1.18rem; }
+      .cal { --axis: 46px; }
+      .cal-scroll { max-height: none; }
+      .cal-b { font-size: .84rem; }
+      .sc-wide { overflow-x: auto; }
+      .sc-wide .cal { min-width: 620px; }
       .sc-dl li { grid-template-columns: 24px 5.6em minmax(0, 1fr); }
       .sc-dl li small { grid-column: 3; margin-top: -6px; }
     }
@@ -152,10 +254,6 @@
 <body data-title="Schedule">
   <script>window.fluentio?.bar?.()</script>
   <main class="sc-main">
-    <header class="sc-head" id="top">
-      <h1>🗓️ <span data-fill="scheduleTitle">Schedule</span></h1>
-      <p class="lead">Today in order, with a check for each thing you do. Your week, your deadlines and when it’s lights out are pages here, and they’re yours to change.</p>
-    </header>
     <div id="sc" class="sc"><noscript><p class="sc-none">Schedule needs JavaScript.</p></noscript></div>
   </main>
   <script type="module" src="app.js"></script>

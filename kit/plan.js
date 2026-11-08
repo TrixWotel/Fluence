@@ -1,8 +1,9 @@
 // Your plan, from the pages in Schedule (schedule/). They're yours: none of a plan is in the site's code.
 // Week has your days: a section for each day or set of days ("## Monday", "## Sunday to Thursday nights"), a line for
 // each thing with its time, and minutes on what you check off ("- 4:30 Homework · 90 min"). A section like "## On game
-// days" is a switch that changes those days. Deadlines has a line for each date, Sleep when it's lights out from when,
-// and How to study a section for each kind of block, which Home and Schedule quote.
+// days" is a switch that changes those days. Classes has your school's days (Day 1, Day 2, …) and which Day a date is,
+// Deadlines a line for each date, Sleep when it's lights out from when, and How to study a section for each kind of
+// block, which Home and Schedule quote.
 // The pages are in 'fluentio.schedule', and what you've checked off in 'fluentio.plan'. Both go with the rest of your
 // progress (kit/progress.js), so every browser has the same plan and carries on from the same day. Schedule shows it
 // all, Home says what's now and lists the day, and the bar shows what's now on every page.
@@ -165,6 +166,25 @@
   }
 
   // ---------- Deadlines and Sleep ----------
+  // a date or a few at the start of some words, and what they're for: "Dec 12 Project due", "Feb 5/6 Exam", "Apr 28 – May 1 Trip",
+  // "Nov 26–27 Thanksgiving" ({ t, end, what, two }, the days at midnight)
+  function readDated(text, ref, year) {
+    const a = dateParts(text);
+    if (!a) return null;
+    let rest = a.rest, b = null;
+    const slash = /^\s*\/\s*(\d{1,2})\b/.exec(rest);
+    if (slash) { b = { ...a, d: +slash[1] }; rest = rest.slice(slash[0].length); }
+    const range = /^\s*(?:–|—|-|to)\s*/.exec(rest);
+    if (range) {
+      const more = rest.slice(range[0].length), whole = dateParts(more), day = /^(\d{1,2})\b(?:,?\s+(\d{4}))?/.exec(more);
+      if (whole) { b = whole; rest = whole.rest; } else if (day) { b = { y: day[2] ? +day[2] : a.y, mo: a.mo, d: +day[1] }; rest = more.slice(day[0].length); }
+    }
+    const what = rest.replace(/^\s*,?\s*\d{4}\b/, '').replace(/^\s*[:–—-]\s*/, '').trim();
+    const y = a.y ?? year ?? yearFor(a.mo, a.d, ref), t0 = new Date(y, a.mo, a.d).getTime();
+    let t1 = b ? new Date(b.y ?? y, b.mo, b.d).getTime() : t0;
+    if (t1 < t0) t1 = new Date(new Date(t1).getFullYear() + 1, b.mo, b.d).getTime();
+    return { t: t0, end: t1, what, two: !!slash };
+  }
   // (each deadline knows its line, so Schedule can check it off there)
   function readDeadlines(text, ref) {
     const out = [];
@@ -177,22 +197,8 @@
       let t = li[2].trim(), done = /x/i.test(li[1] || '');
       if (/^~~.*~~/.test(t)) { done = true; t = t.replace(/~~/g, ''); }
       if (/\((?:done|finished)\)\s*$/i.test(t)) { done = true; t = t.replace(/\s*\((?:done|finished)\)\s*$/i, ''); }
-      const a = dateParts(t);
-      if (!a) continue;
-      let rest = a.rest, b = null;
-      const slash = /^\s*\/\s*(\d{1,2})\b/.exec(rest);
-      if (slash) { b = { ...a, d: +slash[1] }; rest = rest.slice(slash[0].length); }
-      const range = /^\s*(?:–|—|-|to)\s*/.exec(rest);
-      if (range) {
-        const more = rest.slice(range[0].length), whole = dateParts(more), day = /^(\d{1,2})\b(?:,?\s+(\d{4}))?/.exec(more);
-        if (whole) { b = whole; rest = whole.rest; } else if (day) { b = { y: day[2] ? +day[2] : a.y, mo: a.mo, d: +day[1] }; rest = more.slice(day[0].length); }
-      }
-      const what = rest.replace(/^\s*,?\s*\d{4}\b/, '').replace(/^\s*[:–—-]\s*/, '').trim();
-      if (!what) continue;
-      const y = a.y ?? year ?? yearFor(a.mo, a.d, ref), t0 = new Date(y, a.mo, a.d).getTime();
-      let t1 = b ? new Date(b.y ?? y, b.mo, b.d).getTime() : t0;
-      if (t1 < t0) t1 = new Date(new Date(t1).getFullYear() + 1, b.mo, b.d).getTime();
-      out.push({ t: t0, end: t1, what, done, two: !!slash, line: n });
+      const x = readDated(t, ref, year);
+      if (x?.what) out.push({ ...x, done, line: n });
     }
     return out.sort((p, q) => p.t - q.t);
   }
@@ -222,6 +228,93 @@
     }
     return { rows: rows.sort((a, b) => a.t - b.t), later };
   }
+  // ---------- Classes ----------
+  // A section for each Day of your school's days ("## Day 1" … "## Day 10"), and a line for each class: "- 9:00–10:12
+  // Biology · Room 204" (what comes after a · is where, and with whom). The Days go with the weekdays (Monday is Day 1 or
+  // Day 6, Tuesday Day 2 or Day 7, …) and the weeks take turns, from what "## Rotation" says ("- Nov 9: Day 1"): a new line
+  // there puts it right when the school changes it. "## No school" has days off ("- Nov 26–27 Thanksgiving"), and
+  // "## Colors" a color for a class ("- Biology: teal").
+  const COLORS = ['teal', 'blue', 'violet', 'purple', 'pink', 'red', 'orange', 'gold', 'olive', 'green', 'cyan', 'indigo', 'brown', 'gray'];
+  // "Nov 9: Day 1", "Mon, Nov 9, 2026: Day 1", "Week of Nov 9: Days 1–5": { t, n }
+  function anchorOf(text, ref, year) {
+    const t = String(text).trim().replace(/^(?:the\s+)?week\s+of\s+/i, '').replace(/^[A-Za-z]{3,9}\.?,?\s+(?=[A-Za-z]{3,9}\.?\s+\d)/, '');
+    const d = dateParts(t), n = d && /\bdays?\s*(\d{1,2})\b/i.exec(d.rest);
+    return n && +n[1] > 0 ? { t: timeOf(d, ref, year), n: +n[1] } : null;
+  }
+  function readClasses(text, ref) {
+    const days = {}, anchors = [], off = [], colors = {};
+    let cur = null, year = null;
+    for (const line of String(text).split('\n')) {
+      const h = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line);
+      if (h) {
+        const t = h[2].replace(/[*_`]/g, '').trim(), n = /^day\s*(\d{1,2})$/i.exec(t), y = /\b(\d{4})\b/.exec(t);
+        year = y ? +y[1] : null;
+        cur = h[1].length === 1 ? null
+          : n && +n[1] > 0 ? { kind: 'day', n: +n[1] }
+            : /\b(no school|days? off|holidays?|breaks?|closed)\b/i.test(t) ? { kind: 'off' }
+              : /\b(rotation|which day|cycle)\b/i.test(t) ? { kind: 'rotation' }
+                : /\bcolou?rs?\b/i.test(t) ? { kind: 'colors' } : null;
+        continue;
+      }
+      const li = cur && LIST.exec(line);
+      if (!li) continue;
+      const body = li[1].trim();
+      if (cur.kind === 'day') { const x = readLine(body); if (x?.start && x.name) (days[cur.n] = days[cur.n] || []).push(x); }
+      else if (cur.kind === 'off') { const x = readDated(body, ref, year); if (x) off.push({ t: x.t, end: x.end, what: x.what || 'No school' }); }
+      else if (cur.kind === 'rotation') { const a = anchorOf(body, ref, year); if (a) anchors.push(a); }
+      else { const m = /^(.+?)\s*[:–—-]\s*([a-z]+)\s*$/i.exec(body); if (m && COLORS.includes(m[2].toLowerCase())) colors[base(m[1])] = m[2].toLowerCase(); }
+    }
+    return { days, count: Math.max(0, ...Object.keys(days).map(Number)), anchors: anchors.sort((a, b) => a.t - b.t), off, colors };
+  }
+  const mondayOf = (t) => { const d = new Date(t); return addDays(new Date(d.getFullYear(), d.getMonth(), d.getDate()), -((d.getDay() + 6) % 7)).getTime(); };
+  // which Day a date is: { n } on a school day (n is null while Rotation hasn't said), { off } on a day off, null at the
+  // weekend or with no classes
+  function rotationOf(cl, date) {
+    if (!cl?.count) return null;
+    const wd = date.getDay(), t = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    if (wd === 0 || wd === 6) return null;
+    const off = cl.off.find((o) => o.t <= t && t <= o.end);
+    if (off) return { n: null, off: off.what };
+    const weeks = Math.ceil(cl.count / 5);
+    if (weeks === 1) return { n: wd };
+    if (!cl.anchors.length) return { n: null };
+    // (from the last date Rotation names on or before this one, or else the first one after it)
+    const a = [...cl.anchors].reverse().find((x) => x.t <= t) || cl.anchors[0];
+    const k = Math.round((mondayOf(t) - mondayOf(a.t)) / (7 * DAY)), w = (((Math.floor((a.n - 1) / 5) + k) % weeks) + weeks) % weeks;
+    return { n: w * 5 + wd };
+  }
+  const nameOfClass = (x) => x.name.split(' · ')[0].trim();
+  // a Day's classes, as things on the day: { name, where (what came after the name), at, end, kind: 'class', color }
+  function classItems(cl, n) {
+    let after = null;
+    return (cl?.days[n] || []).map((x) => {
+      const at = place(x.start, after, false), end = x.end ? place(x.end, at, false) : at + (x.min || 45), name = nameOfClass(x);
+      after = at;
+      return { id: `${at}|${name.toLowerCase()}`, at, end, set: true, name, where: x.name.split(' · ').slice(1).join(' · '), min: 0, check: false, link: x.link, note: x.note, night: false, special: false, by: '', kind: 'class', n, color: cl.colors[base(name)] || '' };
+    });
+  }
+  // something on the plan named like a class: "Lab: …" and Lab, "Study" and Study Hall
+  const likeClass = (a, b) => { const x = base(a), y = base(b); return !!x && !!y && (x === y || y.startsWith(`${x} `) || x.startsWith(`${y} `)); };
+  // Classes' page with a date's Day said, in "## Rotation" (put at the end when there isn't one): a line there for that week
+  // gives way to it
+  function setDayOf(text, date, n) {
+    const lines = String(text).replace(/\s+$/, '').split('\n');
+    const say = `- ${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}: Day ${n}`;
+    const s = lines.findIndex((l) => /^#{2,6}\s+.*\b(rotation|which day|cycle)\b/i.test(l));
+    if (s < 0) return `${lines.join('\n')}\n\n## Rotation\n${say}\n`;
+    let e = lines.findIndex((l, i) => i > s && /^#{1,6}\s/.test(l));
+    if (e < 0) e = lines.length;
+    const week = mondayOf(date.getTime());
+    for (let i = e - 1; i > s; i--) {
+      const li = LIST.exec(lines[i]), a = li && anchorOf(li[1], date.getTime(), null);
+      if (a && mondayOf(a.t) === week) { lines.splice(i, 1); e--; }
+    }
+    let at = e;
+    while (at > s + 1 && !lines[at - 1].trim()) at--;
+    lines.splice(at, 0, say);
+    return `${lines.join('\n')}\n`;
+  }
+
   // How to study: a section for each kind of block, quoted on Home and in Schedule
   function readHow(text) {
     const out = [];
@@ -294,16 +387,18 @@
     const week = find('week');
     if (!week) return null;
     const when = (d) => (d && d.at > 1e12 ? d.at : Date.now());
-    const ref = when(week), dl = find('deadlines'), sl = find('sleep'), how = find('how-to-study');
+    const ref = when(week), dl = find('deadlines'), sl = find('sleep'), how = find('how-to-study'), cl = find('classes');
     const sections = readWeek(week.text);
     const switches = [];
     for (const s of sections) if (s.kind === 'switch' && !switches.some((x) => x.id === s.id)) switches.push({ id: s.id, name: s.name, scope: s.scope, only: s.only });
+    const classes = cl ? readClasses(cl.text, when(cl)) : null;
     return {
       ref, sections, switches,
+      classes: classes?.count ? classes : null,
       deadlines: dl ? readDeadlines(dl.text, when(dl)) : [],
       sleep: sl ? readSleep(sl.text, when(sl)) : { rows: [], later: null },
       how: how ? readHow(how.text) : [],
-      ids: { week: week.id, deadlines: dl?.id || '', sleep: sl?.id || '', how: how?.id || '' },
+      ids: { week: week.id, deadlines: dl?.id || '', sleep: sl?.id || '', how: how?.id || '', classes: cl?.id || '' },
       docs: docs.map(({ id, title }) => ({ id, title })),
     };
   }
@@ -332,6 +427,7 @@
     return true;
   };
   const base = (name) => name.toLowerCase().split(/[:·,(]/)[0].trim();
+  const SCHOOL = /^school\b/i;
   const same = (a, b) => (a.at != null && a.at === b.at) || base(a.name) === base(b.name);
   // the lines of a section for one day of the week, with their times placed one after another
   function placed(s, wd) {
@@ -371,6 +467,21 @@
         items.push(a);
       }
     }
+    // your classes, on a school day whose Day is known: they take the place of the plan's School, and something with no
+    // time named like one of them ("Lab: …", "Study: …") goes at that class's time. On a day off there's no School
+    const rot = rotationOf(plan.classes, date);
+    if (rot && (rot.off || rot.n)) {
+      const cls = rot.n ? classItems(plan.classes, rot.n) : [];
+      if (rot.off || cls.length) items = items.filter((i) => !(i.at != null && SCHOOL.test(i.name)));
+      for (const c of cls) {
+        const it = items.find((i) => i.at == null && !i.kind && likeClass(i.name, c.name));
+        if (it) Object.assign(it, { at: c.at, end: c.end, set: true, kind: 'class', n: c.n, where: c.where, color: c.color, cls: c.name });
+        else items.push(c);
+      }
+      // (what goes with a class you don't have that day waits for a day you do)
+      const named = Object.values(plan.classes.days).flat().map(nameOfClass);
+      items = items.filter((i) => i.at != null || i.check || !named.some((n) => likeClass(i.name, n)));
+    }
     items.sort((a, b) => (a.at ?? -1) - (b.at ?? -1));
     items.forEach((it, i) => {
       if (it.at == null || it.set) return;
@@ -405,9 +516,18 @@
     const out = { v: 1, days: state.days, weeks: state.weeks };
     try { if (write) write(KEY, out); else root.localStorage.setItem(KEY, JSON.stringify(out)); } catch {}
   }
+  // a switch for days named like a class ("On lab days" and a Lab period) is on by itself on that class's days
+  function classSwitch(plan, s, date) {
+    if (s.scope !== 'day' || !plan?.classes) return false;
+    const n = rotationOf(plan.classes, date)?.n, w = base(s.name).replace(/\s+(day|night)$/, '');
+    return !!n && (plan.classes.days[n] || []).some((x) => likeClass(w, nameOfClass(x)));
+  }
   const switchesOn = (plan, state, date) => {
     const on = {}, d = state.days[dayKey(date)]?.on || {}, w = state.weeks[weekKey(date)]?.on || {};
-    for (const s of plan?.switches || []) if (s.scope === 'day' ? d[s.id] : w[s.id]) on[s.id] = true;
+    for (const s of plan?.switches || []) {
+      const said = s.scope === 'day' ? d[s.id] : w[s.id];
+      if (said === true || (said !== false && classSwitch(plan, s, date))) on[s.id] = true;
+    }
     return on;
   };
   // the day of the plan it is: before 5 in the morning it's still yesterday, at 24:00 and on
@@ -437,7 +557,8 @@
     const box = sw.scope === 'day' ? state.days : state.weeks, k = sw.scope === 'day' ? dayKey(date) : weekKey(date);
     const rec = (box[k] = plainObj(box[k]) ? box[k] : {});
     rec.on = plainObj(rec.on) ? rec.on : {};
-    if (on) rec.on[id] = true; else delete rec.on[id];
+    // (off on a day it's on by itself is kept as off)
+    if (on) rec.on[id] = true; else if (classSwitch(plan, sw, date)) rec.on[id] = false; else delete rec.on[id];
     return state;
   }
   // days in a row at 70% or more (today counts once it's there; a day with nothing to check off doesn't count either way)
@@ -456,7 +577,7 @@
 
   // ---------- now ----------
   const PLACES = [
-    [/\bamc ?12\b/i, 'math/#amc12/learn'], [/\bamc\b.*\b(timed|test|set)\b/i, 'math/#amc10/test'], [/\bamc\b/i, 'math/#amc10/learn'],
+    [/\bamc ?12\b.*\b(timed|test|set)\b/i, 'math/#amc12/test'], [/\bamc ?12\b/i, 'math/#amc12/learn'], [/\bamc\b.*\b(timed|test|set)\b/i, 'math/#amc10/test'], [/\bamc\b/i, 'math/#amc10/learn'],
     [/\bspanish\b|\bvocab/i, 'spanish/'], [/\bphysics\b/i, 'physics/'], [/\bscience\b/i, 'science/'], [/\bhistory\b/i, 'history/'], [/\bessays?\b|\benglish\b/i, 'english/'], [/\bgeograph/i, 'geography/'],
     [/\bschedule\b/i, 'schedule/#week'], [/\bjournal\b|\breview\b/i, 'station/#today'], [/\bwhiteboard\b|\bsketch\b/i, 'board/'],
   ];
@@ -496,7 +617,8 @@
     if (!plan) return null;
     const { d, m } = dayAt(now), key = dayKey(d), rec = state.days[key] || {}, on = switchesOn(plan, state, d);
     const items = day(plan, d, on), checks = items.filter((i) => i.check), done = (i) => !!rec.done?.[i.id];
-    for (const it of items) { it.done = it.check && done(it); it.place = placeOf(plan, it); it.how = it.check ? howFor(plan, it, d) : null; }
+    // (a class has nowhere to start, unless something of yours goes with it)
+    for (const it of items) { it.done = it.check && done(it); it.place = it.kind === 'class' && !it.check ? null : placeOf(plan, it); it.how = it.check ? howFor(plan, it, d) : null; }
     const timed = items.filter((i) => i.at != null);
     const now_ = [...timed].reverse().find((i) => i.at <= m && m < i.end) || null;
     const next = timed.find((i) => i.at > m && (!now_ || i.at >= now_.at)) || null;
@@ -522,7 +644,8 @@
 
   root.fluentioPlan = {
     KEY, DOCS, GOAL,
-    readWeek, readLine, readDeadlines, markDeadline, readSleep, readHow, fromDocs, current, day, status, lightsOut, streak, dayAt,
+    readWeek, readLine, readDated, readDeadlines, markDeadline, readSleep, readHow, fromDocs, current, day, status, lightsOut, streak, dayAt,
+    COLORS, readClasses, rotationOf, classItems, setDayOf, likeClass,
     load, save, check, remember, flip, switchesOn, placeOf, howFor, linked,
     loadDocs, saveDocs, listDocs, putDoc, newDoc, dropDoc, starter, titleOf, idOf,
     dayKey, dateOf, weekKey, isoWeek, daysIn, dateParts, clockAt, place, clock, clockAmPm, plural, left, leftWords, dayWords, lightsWords,
