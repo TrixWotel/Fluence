@@ -97,8 +97,14 @@
     drawNav();
     const brand = el('a', { className: 'brand', href: f.link('./'), 'data-fill': 'name' }, f.settings.name);
     const gear = el('a', { className: 'gear' + (where() === 'settings' ? ' on' : ''), href: f.link('settings/'), title: 'Settings', 'aria-label': 'Settings' }, svg('settings'));
-    document.body.prepend(el('header', { className: 'topbar' }, brand, nav, el('div', { className: 'tools' }, find, gear)));
+    pill = el('a', { className: 'now-pill', href: f.link('./'), hidden: true });
+    document.body.prepend(el('header', { className: 'topbar' }, brand, nav, el('div', { className: 'tools' }, pill, find, gear)));
     document.documentElement.classList.add('has-bar');
+    // what's on your plan now, on every page (kit/plan.js, brought in once there's a plan in Station)
+    if (window.fluentioPlan) paintPill(); else bringPlan();
+    setInterval(() => { if (!document.hidden) paintPill(); }, 30000);
+    addEventListener('fluence:plan', paintPill);
+    addEventListener('storage', (e) => { if (e.key === 'fluentio.plan' || e.key === 'fluentio.station') { if (window.fluentioPlan) paintPill(); else bringPlan(); } });
     // the music player, when there's a song to carry on with (Music's page and the home page bring it themselves)
     if ((f.read('fluentio.music.player') || {}).queue?.length && document.body.dataset.music !== 'off') {
       // (asked for all at once, not one after another as each finds it needs the next)
@@ -106,7 +112,33 @@
       f.wait(import(f.link('kit/music/player.js')).then((m) => m.mount()).catch(() => {}));
     }
   };
-  addEventListener('fluentio:settings', () => nav && drawNav());
+  addEventListener('fluentio:settings', () => { if (nav) drawNav(); paintPill(); });
+
+  // ---------- your plan, now ----------
+  // a block you're due to be doing (and how long it has left), or at night, when it's lights out; nothing otherwise.
+  // A click goes to Home, where the day is. Settings → Home can leave it out of the bar
+  let pill = null, asked = false;
+  function bringPlan() {
+    if (asked || f.settings.planBar === false) return;
+    try { if (!(localStorage.getItem('fluentio.station') || '').includes('"plan/')) return; } catch { return; }
+    asked = true;
+    document.head.append(el('script', { src: f.link('kit/plan.js'), onload: paintPill }));
+  }
+  function paintPill() {
+    const p = window.fluentioPlan;
+    if (!pill) return;
+    const plan = p && f.settings.planBar !== false ? p.current() : null, st = plan ? p.status(plan, p.load(f.read), Date.now()) : null;
+    let name = '', more = '', late = false;
+    if (st?.late) { name = 'Past lights out'; more = p.clockAmPm(st.lights.at + st.lights.later); late = true; }
+    else if (st?.night && st.lights) { name = 'Lights out'; more = p.lightsWords({ at: st.lights.at, later: 0 }); }
+    else if (st?.now?.check && !st.now.done) { name = st.now.name.replace(/:.*$/, '').trim(); more = `${p.leftWords(p.left(st.now, st.m))} left`; }
+    pill.hidden = !name;
+    if (!name) return;
+    pill.classList.toggle('late', late);
+    pill.title = `${name}, ${more}. Your plan for today is on Home.`;
+    pill.setAttribute('aria-label', pill.title);
+    pill.replaceChildren(el('i', { className: 'dot', 'aria-hidden': 'true' }), el('b', {}, name), el('span', {}, more));
+  }
   // the mark slides across as soon as you go somewhere, and the next page's mark carries on from where it got to (kit/look.js)
   const slide = (pill, moves) => {
     for (const a of nav.children) if (!a.contains(pill)) a.style.zIndex = 1;   // (so it passes under the other names, not over them)

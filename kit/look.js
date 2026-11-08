@@ -23,6 +23,7 @@
     animationsIn: { data: true, code: true, notes: true },
     keys: { search: 'Ctrl+K', home: 'Ctrl+1', study: 'Ctrl+2', music: 'Ctrl+3', data: 'Ctrl+4', code: 'Ctrl+5', notes: 'Ctrl+6' },
     home: ['workspace', 'music', 'study', 'progress', 'today', 'question', 'data', 'quick'], homeLayout: 'assistant', homeAlign: 'center', showDaysOff: true, daysOff: [{ name: '', emoji: '', from: '', to: '' }],
+    planHome: true, planBar: true,
     quick: [
       { title: 'New note', link: 'notes/#new/note' },
       { title: 'New sheet', link: 'data/#new/table' },
