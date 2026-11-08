@@ -54,13 +54,17 @@ const pane = el('section', { className: 'sn-pane' });
 const findBox = el('input', { className: 'input sn-find', type: 'search', placeholder: 'Find in your notes', 'aria-label': 'Find in your notes', autocomplete: 'off', spellcheck: false });
 const tree = el('nav', { className: 'sn-tree', 'aria-label': 'Folders and notes' });
 const syncLine = el('p', { className: 'sn-sync' });
-const todayLink = el('a', { className: 'sn-row sn-today', href: '#today' }, svg('calendar'), el('span', { className: 'sn-label' }, 'Today'), el('small', {}, ''));
-const button = (icon, text, onclick, cls = '') => el('button', { type: 'button', className: `sn-btn ${cls}`.trim(), onclick }, icon ? svg(icon) : null, text ? el('span', {}, text) : null);
+const todayLink = el('a', { className: 'sn-row sn-today', href: '#today' }, svg('calendar'), el('span', { className: 'sn-label' }, 'Today'));
+// (a new note and a new folder are two small buttons beside Find, made where you are)
+const glyph = (paths) => { const t = document.createElement('template'); t.innerHTML = `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`; return t.content.firstChild; };
+const tool = (icon, label, onclick) => el('button', { type: 'button', className: 'sn-tool', title: label, 'aria-label': label, onclick }, icon);
 side.append(
-  el('div', { className: 'sn-side-top' }, findBox, todayLink),
+  el('div', { className: 'sn-side-top' }, el('label', { className: 'sn-search' }, svg('search'), findBox),
+    tool(glyph('<path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><path d="M17.5 3.5a2.1 2.1 0 0 1 3 3L13 14l-4 1 1-4z"/>'), 'New note', () => newNote(here())),
+    tool(glyph('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10.5v5M9.5 13h5"/>'), 'New folder', () => newFolder(here()))),
+  el('div', { className: 'sn-side-go' }, todayLink),
   tree,
-  el('div', { className: 'sn-side-foot' }, el('div', { className: 'sn-makers' },
-    button('plus', 'Note', () => newNote(here())), button('folder', 'Folder', () => newFolder(here()))), syncLine));
+  el('div', { className: 'sn-side-foot' }, syncLine));
 const toggleSide = el('button', { type: 'button', className: 'sn-icon sn-only-narrow', title: 'Your notes', 'aria-label': 'Your notes', onclick: () => frame.classList.toggle('side-open') }, svg('panel'));
 frame.replaceChildren(side, pane);
 
@@ -89,8 +93,8 @@ const rowOf = (path) => tree.querySelector(`.sn-row[data-path="${CSS.escape(path
 // ---------- the list on the left ----------
 let dragging = null;
 function drawTree() {
-  todayLink.lastChild.textContent = noWeekday(dayWords(store.dayKey()));
-  todayLink.classList.toggle('on', open?.path === store.dayPath());
+  // (one row is lit for the note that's open: Today only until today's entry is written, then its row in journal)
+  todayLink.classList.toggle('on', open?.path === store.dayPath() && !store.note(v, open.path));
   const q = findBox.value.trim().toLowerCase();
   if (q) return drawFound(q);
   const rows = [];
@@ -514,9 +518,13 @@ function drawBack(n, box) {
   if (!list.length) return box.replaceChildren();
   box.replaceChildren(el('h3', {}, `Linked from ${plural(list.length, 'note')}`), el('ul', {}, list.map(({ note: x, lines }) => {
     const li = el('li', {}, el('a', { className: 'sn-from', href: hrefOf(x.path) }, svg(isDayNote(x.path) ? 'calendar' : 'note'), labelOf(x.path)));
+    // (a table's row shows what's in its cells, without its | marks or the link to this note, which is where you are)
+    const self = (cell) => { const m = /^\[\[([^\]]+)\]\]$/.exec(cell); return !!m && store.resolve(v, md.linkParts(m[1]).target, x.path)?.path === n.path; };
     for (const line of lines.slice(0, 3)) {
+      const text = /^\s*\|/.test(line) ? md.cells(line).filter((c) => c && !self(c)).join(' · ') : line.replace(/^\s*(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?|^#+\s+|^>\s?/, '');
+      if (!text.trim()) continue;
       const p = el('p', {});
-      p.innerHTML = md.inline(line.replace(/^\s*(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?|^#+\s+|^>\s?/, ''), ctxFor(x));
+      p.innerHTML = md.inline(text, ctxFor(x));
       li.append(p);
     }
     return li;

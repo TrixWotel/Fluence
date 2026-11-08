@@ -29,13 +29,22 @@
 
     /* the left: Find, Today, your folders and notes, and how saving is going */
     .sn-side { display: flex; flex-direction: column; min-height: 0; background: color-mix(in srgb, var(--bg) 62%, var(--card)); border-right: 1px solid var(--line); }
-    .sn-side-top { display: grid; gap: 6px; padding: 12px 8px 6px; }
-    .sn-find { width: 100%; box-sizing: border-box; padding: 7px 10px; font-size: .92rem; background: var(--card); }
+    .sn-side-top { display: flex; align-items: center; gap: 2px; padding: 14px 10px 6px 12px; }
+    .sn-search { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; margin-right: 4px; }
+    .sn-search > svg { position: absolute; left: 10px; width: 14px; height: 14px; color: var(--muted); pointer-events: none; }
+    .sn-find { width: 100%; height: 32px; box-sizing: border-box; padding: 0 8px 0 30px; font-size: .9rem; background: color-mix(in srgb, var(--text) 5%, transparent); border-color: transparent; border-radius: 9px; }
+    .sn-find:hover { background: color-mix(in srgb, var(--text) 7%, transparent); }
+    .sn-find:focus { background: var(--card); }
+    .sn-find::placeholder { color: var(--muted); }
+    .sn-tool { display: grid; place-items: center; flex: none; width: 30px; height: 30px; padding: 0; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 8px; transition: color var(--t1), background var(--t1); }
+    .sn-tool:hover, .sn-tool:focus-visible { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
+    .sn-tool svg { width: 17px; height: 17px; }
+    .sn-side-go { padding: 4px 8px 8px; }
     .sn-tree { flex: 1; min-height: 0; overflow: auto; padding: 2px 8px 12px; scrollbar-width: thin; border-radius: 10px; transition: background var(--t1); }
     .sn-tree.drop { background: color-mix(in srgb, var(--accent) 6%, transparent); }
     .sn-row { position: relative; display: flex; align-items: center; gap: 7px; min-height: 30px; padding: 3px 4px 3px calc(8px + var(--d, 0) * 15px); font-size: .92rem; color: var(--text); text-decoration: none; border-radius: 8px; cursor: pointer; user-select: none; -webkit-user-select: none; transition: background var(--t1); }
     .sn-row:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
-    .sn-row.on { background: color-mix(in srgb, var(--accent) 17%, transparent); }
+    .sn-row.on { background: color-mix(in srgb, var(--accent) 12%, transparent); }
     .sn-row.drop { outline: 2px dashed var(--accent); outline-offset: -2px; }
     .sn-row.dragging { opacity: .45; }
     .sn-row > svg { flex: none; width: 15px; height: 15px; color: var(--muted); }
@@ -47,9 +56,8 @@
     .sn-more { display: grid; place-items: center; flex: none; width: 24px; height: 22px; padding: 0; font: inherit; line-height: 1; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 6px; opacity: 0; transition: opacity var(--t1); }
     .sn-more:hover { color: var(--text); background: color-mix(in srgb, var(--text) 9%, transparent); }
     .sn-row:hover .sn-more, .sn-row:focus-visible .sn-more, .sn-more:focus-visible { opacity: 1; }
-    .sn-today { padding-left: 8px; font-weight: 550; }
+    .sn-today { padding-left: 8px; }
     .sn-today > svg { color: var(--accent); }
-    .sn-today small { color: var(--muted); font-size: .8rem; font-weight: 400; }
     .sn-local { flex: none; padding: 0 6px; font-size: .68rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; }
     .sn-rename { flex: 1; min-width: 0; padding: 1px 5px; font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--accent); border-radius: 6px; outline: none; }
     .sn-row.found { flex-wrap: wrap; align-items: flex-start; padding-top: 6px; padding-bottom: 6px; }
@@ -59,12 +67,7 @@
     .sn-row.found > small { flex-basis: 100%; padding-left: 22px; font-size: .8rem; line-height: 1.4; color: var(--muted); }
     .sn-row.found mark, .sn-doc mark { color: inherit; background: color-mix(in srgb, #ffd43b 45%, transparent); border-radius: 3px; padding: 0 2px; }
     .sn-none { margin: 6px 8px; font-size: .9rem; color: var(--muted); }
-    .sn-side-foot { display: grid; gap: 8px; padding: 8px 10px 10px; border-top: 1px solid var(--line); }
-    .sn-makers { display: flex; gap: 6px; }
-    .sn-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 8px; font: inherit; font-size: .86rem; color: var(--text); cursor: pointer; background: var(--card); border: 1px solid var(--line); border-radius: 9px; transition: border-color var(--t1), transform var(--t2) var(--spring); }
-    .sn-btn:hover { border-color: var(--accent); }
-    .sn-btn:active { transform: scale(.97); }
-    .sn-btn svg { width: 14px; height: 14px; }
+    .sn-side-foot { padding: 10px 16px 14px; }
     .sn-sync { display: flex; align-items: flex-start; gap: 6px; margin: 0; font-size: .78rem; line-height: 1.4; color: var(--muted); }
     .sn-sync svg { flex: none; width: 13px; height: 13px; margin-top: 2px; }
     .sn-sync a { color: var(--accent); }
@@ -73,10 +76,10 @@
 
     /* the right: the open note */
     .sn-pane { position: relative; min-height: 0; overflow: auto; scrollbar-width: thin; }
-    .sn-note { max-width: 780px; margin: 0 auto; padding: 18px clamp(18px, 4vw, 48px) 28px; box-sizing: border-box; }
+    .sn-note { max-width: 780px; margin: 0 auto; padding: 28px clamp(18px, 4vw, 48px) 28px; box-sizing: border-box; }
     .sn-note.enter { animation: fade-in var(--t2) var(--ease); }
-    .sn-head-row { display: flex; align-items: center; gap: 8px; min-height: 30px; margin-bottom: 2px; }
-    .sn-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: .86rem; color: var(--muted); }
+    .sn-head-row { display: flex; align-items: center; gap: 8px; min-height: 30px; margin-bottom: 8px; }
+    .sn-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: .82rem; color: var(--muted); }
     .sn-crumbs a { color: var(--muted); text-decoration: none; }
     .sn-crumbs a:hover { color: var(--accent); }
     .sn-icon { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; font: inherit; font-size: 1.05rem; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 8px; }
@@ -90,11 +93,11 @@
     .sn-file:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
     .sn-file .sn-label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .sn-file .sn-rename { font-size: .86rem; }
-    .sn-doc.titled > .b-heading:first-child h1, .sn-doc.titled > textarea.sn-edit.h1:first-child { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
-    .sn-doc.titled > .b-heading:first-child h1 { margin: .1em 0 .3em; }
-    .sn-title { display: block; width: 100%; margin: 0 0 12px; padding: 0; font: inherit; font-size: 2rem; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; color: var(--text); background: none; border: 0; outline: none; }
+    .sn-doc.titled > .b-heading:first-child h1, .sn-doc.titled > textarea.sn-edit.h1:first-child { font-size: 1.75rem; font-weight: 650; letter-spacing: -0.02em; }
+    .sn-doc.titled > .b-heading:first-child h1 { margin: 0 0 .45em; }
+    .sn-title { display: block; width: 100%; margin: 0 0 16px; padding: 0; font: inherit; font-size: 1.75rem; font-weight: 650; line-height: 1.2; letter-spacing: -0.02em; color: var(--text); background: none; border: 0; outline: none; }
     input.sn-title::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); }
-    .sn-day { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 16px; margin-bottom: 12px; }
+    .sn-day { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 16px; margin-bottom: 16px; }
     .sn-day .sn-title { width: auto; margin: 0; }
     .sn-days { display: flex; gap: 14px; font-size: .9rem; }
     .sn-days a { color: var(--accent); text-decoration: none; }
@@ -107,10 +110,10 @@
     .sn-doc .b > :first-child { margin-top: .32em; }
     .sn-doc .b > :last-child { margin-bottom: .32em; }
     .sn-doc p { margin: .32em 0; }
-    .sn-doc h1, .sn-doc h2, .sn-doc h3, .sn-doc h4, .sn-doc h5, .sn-doc h6 { line-height: 1.3; letter-spacing: -0.01em; }
-    .sn-doc .b-heading > :first-child { margin-top: .9em; margin-bottom: .2em; }
+    .sn-doc h1, .sn-doc h2, .sn-doc h3, .sn-doc h4, .sn-doc h5, .sn-doc h6 { font-weight: 650; line-height: 1.3; letter-spacing: -0.01em; }
+    .sn-doc .b-heading > :first-child { margin-top: 1.1em; margin-bottom: .2em; }
     .sn-doc .b-heading:first-child > :first-child { margin-top: .2em; }
-    .sn-doc h1 { font-size: 1.7rem; } .sn-doc h2 { font-size: 1.38rem; } .sn-doc h3 { font-size: 1.15rem; } .sn-doc h4, .sn-doc h5, .sn-doc h6 { font-size: 1rem; }
+    .sn-doc h1 { font-size: 1.55rem; } .sn-doc h2 { font-size: 1.28rem; } .sn-doc h3 { font-size: 1.12rem; } .sn-doc h4, .sn-doc h5, .sn-doc h6 { font-size: 1rem; }
     .sn-doc a.wiki { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); cursor: pointer; }
     .sn-doc a.wiki:hover { border-bottom-color: var(--accent); }
     .sn-doc a.wiki.missing { color: var(--muted); border-bottom: 1px dashed color-mix(in srgb, var(--muted) 70%, transparent); }
@@ -149,15 +152,14 @@
     /* the block being changed: its Markdown, in a box the same size as the words were */
     .sn-edit { display: block; width: calc(100% + 20px); box-sizing: border-box; margin: 2px -10px; padding: 4px 9px; font: inherit; line-height: inherit; color: var(--text); background: color-mix(in srgb, var(--accent) 5%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); border-radius: 8px; outline: none; resize: none; overflow: hidden; }
     .sn-edit.k-heading { font-weight: 650; line-height: 1.3; margin-top: .6em; }
-    .sn-edit.h1 { font-size: 1.7rem; } .sn-edit.h2 { font-size: 1.38rem; } .sn-edit.h3 { font-size: 1.15rem; }
+    .sn-edit.h1 { font-size: 1.55rem; } .sn-edit.h2 { font-size: 1.28rem; } .sn-edit.h3 { font-size: 1.12rem; }
     .sn-edit.k-code, .sn-edit.k-table, .sn-edit.k-props { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86rem; line-height: 1.6; white-space: pre; overflow-x: auto; }
     .sn-tail { min-height: 140px; cursor: text; }
     .sn-empty { margin: .32em 0; color: color-mix(in srgb, var(--muted) 80%, transparent); }
     /* what links here */
     .sn-back { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line); }
     .sn-back h3 { margin: 0 0 10px; font-size: .8rem; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-    .sn-back ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-    .sn-back li { padding: 9px 12px; background: color-mix(in srgb, var(--bg) 55%, var(--card)); border: 1px solid var(--line); border-radius: 10px; }
+    .sn-back ul { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
     .sn-from { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text); text-decoration: none; }
     .sn-from:hover { color: var(--accent); }
     .sn-from svg { width: 14px; height: 14px; color: var(--muted); }
@@ -217,7 +219,7 @@
       .sn-side { position: absolute; inset: 0 auto 0 0; z-index: 10; width: min(300px, 86%); transform: translateX(-102%); transition: transform var(--t2) var(--ease); box-shadow: var(--shadow-up); }
       .sn.side-open .sn-side { transform: none; }
       .sn-only-narrow { display: grid; }
-      .sn-title { font-size: 1.6rem; }
+      .sn-title, .sn-doc.titled > .b-heading:first-child h1 { font-size: 1.5rem; }
     }
   </style>
 </head>
