@@ -107,12 +107,18 @@ window.FLUENTIO_SETTINGS = {
   codeTitle: 'Code',
   notesTitle: 'Notes',
 
-  // Music (the music/ page): its name in the bar and on its page
-  stationTitle: 'Station',
-  boardFont: 'Inter',      // Station's font: 'Inter', 'System', 'DM Sans', 'Manrope', 'Poppins', 'Space Grotesk', 'IBM Plex Sans', 'Lora', 'JetBrains Mono' or 'Caveat'
+  // Board (board/), your whiteboard: its name, and how it works
+  boardTitle: 'Board',
+  boardFont: 'Inter',      // its font: 'Inter', 'System', 'DM Sans', 'Manrope', 'Poppins', 'Space Grotesk', 'IBM Plex Sans', 'Lora', 'JetBrains Mono' or 'Caveat'
   boardTools: ['freedraw', 'rectangle', 'diamond', 'ellipse', 'arrow', 'text'],   // on its toolbar, after Select; 'line', 'eraser' and 'hand' can go here too
   boardMenu: true,         // the menu a right-click brings up on the board
   boardFull: false,        // true for all of Excalidraw's own tools in place of the small toolbar
+
+  // Station (station/), your notes and journal: its name, and whether a link you paste goes into your sources note too
+  stationTitle: 'Station',
+  stationSources: true,
+
+  // Music (the music/ page): its name in the bar and on its page
   musicTitle: 'Music',
 
   // Modules (the study/ page): its title, the line under it, and its subjects in this order (color is the subject's
@@ -127,7 +133,7 @@ window.FLUENTIO_SETTINGS = {
     { emoji: '🇪🇸', title: 'Spanish', text: '1,100 words in 25 themes, and the preterite and the imperfect.', link: 'spanish/', color: '#e5484d' },
     { emoji: '🏰', title: 'History', text: 'The Middle Ages and the Wars of Religion, as stories where you make the choices, with notes and tests.', link: 'history/', color: '#b7791f' },
     { emoji: '✍️', title: 'English', text: 'Essays: learn how a good one works, a step at a time, then write your own and check it.', link: 'english/', color: '#0ea5b7' },
-    { emoji: '🎨', title: 'Station', text: 'Your whiteboard, for working things out while you study: ideas, flowcharts and diagrams.', link: 'station/', color: '#d6409f' },
-    { emoji: '📓', title: 'Journal', text: 'A few lines a day: what you did, what you learned, what’s on your mind.', link: 'journal/', color: '#c2884a' },
+    { emoji: '🎨', title: 'Board', text: 'Your whiteboard, for working things out while you study: ideas, flowcharts and diagrams.', link: 'board/', color: '#d6409f' },
+    { emoji: '🗂️', title: 'Station', text: 'Notes in folders that link to each other, tables to compare things, and a journal of what you decided and why.', link: 'station/', color: '#c2884a' },
   ],
 };

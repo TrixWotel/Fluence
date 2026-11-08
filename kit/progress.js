@@ -9,8 +9,9 @@
 import { connection, call, explain } from './music/github.js';
 
 const KEY = 'fluentio:progress', BRANCH = 'progress', FILE = 'progress.json', MESSAGE = 'Progress (from Fluence)';   // (not 'fluentio.', so it isn't saved with the rest)
-// what isn't progress: how this browser looks, and what has its own place (Music on its branch, Data, Code and Notes on main)
-const OTHERS = /^fluentio\.(?:look$|music\.|workspace|ws\.)/;
+// what isn't progress: how this browser looks, and what has its own place (Music and Station on their branches, Data, Code
+// and Notes on main)
+const OTHERS = /^fluentio\.(?:look$|music\.|workspace|ws\.|station(?:$|\.))/;
 const README = `# Progress
 
 Your progress in Fluence (https://trixwotel.github.io/Fluence/), saved here by itself: topics learned, best scores, tests under way, days in a row.

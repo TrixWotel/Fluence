@@ -252,16 +252,16 @@ function daysOff() {
 
 // the board: its font (each name shown in its own font, just those letters of each, to keep it light), its tools and menus,
 // and buttons for the board itself, which go there to do it
-function station() {
+function board() {
   if (!f.BOARD_FONTS) return null;        // (a browser can hold on to an older kit/look.js for a few minutes after the site changes)
   const names = f.BOARD_FONTS, href = f.fontSheet(names, [...new Set(names.join(''))].join(''));
   if (!document.querySelector(`link[href="${href}"]`)) document.head.append(el('link', { rel: 'stylesheet', href }));
   const TOOLS = [['freedraw', 'Pen'], ['rectangle', 'Box'], ['diamond', 'Diamond'], ['ellipse', 'Circle'], ['arrow', 'Arrow'], ['line', 'Line'], ['text', 'Text'], ['eraser', 'Eraser'], ['hand', 'Move around']];
   const tools = () => (Array.isArray(s.boardTools) ? s.boardTools : f.DEFAULTS.boardTools);
-  const ask = (what) => { try { sessionStorage.setItem('fluence.station.do', what); } catch {} };
-  const go = (what, label) => el('a', { className: 'btn', href: f.link('station/'), onclick: () => ask(what) }, label);
+  const ask = (what) => { try { sessionStorage.setItem('fluence.board.do', what); } catch {} };
+  const go = (what, label) => el('a', { className: 'btn', href: f.link('board/'), onclick: () => ask(what) }, label);
   const clearRow = el('div');
-  return el('section', { className: 'panel', id: 'station' }, el('h2', {}, s.stationTitle),
+  return el('section', { className: 'panel', id: 'board' }, el('h2', {}, s.boardTitle),
     set('Font', 'The words on your board. It changes all of them at once. The fonts other than System come from Google Fonts.',
       el('div', { className: 'fonts' }, seg(names.map((n) => [n, n, n === 'System' ? 'system-ui' : `"${n}"`]), names.includes(s.boardFont) ? s.boardFont : names[0], (v) => { s.boardFont = v; save(); }, 'The board’s font'))),
     set('Tools', 'Which show on the toolbar, after Select. Their keys work either way: each one’s tip says its key.',
@@ -271,15 +271,25 @@ function station() {
     set('All of Excalidraw’s tools', 'Its own toolbars and menus, in place of the small toolbar.', toggle(!!s.boardFull, (v) => { s.boardFull = v; save(); }, 'All of Excalidraw’s tools')),
     set('The board', 'To add a picture, drop or paste it on the board. On the board, ⌘Z undoes, ⇧⌘Z redoes, and ? shows every key.',
       el('div', { className: 'pairs' }, go('fit', 'Show all my drawings'), go('actual', 'Zoom to 100%'), go('picture', 'Save as a picture'),
-        el('button', { type: 'button', className: 'btn', onclick: () => confirmIn(clearRow, 'Clear the whole board? You can undo it straight after.', 'Clear it', () => { ask('clear'); location.href = f.link('station/'); }) }, 'Clear the board')),
+        el('button', { type: 'button', className: 'btn', onclick: () => confirmIn(clearRow, 'Clear the whole board? You can undo it straight after.', 'Clear it', () => { ask('clear'); location.href = f.link('board/'); }) }, 'Clear the board')),
       clearRow));
+}
+
+// Station, your notes: what happens to a link you paste, and where they're kept
+function station() {
+  const where = (() => { try { const c = JSON.parse(localStorage.getItem('fluentio:music')) || JSON.parse(localStorage.getItem('fluentio:github')); return c?.repo || ''; } catch { return ''; } })();
+  return el('section', { className: 'panel', id: 'station' }, el('h2', {}, s.stationTitle),
+    set('Links you paste', 'A web address pasted into a note goes into your sources note too, with the day, so you always know where something came from.', toggle(s.stationSources !== false, (v) => { s.stationSources = v; save(); }, 'Put links you paste in your sources')),
+    set('Where your notes are', where ? `In this browser, and as Markdown files on the notes branch of ${where} on GitHub, in their folders, so they open in Obsidian too. PDFs stay on this computer only.` : 'In this browser only, until you connect GitHub on the Music page. Then they go to the notes branch of that repo too, as Markdown files in their folders.',
+      el('a', { className: 'btn', href: f.link('station/') }, 'Open Station')));
 }
 
 function names() {
   return el('section', { className: 'panel', id: 'names' }, el('h2', {}, 'Names'),
     set('Modules', 'The subjects’ page: its name in the bar, on its page and on the home page.', text(s.studyTitle, (v) => { s.studyTitle = v; save(); }, 'Modules’ name')),
     set('Modules’ line', 'Under its name on its page.', text(s.studyIntro, (v) => { s.studyIntro = v; save(); }, 'Modules’ line', { long: true })),
-    set('Station', 'Your board’s name, on its page.', text(s.stationTitle, (v) => { s.stationTitle = v; save(); }, 'Station’s name')),
+    set('Board', 'Your whiteboard’s name, on its page.', text(s.boardTitle, (v) => { s.boardTitle = v; save(); }, 'Board’s name')),
+    set('Station', 'Your notes and journal: the name on their page.', text(s.stationTitle, (v) => { s.stationTitle = v; save(); }, 'Station’s name')),
     set('Music', 'Your songs: its name in the bar, on its page and on the home page.', text(s.musicTitle, (v) => { s.musicTitle = v; save(); }, 'Music’s name')),
     ...(!f.spacesOn ? [] : [set('Data', 'Your databases of docs and sheets: its name in the bar and on its page.', text(s.dataTitle, (v) => { s.dataTitle = v; save(); }, 'Data’s name')),
     set('Code', 'Your code: its name in the bar and on its page.', text(s.codeTitle, (v) => { s.codeTitle = v; save(); }, 'Code’s name')),
@@ -507,7 +517,7 @@ function everywhere() {
 if (!f.spacesOn) document.getElementById('jump-github')?.remove();
 function draw() {
   const y = scrollY;
-  panels.replaceChildren(...[look(), colors(), motion(), home(), station(), names(), keys(), data(), f.spacesOn && gitHub(), everywhere()].filter(Boolean));
+  panels.replaceChildren(...[look(), colors(), motion(), home(), board(), station(), names(), keys(), data(), f.spacesOn && gitHub(), everywhere()].filter(Boolean));
   scrollTo(0, y);
 }
 draw();

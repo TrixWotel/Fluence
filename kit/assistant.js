@@ -47,14 +47,15 @@
     const audio = (() => { try { return (window.top.fluentioSong || window.fluentioSong)?.audio || null; } catch { return null; } })();
     return {
       now, hour: new Date(now).getHours(), banks, last: f.last(), seen: trail.seen || {}, session: Math.round((now - began) / MINUTE), mostly: mostly && mostly[1] >= 10 * MINUTE ? mostly[0] : null,
-      wrote: (() => { const d = new Date(now), k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; return !!String((read('fluentio.journal') || {})[k]?.text || '').trim(); })(),
+      // (today's journal entry is a note in Station's journal folder)
+      wrote: (() => { const d = new Date(now), k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; return (read('fluentio.station')?.notes || []).some((n) => n?.path === `journal/${k}.md` && String(n.text || '').trim()) || !!String((read('fluentio.journal') || {})[k]?.text || '').trim(); })(),
       answered: (read('fluentio.today') || {}).day === new Date(now).toDateString(), chapters: (read('fluentio.chapters') || {}).done || {}, essays: Object.values(read('fluentio.essays.list') || {}),
       music: { count: all.length, liked: all.filter((x) => x && x.liked).length, current, playing: !!current && (audio ? !audio.paused : !!saved.playing) },
     };
   }
   const place = (b, rest = '') => (b.id === 'essays' ? link('english/') : link(`${b.folder}/#${b.id}${rest}`));
   const topicLink = (b, topic) => (b.id === 'essays' ? link(`english/learn.html#${encodeURIComponent(topic)}`) : place(b, `/learn/${encodeURIComponent(topic)}`));
-  const PAGES = { math: 'math', science: 'science', physics: 'physics', spanish: 'Spanish', geography: 'geography', history: 'history', english: 'English', journal: 'your journal', study: 'Modules', music: 'Music', station: 'Station' };
+  const PAGES = { math: 'math', science: 'science', physics: 'physics', spanish: 'Spanish', geography: 'geography', history: 'history', english: 'English', journal: 'your journal', study: 'Modules', music: 'Music', station: 'Station', board: 'your board' };
 
   // the music, when something's asked of it
   const tunes = async () => {
@@ -107,9 +108,9 @@
     else if (music.current) out.push({ icon: 'music', title: 'Skip this song', why: `${music.current.title} is playing.`, run: async (reply) => { const { player } = await tunes(); player.next(); reply(`Next up: ${player.current()?.title || 'the next song'}.`); }, score: 20 });
     else if (music.count) out.push({ icon: 'music', title: 'Put on some music', why: `${plural(music.count, 'song')}. I’ll shuffle them.`, run: shuffleAll, score: 34 + (evening ? 20 : 0) + (seen.session >= 25 ? 10 : 0) });
     else out.push({ icon: 'music', title: 'Set up Music', why: 'Your own songs, playing on every page.', href: link('music/'), score: 6 });
-    if (!seen.wrote) out.push({ emoji: '📓', title: 'Write in your journal', why: evening ? 'A few lines about today, before it’s over.' : 'A few lines about today.', href: link('journal/'), score: 22 + (evening ? 28 : 0) + (late ? 6 : 0) });
-    const drew = seen.seen.station;
-    out.push(drew && now - drew < 7 * DAY ? { icon: 'station', title: 'Back to your board', why: `You were on it ${agoWords(drew, now)}.`, href: link('station/'), score: now - drew < DAY ? 50 : 36 } : { icon: 'station', title: 'Sketch something on your board', why: 'An idea, a flowchart, anything.', href: link('station/'), score: 16 });
+    if (!seen.wrote) out.push({ emoji: '📓', title: 'Write in your journal', why: evening ? 'A few lines about today, before it’s over.' : 'A few lines about today.', href: link('station/#today'), score: 22 + (evening ? 28 : 0) + (late ? 6 : 0) });
+    const drew = seen.seen.board;
+    out.push(drew && now - drew < 7 * DAY ? { icon: 'station', title: 'Back to your board', why: `You were on it ${agoWords(drew, now)}.`, href: link('board/'), score: now - drew < DAY ? 50 : 36 } : { icon: 'station', title: 'Sketch something on your board', why: 'An idea, a flowchart, anything.', href: link('board/'), score: 16 });
     if (!Object.keys(seen.chapters).some((k) => k.startsWith('wars/'))) out.push({ emoji: '⚔️', title: 'Start The Wars of Religion', why: 'Five chapters, told as a story.', href: link('history/chapters.html#wars'), score: 30 });
     const writing = by('essays');
     if (!Object.keys(writing.learn).length && !seen.essays.length) out.push({ emoji: '✍️', title: 'Try essay writing', why: 'How essays work, a step at a time, then write your own.', href: link('english/'), score: 31 });
@@ -179,8 +180,9 @@
     if (/\bhow am i\b|\bprogress\b|\bstats?\b|\bstreak\b|\bscores?\b|\bdoing\b/.test(t)) return reply(progressWords(seen), { tile: 'progress' });
     if (/\bbreak\b|\btired\b|\bsleep\b|\bbed\b/.test(t)) return reply(seen.hour >= 22 || seen.hour < 5 ? 'Go to bed. It’ll all be here tomorrow.' : 'Go for it. Everything stays where you left it.');
     // somewhere to go
-    if (/\b(draw|sketch|board|flowchart|diagram|station|whiteboard)\b/.test(t)) return go('Opening your board.', link('station/'));
-    if (/\b(journal|diary)\b/.test(t)) return go('Opening your journal.', link('journal/'));
+    if (/\b(draw|sketch|board|flowchart|diagram|whiteboard)\b/.test(t)) return go('Opening your board.', link('board/'));
+    if (/\b(journal|diary)\b/.test(t)) return go('Opening today’s entry in your journal.', link('station/#today'));
+    if (/\bstation\b|\bmy notes\b|\bresearch\b/.test(t)) return go('Opening Station.', link('station/'));
     if (/\b(settings?|theme|font|colou?rs?)\b/.test(t)) return go('Opening Settings.', link('settings/'));
     // a course: straight there, when you've said what for
     if (courses.length) {

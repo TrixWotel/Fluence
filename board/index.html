@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Board · Fluence</title>
+  <!-- (Board is one of the modules: framed under its heading, or filling the window with ?big. Decided before anything's drawn, so it never jumps) -->
+  <script>document.documentElement.classList.add('st-module'); if (new URLSearchParams(location.search).has('big')) document.documentElement.classList.add('st-big');</script>
+  <meta name="description" content="An endless whiteboard, saved in your private repo on GitHub.">
+  <script type="importmap">{ "imports": { "react": "https://esm.sh/react@19.0.0", "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime", "react-dom": "https://esm.sh/react-dom@19.0.0", "react-dom/client": "https://esm.sh/react-dom@19.0.0/client" } }</script>
+  <script>window.EXCALIDRAW_ASSET_PATH = 'https://esm.sh/@excalidraw/excalidraw@0.18.1/dist/prod/';</script>
+  <script src="../settings.js"></script>
+  <script src="../kit/look.js"></script>
+  <script src="../kit/bar.js"></script>
+  <link rel="modulepreload" href="app.js">
+  <link rel="modulepreload" href="../kit/music/github.js">
+  <link rel="stylesheet" href="../kit/site.css">
+  <!-- (it comes from another site, so it doesn't get to hold up the page: only the board waits for it) -->
+  <link rel="stylesheet" id="board-css" href="https://esm.sh/@excalidraw/excalidraw@0.18.1/dist/prod/index.css" media="print" onload="this.media='all'">
+  <style>
+    /* the board takes the whole window under the bar (and above the player, when there is one), on the site's own background */
+    html:not(.st-module), html:not(.st-module) body { overflow: hidden; }
+    /* the room holds the board and what floats on it: the whole window under the bar, or a frame in the middle like any module */
+    #room { position: fixed; top: var(--bar-h); left: 0; right: 0; bottom: 0; }
+    #board { position: absolute; inset: 0; }
+    html { --st-bottom: 16px; }
+    html.has-player { --st-bottom: calc(var(--player-h, 78px) + 26px); }
+    .st-head { display: none; }
+    html.st-module main.st-main { width: 100%; max-width: 1320px; margin: 0 auto; padding: 40px 20px 0; box-sizing: border-box; flex: 1; }
+    html.st-module .st-head { display: block; }
+    html.st-module .st-head > * { animation: rise var(--t3) var(--ease) backwards; }
+    html.st-module .st-head > :nth-child(2) { animation-delay: calc(60ms / var(--speed)); }
+    html.st-module .st-head > :nth-child(3) { animation-delay: calc(120ms / var(--speed)); }
+    .st-head h1 { font-size: 2.4rem; line-height: 1.15; letter-spacing: -0.025em; margin: 0 0 8px; }
+    .st-head .lead { color: var(--muted); font-size: 1.1rem; margin: 0 0 22px; }
+    .st-head .lead a { color: var(--accent); white-space: nowrap; }
+    html.st-module #room { position: relative; top: auto; left: auto; right: auto; bottom: auto; height: var(--st-h, 64vh); min-height: 340px; overflow: hidden; border: 1px solid var(--line); border-radius: calc(var(--radius) + 8px); background: color-mix(in srgb, var(--bg) 88%, #000); box-shadow: var(--shadow); --st-bottom: 12px; animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(160ms / var(--speed)); }
+    @media (max-width: 560px) { html.st-module main.st-main { padding-top: 28px; } .st-head h1 { font-size: 2rem; } }
+    /* as big as the window, and back */
+    html.st-big, html.st-big body { overflow: hidden; }
+    html.st-big #room { position: fixed; top: var(--bar-h); left: 0; right: 0; bottom: 0; height: auto; min-height: 0; z-index: 40; border: 0; border-radius: 0; box-shadow: none; --st-bottom: 16px; animation: none; }
+    html.st-big.has-player #room { --st-bottom: calc(var(--player-h, 78px) + 26px); }
+    .st-expand { position: absolute; z-index: 6; top: 10px; left: 10px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; color: var(--muted); cursor: pointer; background: color-mix(in srgb, var(--card) 92%, transparent); border: 1px solid var(--line); border-radius: 9px; transition: color var(--t1), border-color var(--t1); }
+    .st-expand:hover { color: var(--text); border-color: color-mix(in srgb, var(--text) 30%, var(--line)); }
+    .st-expand svg { width: 15px; height: 15px; }
+    html.st-full .st-expand { top: 62px; }
+    .excalidraw, .excalidraw .excalidraw-container { background: transparent !important; }
+    /* Excalidraw's own interface stays out of sight: this page has its own */
+    html:not(.st-full) .excalidraw :is(.layer-ui__wrapper, .App-top-bar, .App-bottom-bar, .FixedSideContainer, .scroll-back-to-content) { display: none !important; }
+    .excalidraw .LoadingMessage { display: none; }
+    /* the board appears like any other page: your drawings fade in (a fade only: Excalidraw measures where the board is as it
+       opens, and a board on the move would throw off every click), the toolbar rises with its tools one after another, and the
+       styles rise each time they show */
+    #board .excalidraw { animation: fade-in var(--t2) var(--ease) backwards; }
+    @keyframes st-rise { from { opacity: 0; transform: translateX(-50%) translateY(12px); } }
+    .st-bar { animation: st-rise var(--t3) var(--ease) backwards; }
+    .st-tray { animation: st-rise var(--t2) var(--ease) backwards; }
+    /* what you select and drag, in the theme's color (board/app.js works it out) */
+    .excalidraw { --color-selection: var(--st-selection, var(--accent)) !important; }
+    /* and everywhere else it would be Excalidraw's purple or blue: the right-click menu, and all of its tools if you've turned those on */
+    .excalidraw, .excalidraw.theme--dark {
+      --color-primary: var(--accent) !important;
+      --color-primary-darker: color-mix(in srgb, var(--accent) 85%, var(--text)) !important; --color-primary-darkest: color-mix(in srgb, var(--accent) 75%, var(--text)) !important;
+      --color-primary-hover: color-mix(in srgb, var(--accent) 85%, var(--text)) !important; --color-brand-hover: color-mix(in srgb, var(--accent) 85%, var(--text)) !important; --color-brand-active: color-mix(in srgb, var(--accent) 75%, var(--text)) !important;
+      --color-primary-light: color-mix(in srgb, var(--accent) 22%, var(--card)) !important; --color-primary-light-darker: color-mix(in srgb, var(--accent) 32%, var(--card)) !important;
+      --color-surface-primary-container: color-mix(in srgb, var(--accent) 22%, var(--card)) !important; --color-on-primary-container: var(--text) !important;
+      --select-highlight-color: var(--accent) !important; --focus-highlight-color: var(--accent) !important;
+    }
+    /* (white words wouldn't show on a white accent) */
+    .excalidraw :is(.Dialog__action-button--primary, .ttd-dialog-panel-button.excalidraw-button, .library-menu-browse-button, .library-unit__adder, .Switch.toggled) { color: var(--on-accent) !important; }
+    .excalidraw .context-menu-item:hover { color: var(--on-accent) !important; }
+    .st-bar, .st-tray { position: absolute; z-index: 5; left: 50%; transform: translateX(-50%); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .st-bar { bottom: var(--st-bottom, 14px); display: flex; align-items: center; gap: 1px; padding: 4px; border-radius: 14px; max-width: calc(100% - 16px); }
+    .st-bar[hidden], .st-tray[hidden], .st-chip[hidden] { display: none; }
+    .st-tool { display: grid; place-items: center; flex: none; width: 32px; height: 32px; padding: 0; color: var(--muted); cursor: pointer; background: transparent; border: 0; border-radius: 10px; transition: color var(--t1), background var(--t1); }
+    .st-tool:hover { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
+    .st-tool.on { color: var(--on-accent); background: var(--accent); }
+    .st-gap { flex: none; width: 1px; height: 16px; margin: 0 4px; background: var(--line); }
+    /* one row of styles */
+    .st-tray { bottom: calc(var(--st-bottom, 14px) + 48px); display: flex; align-items: center; gap: 3px; padding: 4px 7px; border-radius: 12px; width: max-content; max-width: calc(100% - 16px); }
+    .st-dot { flex: none; width: 18px; height: 18px; margin: 0 1px; padding: 0; cursor: pointer; background: var(--dot); border: 0; border-radius: 50%; outline: 2px solid transparent; outline-offset: 1px; transition: transform var(--t1); }
+    html.st-dark .st-dot { filter: invert(93%) hue-rotate(180deg); }
+    .st-dot:hover { transform: scale(1.12); }
+    .st-dot.on { outline-color: var(--accent); }
+    html.st-dark .st-dot.on { outline-color: color-mix(in srgb, var(--accent) 60%, #000); }
+    .st-chip { display: grid; place-items: center; flex: none; min-width: 26px; height: 26px; padding: 0 5px; font: inherit; font-size: .76rem; font-weight: 600; color: var(--muted); cursor: pointer; background: transparent; border: 0; border-radius: 8px; transition: color var(--t1), background var(--t1); }
+    .st-chip:hover { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
+    .st-chip.on { color: var(--text); background: color-mix(in srgb, var(--accent) 22%, transparent); }
+    .st-chip svg { width: 15px; height: 15px; }
+    /* how saving is going: a small dot that fades, and words only if there's something you should know */
+    .st-status { position: absolute; z-index: 5; right: 14px; top: 10px; max-width: min(72vw, 460px); padding: 2px 4px; font-size: .78rem; line-height: 1.5; color: var(--muted); text-align: right; pointer-events: none; }
+    .st-status a { pointer-events: auto; color: var(--accent); }
+    html.st-full .st-status { top: 62px; }
+    .st-status.busy, .st-status.done { font-size: 0; }
+    .st-status.busy::after, .st-status.done::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+    .st-status.done::after { background: var(--good); animation: st-fade 2.2s var(--ease) forwards; }
+    @keyframes st-fade { 0%, 50% { opacity: 1; } 100% { opacity: 0; } }
+    .st-status.bad { color: var(--bad); }
+    .st-failed { display: grid; place-content: center; justify-items: center; gap: 12px; height: 100%; color: var(--muted); }
+  </style>
+</head>
+<body data-title="Board">
+  <script>window.fluentio?.bar?.()</script>
+  <main class="st-main">
+    <header class="st-head" id="top">
+      <a class="back" href="../study/">← <span data-fill="studyTitle">Modules</span></a>
+      <h1>🎨 <span data-fill="boardTitle">Board</span></h1>
+      <p class="lead">Your whiteboard, for working things out while you study: ideas, flowcharts and diagrams. The button in its corner makes it as big as the window.</p>
+    </header>
+    <div id="room">
+      <div id="board"></div>
+      <button type="button" class="st-expand" id="expand" title="Make it as big as the window" aria-label="Make it as big as the window" aria-pressed="false"></button>
+      <div id="status" class="st-status" role="status"></div>
+      <div id="tray" class="st-tray" hidden></div>
+      <div id="tools" class="st-bar stagger" role="toolbar" aria-label="Drawing tools" hidden></div>
+    </div>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

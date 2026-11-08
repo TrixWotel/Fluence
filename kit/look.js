@@ -31,7 +31,8 @@
     dataTitle: 'Data',
     codeTitle: 'Code',
     notesTitle: 'Notes',
-    stationTitle: 'Station', boardFont: 'Inter', boardTools: ['freedraw', 'rectangle', 'diamond', 'ellipse', 'arrow', 'text'], boardMenu: true, boardFull: false,
+    boardTitle: 'Board', boardFont: 'Inter', boardTools: ['freedraw', 'rectangle', 'diamond', 'ellipse', 'arrow', 'text'], boardMenu: true, boardFull: false,
+    stationTitle: 'Station', stationSources: true,
     musicTitle: 'Music',
     studyTitle: 'Modules',
     studyIntro: 'Pick a subject. Take a test, learn it one topic at a time, or practise any question.',
@@ -43,8 +44,8 @@
       { emoji: '🇪🇸', title: 'Spanish', text: '1,100 words in 25 themes, and the preterite and the imperfect.', link: 'spanish/', color: '#e5484d' },
       { emoji: '🏰', title: 'History', text: 'The Middle Ages and the Wars of Religion, as stories where you make the choices, with notes and tests.', link: 'history/', color: '#b7791f' },
       { emoji: '✍️', title: 'English', text: 'Essays: learn how a good one works, a step at a time, then write your own and check it.', link: 'english/', color: '#0ea5b7' },
-      { emoji: '🎨', title: 'Station', text: 'Your whiteboard, for working things out while you study: ideas, flowcharts and diagrams.', link: 'station/', color: '#d6409f' },
-      { emoji: '📓', title: 'Journal', text: 'A few lines a day: what you did, what you learned, what’s on your mind.', link: 'journal/', color: '#c2884a' },
+      { emoji: '🎨', title: 'Board', text: 'Your whiteboard, for working things out while you study: ideas, flowcharts and diagrams.', link: 'board/', color: '#d6409f' },
+      { emoji: '🗂️', title: 'Station', text: 'Notes in folders that link to each other, tables to compare things, and a journal of what you decided and why.', link: 'station/', color: '#c2884a' },
     ],
   };
   const FONTS = {
@@ -54,7 +55,7 @@
     mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
   };
 
-  // Station's fonts: each from Google Fonts, but for System, the device's own. fontSheet's text, if given, asks for only those letters
+  // the board's fonts: each from Google Fonts, but for System, the device's own. fontSheet's text, if given, asks for only those letters
   const BOARD_FONTS = ['Inter', 'System', 'DM Sans', 'Manrope', 'Poppins', 'Space Grotesk', 'IBM Plex Sans', 'Lora', 'JetBrains Mono', 'Caveat'];
   const fontSheet = (names, text) => `https://fonts.googleapis.com/css2?${names.filter((n) => n !== 'System').map((n) => `family=${n.replace(/ /g, '+')}`).join('&')}&display=swap${text ? `&text=${encodeURIComponent(text)}` : ''}`;
 
@@ -85,6 +86,8 @@
   const given = window.FLUENTIO_SETTINGS;
   const site = merge(DEFAULTS, plain(given) ? given : {});        // the built-in settings with settings.js over them
   const mine = () => merge(site, read('fluentio.look') || {});    // and this browser's own, from the Settings page
+  // (the board was called Station until November 2026, so a name you gave it then is the board's: Station is your notes now)
+  { const was = read('fluentio.look'); if (plain(was) && typeof was.stationTitle === 'string' && !('boardTitle' in was)) { was.boardTitle = was.stationTitle; delete was.stationTitle; write('fluentio.look', was); } }
   let s = mine();
   const color = (v, fallback) => (typeof v === 'string' && window.CSS && CSS.supports('color', v) ? v : fallback);
   // whether a color is light (so words on it should be black): its luminance, read back from a canvas as #rrggbb
@@ -178,6 +181,7 @@
     workspace: '<path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M9 4v16M12 8h4M12 12h4"/>',
     note: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
     doc: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/>',
+    picture: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-10 9"/>',
     table: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/>',
     code: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>',
     folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
@@ -455,7 +459,7 @@
     const warm = async (fresh) => {
       if (navigator.connection?.saveData || document.hidden) return;
       const asked = new Set(), ask = async (url) => { if (asked.has(url)) return null; asked.add(url); try { return await fetch(url, { cache: fresh ? 'no-cache' : 'default' }); } catch { return null; } };
-      for (const page of ['', 'study/', 'station/', 'journal/', 'music/']) {
+      for (const page of ['', 'study/', 'station/', 'board/', 'music/']) {
         const base = root + page, answer = await ask(base);
         if (!answer?.ok) continue;
         const doc = new DOMParser().parseFromString(await answer.text(), 'text/html');

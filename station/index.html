@@ -4,116 +4,232 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Station · Fluence</title>
-  <!-- (Station is one of the modules: framed under its heading, or filling the window with ?big. Decided before anything's drawn, so it never jumps) -->
-  <script>document.documentElement.classList.add('st-module'); if (new URLSearchParams(location.search).has('big')) document.documentElement.classList.add('st-big');</script>
-  <meta name="description" content="An endless whiteboard, saved in your private repo on GitHub.">
-  <script type="importmap">{ "imports": { "react": "https://esm.sh/react@19.0.0", "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime", "react-dom": "https://esm.sh/react-dom@19.0.0", "react-dom/client": "https://esm.sh/react-dom@19.0.0/client" } }</script>
-  <script>window.EXCALIDRAW_ASSET_PATH = 'https://esm.sh/@excalidraw/excalidraw@0.18.1/dist/prod/';</script>
+  <!-- (the board was here until it was called Board: its links, and its buttons in Settings, go on to board/) -->
+  <script>try { if (new URLSearchParams(location.search).has('big') || sessionStorage.getItem('fluence.station.do')) { const w = sessionStorage.getItem('fluence.station.do'); if (w) { sessionStorage.removeItem('fluence.station.do'); sessionStorage.setItem('fluence.board.do', w); } location.replace(new URL('../board/' + location.search, location.href).href); } } catch {}</script>
+  <meta name="description" content="Notes in folders that link to each other, tables to compare things, and a journal of what you decided and why.">
   <script src="../settings.js"></script>
   <script src="../kit/look.js"></script>
   <script src="../kit/bar.js"></script>
   <link rel="modulepreload" href="app.js">
+  <link rel="modulepreload" href="md.js">
+  <link rel="modulepreload" href="store.js">
+  <link rel="modulepreload" href="sync.js">
   <link rel="modulepreload" href="../kit/music/github.js">
   <link rel="stylesheet" href="../kit/site.css">
-  <!-- (it comes from another site, so it doesn't get to hold up the page: only the board waits for it) -->
-  <link rel="stylesheet" id="board-css" href="https://esm.sh/@excalidraw/excalidraw@0.18.1/dist/prod/index.css" media="print" onload="this.media='all'">
   <style>
-    /* the board takes the whole window under the bar (and above the player, when there is one), on the site's own background */
-    html:not(.st-module), html:not(.st-module) body { overflow: hidden; }
-    /* the room holds the board and what floats on it: the whole window under the bar, or a frame in the middle like any module */
-    #room { position: fixed; top: var(--bar-h); left: 0; right: 0; bottom: 0; }
-    #board { position: absolute; inset: 0; }
-    html { --st-bottom: 16px; }
-    html.has-player { --st-bottom: calc(var(--player-h, 78px) + 26px); }
-    .st-head { display: none; }
-    html.st-module main.st-main { width: 100%; max-width: 1320px; margin: 0 auto; padding: 40px 20px 0; box-sizing: border-box; flex: 1; }
-    html.st-module .st-head { display: block; }
-    html.st-module .st-head > * { animation: rise var(--t3) var(--ease) backwards; }
-    html.st-module .st-head > :nth-child(2) { animation-delay: calc(60ms / var(--speed)); }
-    html.st-module .st-head > :nth-child(3) { animation-delay: calc(120ms / var(--speed)); }
-    .st-head h1 { font-size: 2.4rem; line-height: 1.15; letter-spacing: -0.025em; margin: 0 0 8px; }
-    .st-head .lead { color: var(--muted); font-size: 1.1rem; margin: 0 0 22px; }
-    .st-head .lead a { color: var(--accent); white-space: nowrap; }
-    html.st-module #room { position: relative; top: auto; left: auto; right: auto; bottom: auto; height: var(--st-h, 64vh); min-height: 340px; overflow: hidden; border: 1px solid var(--line); border-radius: calc(var(--radius) + 8px); background: color-mix(in srgb, var(--bg) 88%, #000); box-shadow: var(--shadow); --st-bottom: 12px; animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(160ms / var(--speed)); }
-    @media (max-width: 560px) { html.st-module main.st-main { padding-top: 28px; } .st-head h1 { font-size: 2rem; } }
-    /* as big as the window, and back */
-    html.st-big, html.st-big body { overflow: hidden; }
-    html.st-big #room { position: fixed; top: var(--bar-h); left: 0; right: 0; bottom: 0; height: auto; min-height: 0; z-index: 40; border: 0; border-radius: 0; box-shadow: none; --st-bottom: 16px; animation: none; }
-    html.st-big.has-player #room { --st-bottom: calc(var(--player-h, 78px) + 26px); }
-    .st-expand { position: absolute; z-index: 6; top: 10px; left: 10px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; color: var(--muted); cursor: pointer; background: color-mix(in srgb, var(--card) 92%, transparent); border: 1px solid var(--line); border-radius: 9px; transition: color var(--t1), border-color var(--t1); }
-    .st-expand:hover { color: var(--text); border-color: color-mix(in srgb, var(--text) 30%, var(--line)); }
-    .st-expand svg { width: 15px; height: 15px; }
-    html.st-full .st-expand { top: 62px; }
-    .excalidraw, .excalidraw .excalidraw-container { background: transparent !important; }
-    /* Excalidraw's own interface stays out of sight: this page has its own */
-    html:not(.st-full) .excalidraw :is(.layer-ui__wrapper, .App-top-bar, .App-bottom-bar, .FixedSideContainer, .scroll-back-to-content) { display: none !important; }
-    .excalidraw .LoadingMessage { display: none; }
-    /* the board appears like any other page: your drawings fade in (a fade only: Excalidraw measures where the board is as it
-       opens, and a board on the move would throw off every click), the toolbar rises with its tools one after another, and the
-       styles rise each time they show */
-    #board .excalidraw { animation: fade-in var(--t2) var(--ease) backwards; }
-    @keyframes st-rise { from { opacity: 0; transform: translateX(-50%) translateY(12px); } }
-    .st-bar { animation: st-rise var(--t3) var(--ease) backwards; }
-    .st-tray { animation: st-rise var(--t2) var(--ease) backwards; }
-    /* what you select and drag, in the theme's color (station/app.js works it out) */
-    .excalidraw { --color-selection: var(--st-selection, var(--accent)) !important; }
-    /* and everywhere else it would be Excalidraw's purple or blue: the right-click menu, and all of its tools if you've turned those on */
-    .excalidraw, .excalidraw.theme--dark {
-      --color-primary: var(--accent) !important;
-      --color-primary-darker: color-mix(in srgb, var(--accent) 85%, var(--text)) !important; --color-primary-darkest: color-mix(in srgb, var(--accent) 75%, var(--text)) !important;
-      --color-primary-hover: color-mix(in srgb, var(--accent) 85%, var(--text)) !important; --color-brand-hover: color-mix(in srgb, var(--accent) 85%, var(--text)) !important; --color-brand-active: color-mix(in srgb, var(--accent) 75%, var(--text)) !important;
-      --color-primary-light: color-mix(in srgb, var(--accent) 22%, var(--card)) !important; --color-primary-light-darker: color-mix(in srgb, var(--accent) 32%, var(--card)) !important;
-      --color-surface-primary-container: color-mix(in srgb, var(--accent) 22%, var(--card)) !important; --color-on-primary-container: var(--text) !important;
-      --select-highlight-color: var(--accent) !important; --focus-highlight-color: var(--accent) !important;
+    /* a module's heading, then the frame: your notes on the left, the open one on the right */
+    main.sn-main { width: 100%; max-width: 1320px; margin: 0 auto; padding: 40px 20px 0; box-sizing: border-box; flex: 1; }
+    .sn-head > * { animation: rise var(--t3) var(--ease) backwards; }
+    .sn-head > :nth-child(2) { animation-delay: calc(60ms / var(--speed)); }
+    .sn-head > :nth-child(3) { animation-delay: calc(120ms / var(--speed)); }
+    .sn-head h1 { font-size: 2.4rem; line-height: 1.15; letter-spacing: -0.025em; margin: 0 0 8px; }
+    .sn-head .lead { color: var(--muted); font-size: 1.1rem; margin: 0 0 22px; max-width: 74ch; }
+    .sn { position: relative; display: grid; grid-template-columns: 268px minmax(0, 1fr); height: var(--sn-h, 70vh); min-height: 420px; overflow: hidden; background: var(--card); border: 1px solid var(--line); border-radius: calc(var(--radius) + 8px); box-shadow: var(--shadow); animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(160ms / var(--speed)); }
+    .grow { flex: 1; }
+
+    /* the left: Find, Today, your folders and notes, and how saving is going */
+    .sn-side { display: flex; flex-direction: column; min-height: 0; background: color-mix(in srgb, var(--bg) 62%, var(--card)); border-right: 1px solid var(--line); }
+    .sn-side-top { display: grid; gap: 6px; padding: 12px 8px 6px; }
+    .sn-find { width: 100%; box-sizing: border-box; padding: 7px 10px; font-size: .92rem; background: var(--card); }
+    .sn-tree { flex: 1; min-height: 0; overflow: auto; padding: 2px 8px 12px; scrollbar-width: thin; border-radius: 10px; transition: background var(--t1); }
+    .sn-tree.drop { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+    .sn-row { position: relative; display: flex; align-items: center; gap: 7px; min-height: 30px; padding: 3px 4px 3px calc(8px + var(--d, 0) * 15px); font-size: .92rem; color: var(--text); text-decoration: none; border-radius: 8px; cursor: pointer; user-select: none; -webkit-user-select: none; transition: background var(--t1); }
+    .sn-row:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+    .sn-row.on { background: color-mix(in srgb, var(--accent) 17%, transparent); }
+    .sn-row.drop { outline: 2px dashed var(--accent); outline-offset: -2px; }
+    .sn-row.dragging { opacity: .45; }
+    .sn-row > svg { flex: none; width: 15px; height: 15px; color: var(--muted); }
+    .sn-row.folder > svg { color: color-mix(in srgb, var(--accent) 65%, var(--muted)); }
+    .sn-chev { display: grid; place-items: center; flex: none; width: 12px; margin-right: -3px; color: var(--muted); transition: transform var(--t1) var(--ease); }
+    .sn-chev svg { width: 12px; height: 12px; }
+    .sn-row.folder:not(.open) .sn-chev { transform: rotate(-90deg); }
+    .sn-label { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .sn-more { display: grid; place-items: center; flex: none; width: 24px; height: 22px; padding: 0; font: inherit; line-height: 1; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 6px; opacity: 0; transition: opacity var(--t1); }
+    .sn-more:hover { color: var(--text); background: color-mix(in srgb, var(--text) 9%, transparent); }
+    .sn-row:hover .sn-more, .sn-row:focus-visible .sn-more, .sn-more:focus-visible { opacity: 1; }
+    .sn-today { padding-left: 8px; font-weight: 550; }
+    .sn-today > svg { color: var(--accent); }
+    .sn-today small { color: var(--muted); font-size: .8rem; font-weight: 400; }
+    .sn-local { flex: none; padding: 0 6px; font-size: .68rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; }
+    .sn-rename { flex: 1; min-width: 0; padding: 1px 5px; font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--accent); border-radius: 6px; outline: none; }
+    .sn-row.found { flex-wrap: wrap; align-items: flex-start; padding-top: 6px; padding-bottom: 6px; }
+    .sn-row.found > svg { margin-top: 3px; }
+    .sn-row.found .sn-label { display: grid; white-space: normal; }
+    .sn-in { font-size: .74rem; color: var(--muted); }
+    .sn-row.found > small { flex-basis: 100%; padding-left: 22px; font-size: .8rem; line-height: 1.4; color: var(--muted); }
+    .sn-row.found mark, .sn-doc mark { color: inherit; background: color-mix(in srgb, #ffd43b 45%, transparent); border-radius: 3px; padding: 0 2px; }
+    .sn-none { margin: 6px 8px; font-size: .9rem; color: var(--muted); }
+    .sn-side-foot { display: grid; gap: 8px; padding: 8px 10px 10px; border-top: 1px solid var(--line); }
+    .sn-makers { display: flex; gap: 6px; }
+    .sn-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 8px; font: inherit; font-size: .86rem; color: var(--text); cursor: pointer; background: var(--card); border: 1px solid var(--line); border-radius: 9px; transition: border-color var(--t1), transform var(--t2) var(--spring); }
+    .sn-btn:hover { border-color: var(--accent); }
+    .sn-btn:active { transform: scale(.97); }
+    .sn-btn svg { width: 14px; height: 14px; }
+    .sn-sync { display: flex; align-items: flex-start; gap: 6px; margin: 0; font-size: .78rem; line-height: 1.4; color: var(--muted); }
+    .sn-sync svg { flex: none; width: 13px; height: 13px; margin-top: 2px; }
+    .sn-sync a { color: var(--accent); }
+    .sn-sync.error { color: var(--bad); }
+    .sn-sync.synced svg { color: var(--good); }
+
+    /* the right: the open note */
+    .sn-pane { position: relative; min-height: 0; overflow: auto; scrollbar-width: thin; }
+    .sn-note { max-width: 780px; margin: 0 auto; padding: 18px clamp(18px, 4vw, 48px) 28px; box-sizing: border-box; }
+    .sn-note.enter { animation: fade-in var(--t2) var(--ease); }
+    .sn-head-row { display: flex; align-items: center; gap: 8px; min-height: 30px; margin-bottom: 2px; }
+    .sn-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: .86rem; color: var(--muted); }
+    .sn-crumbs a { color: var(--muted); text-decoration: none; }
+    .sn-crumbs a:hover { color: var(--accent); }
+    .sn-icon { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; font: inherit; font-size: 1.05rem; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 8px; }
+    .sn-icon:hover { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
+    .sn-icon svg { width: 17px; height: 17px; }
+    .sn-icon[hidden] { display: none; }
+    .sn-only-narrow { display: none; }
+    .sn-saved { font-size: .84rem; color: var(--muted); }
+    .sn-saved.bad { color: var(--bad); }
+    .sn-file { display: inline-flex; max-width: 260px; padding: 0 4px; margin: 0 -4px; font: inherit; color: var(--muted); cursor: text; background: none; border: 0; border-radius: 5px; }
+    .sn-file:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
+    .sn-file .sn-label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .sn-file .sn-rename { font-size: .86rem; }
+    .sn-doc.titled > .b-heading:first-child h1, .sn-doc.titled > textarea.sn-edit.h1:first-child { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+    .sn-doc.titled > .b-heading:first-child h1 { margin: .1em 0 .3em; }
+    .sn-title { display: block; width: 100%; margin: 0 0 12px; padding: 0; font: inherit; font-size: 2rem; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; color: var(--text); background: none; border: 0; outline: none; }
+    input.sn-title::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); }
+    .sn-day { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 16px; margin-bottom: 12px; }
+    .sn-day .sn-title { width: auto; margin: 0; }
+    .sn-days { display: flex; gap: 14px; font-size: .9rem; }
+    .sn-days a { color: var(--accent); text-decoration: none; }
+
+    /* a note, laid out: each block shows its Markdown when you click it */
+    .sn-doc { font-size: 1.04rem; line-height: 1.7; border-radius: 10px; }
+    .sn-doc.drop { outline: 2px dashed var(--accent); outline-offset: 6px; }
+    .sn-doc .b { position: relative; margin: 0 -10px; padding: 0 10px; border-radius: 8px; cursor: text; transition: background var(--t1); }
+    .sn-doc .b:hover { background: color-mix(in srgb, var(--text) 3%, transparent); }
+    .sn-doc .b > :first-child { margin-top: .32em; }
+    .sn-doc .b > :last-child { margin-bottom: .32em; }
+    .sn-doc p { margin: .32em 0; }
+    .sn-doc h1, .sn-doc h2, .sn-doc h3, .sn-doc h4, .sn-doc h5, .sn-doc h6 { line-height: 1.3; letter-spacing: -0.01em; }
+    .sn-doc .b-heading > :first-child { margin-top: .9em; margin-bottom: .2em; }
+    .sn-doc .b-heading:first-child > :first-child { margin-top: .2em; }
+    .sn-doc h1 { font-size: 1.7rem; } .sn-doc h2 { font-size: 1.38rem; } .sn-doc h3 { font-size: 1.15rem; } .sn-doc h4, .sn-doc h5, .sn-doc h6 { font-size: 1rem; }
+    .sn-doc a.wiki { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); cursor: pointer; }
+    .sn-doc a.wiki:hover { border-bottom-color: var(--accent); }
+    .sn-doc a.wiki.missing { color: var(--muted); border-bottom: 1px dashed color-mix(in srgb, var(--muted) 70%, transparent); }
+    .sn-doc a.ext { color: var(--accent); text-underline-offset: 2px; }
+    .sn-doc code { padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; background: color-mix(in srgb, var(--text) 7%, transparent); border-radius: 5px; }
+    .sn-doc pre { margin: .4em 0; padding: 12px 14px; overflow: auto; background: color-mix(in srgb, var(--text) 6%, transparent); border-radius: 10px; scrollbar-width: thin; }
+    .sn-doc pre code { padding: 0; font-size: .86rem; background: none; }
+    .sn-doc pre.props { font-size: .82rem; color: var(--muted); }
+    .sn-doc blockquote { margin: .4em 0; padding: 1px 14px; color: var(--muted); border-left: 3px solid color-mix(in srgb, var(--accent) 50%, var(--line)); }
+    .sn-doc blockquote.callout { color: var(--text); background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: 0 10px 10px 0; }
+    .sn-doc .callout-title { font-weight: 650; }
+    .sn-doc ul, .sn-doc ol { margin: .32em 0; padding-left: 1.5em; }
+    .sn-doc li { margin: .1em 0; }
+    .sn-doc li.task { position: relative; list-style: none; margin-left: -1.5em; padding-left: 1.75em; }
+    .sn-doc li.task > input { position: absolute; left: .1em; top: .38em; width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: var(--accent); }
+    .sn-doc li.task.done > span { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+    .sn-doc hr { margin: 1em 0; border: 0; border-top: 1px solid var(--line); }
+    .sn-doc .b-hr { padding-top: 6px; padding-bottom: 6px; }
+    .sn-img { display: block; max-width: 100%; height: auto; margin: .3em 0; cursor: zoom-in; border: 1px solid var(--line); border-radius: 10px; }
+    .sn-doc .fig { display: flex; flex-wrap: wrap; gap: 10px; }
+    .sn-doc .fig .sn-img { margin: 0; }
+    .sn-missing { font-size: .92em; font-style: italic; color: var(--muted); }
+    /* tables: each cell changes where it is */
+    .sn-doc .b-table { cursor: default; }
+    .sn-doc .tbl { margin: .45em 0; overflow-x: auto; scrollbar-width: thin; }
+    .sn-doc table { width: 100%; font-size: .95rem; line-height: 1.5; border-collapse: collapse; }
+    .sn-doc th, .sn-doc td { min-width: 70px; padding: 6px 10px; text-align: left; vertical-align: top; cursor: text; border: 1px solid var(--line); }
+    .sn-doc th { font-weight: 650; background: color-mix(in srgb, var(--text) 4%, transparent); }
+    .sn-doc td:hover, .sn-doc th:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+    /* (a link in a cell stays on one line: on a narrow screen the table scrolls sideways instead) */
+    .sn-doc :is(td, th) a.wiki { white-space: nowrap; }
+    .sn-doc :is(td, th).editing { position: relative; z-index: 1; background: var(--card); outline: 2px solid var(--accent); outline-offset: -1px; }
+    .sn-tbl-tools { position: absolute; z-index: 4; right: 10px; top: -30px; display: flex; gap: 2px; padding: 3px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); animation: fade-in var(--t1); }
+    .sn-tbl-tools button { padding: 3px 8px; font: inherit; font-size: .78rem; color: var(--text); white-space: nowrap; cursor: pointer; background: none; border: 0; border-radius: 7px; }
+    .sn-tbl-tools button:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+    /* the block being changed: its Markdown, in a box the same size as the words were */
+    .sn-edit { display: block; width: calc(100% + 20px); box-sizing: border-box; margin: 2px -10px; padding: 4px 9px; font: inherit; line-height: inherit; color: var(--text); background: color-mix(in srgb, var(--accent) 5%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); border-radius: 8px; outline: none; resize: none; overflow: hidden; }
+    .sn-edit.k-heading { font-weight: 650; line-height: 1.3; margin-top: .6em; }
+    .sn-edit.h1 { font-size: 1.7rem; } .sn-edit.h2 { font-size: 1.38rem; } .sn-edit.h3 { font-size: 1.15rem; }
+    .sn-edit.k-code, .sn-edit.k-table, .sn-edit.k-props { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .86rem; line-height: 1.6; white-space: pre; overflow-x: auto; }
+    .sn-tail { min-height: 140px; cursor: text; }
+    .sn-empty { margin: .32em 0; color: color-mix(in srgb, var(--muted) 80%, transparent); }
+    /* what links here */
+    .sn-back { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .sn-back h3 { margin: 0 0 10px; font-size: .8rem; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .sn-back ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .sn-back li { padding: 9px 12px; background: color-mix(in srgb, var(--bg) 55%, var(--card)); border: 1px solid var(--line); border-radius: 10px; }
+    .sn-from { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text); text-decoration: none; }
+    .sn-from:hover { color: var(--accent); }
+    .sn-from svg { width: 14px; height: 14px; color: var(--muted); }
+    .sn-back p { margin: 3px 0 0; font-size: .94rem; color: var(--muted); }
+    .sn-back a.wiki { color: var(--accent); text-decoration: none; }
+    .sn-back mark { color: inherit; }
+    /* menus, suggestions, a word at the bottom, a picture as big as the window */
+    .sn-menu, .sn-suggest { position: fixed; z-index: 70; padding: 5px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-up); animation: fade-in var(--t1); }
+    .sn-menu { min-width: 200px; max-width: 300px; max-height: 60vh; overflow: auto; scrollbar-width: thin; }
+    .sn-menu button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 10px; font: inherit; font-size: .9rem; color: var(--text); text-align: left; cursor: pointer; background: none; border: 0; border-radius: 8px; }
+    .sn-menu button:hover, .sn-menu button:focus-visible { background: color-mix(in srgb, var(--accent) 14%, transparent); outline: none; }
+    .sn-menu button.danger { color: var(--bad); }
+    .sn-menu svg { flex: none; width: 15px; height: 15px; color: var(--muted); }
+    .sn-menu select { width: calc(100% - 12px); margin: 0 6px 6px; }
+    .sn-ask { margin: 5px 9px 7px; font-size: .86rem; line-height: 1.45; color: var(--muted); }
+    .sn-suggest { min-width: 250px; max-width: 380px; }
+    .sn-suggest button { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 9px; width: 100%; padding: 6px 9px; font: inherit; font-size: .9rem; color: var(--text); text-align: left; cursor: pointer; background: none; border: 0; border-radius: 8px; }
+    .sn-suggest button.on { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+    .sn-suggest svg { width: 15px; height: 15px; color: var(--muted); }
+    .sn-suggest span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .sn-suggest b { font-weight: 550; }
+    .sn-suggest small { margin-left: 7px; color: var(--muted); }
+    .sn-suggest em { font-size: .76rem; font-style: normal; color: var(--muted); white-space: nowrap; }
+    .sn-toast { position: sticky; bottom: 14px; z-index: 6; display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100% - 32px); margin: 0 auto 14px; padding: 8px 16px; font-size: .9rem; line-height: 1.4; color: var(--bg); background: var(--text); border-radius: 14px; box-shadow: var(--shadow-up); animation: rise var(--t2) var(--ease); }
+    .sn-toast[hidden] { display: none; }
+    .sn-toast button { padding: 0; font: inherit; font-weight: 650; color: inherit; cursor: pointer; background: none; border: 0; text-decoration: underline; text-underline-offset: 2px; }
+    .sn-big { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 28px; cursor: zoom-out; background: rgb(0 0 0 / .74); animation: fade-in var(--t2); }
+    .sn-big img { max-width: 100%; max-height: 100%; border-radius: 10px; box-shadow: 0 20px 60px rgb(0 0 0 / .5); }
+    /* the start */
+    .sn-home-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin: 4px 0 24px; }
+    .sn-card { padding: 16px 18px; background: color-mix(in srgb, var(--bg) 45%, var(--card)); border: 1px solid var(--line); border-radius: calc(var(--radius) + 2px); }
+    .sn-go { display: flex; align-items: center; gap: 13px; font: inherit; color: inherit; text-align: left; text-decoration: none; cursor: pointer; transition: border-color var(--t1), transform var(--t2) var(--spring); }
+    .sn-go:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .sn-go svg { flex: none; width: 22px; height: 22px; color: var(--accent); }
+    .sn-go b { display: block; }
+    .sn-go small { color: var(--muted); }
+    .sn-recent h3, .sn-start h3 { margin: 0 0 8px; font-size: 1.05rem; }
+    .sn-recent ul { display: grid; gap: 2px; margin: 0 0 24px; padding: 0; list-style: none; }
+    .sn-recent a { display: grid; grid-template-columns: 16px auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 7px 10px; color: inherit; text-decoration: none; border-radius: 9px; }
+    .sn-recent a:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
+    .sn-recent svg { width: 15px; height: 15px; color: var(--muted); }
+    .sn-recent span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--muted); }
+    .sn-start p { margin: 0 0 6px; color: var(--muted); }
+    .sn-start label { display: grid; gap: 4px; margin: 12px 0 0; }
+    .sn-start label span { font-size: .86rem; font-weight: 600; }
+    .sn-start .input { width: 100%; box-sizing: border-box; background: var(--card); }
+    .sn-start textarea { resize: vertical; }
+    .sn-start-go { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 16px; }
+    .sn-start-go small { flex: 1; min-width: 220px; color: var(--muted); }
+    .sn-file img { max-width: 100%; cursor: zoom-in; border: 1px solid var(--line); border-radius: 10px; }
+    .sn-file-about { font-size: .9rem; color: var(--muted); }
+    /* a phone: the list slides in from the left */
+    @media (max-width: 760px) {
+      main.sn-main { padding: 28px 12px 0; }
+      .sn-head h1 { font-size: 2rem; }
+      .sn { grid-template-columns: minmax(0, 1fr); }
+      .sn-side { position: absolute; inset: 0 auto 0 0; z-index: 10; width: min(300px, 86%); transform: translateX(-102%); transition: transform var(--t2) var(--ease); box-shadow: var(--shadow-up); }
+      .sn.side-open .sn-side { transform: none; }
+      .sn-only-narrow { display: grid; }
+      .sn-title { font-size: 1.6rem; }
     }
-    /* (white words wouldn't show on a white accent) */
-    .excalidraw :is(.Dialog__action-button--primary, .ttd-dialog-panel-button.excalidraw-button, .library-menu-browse-button, .library-unit__adder, .Switch.toggled) { color: var(--on-accent) !important; }
-    .excalidraw .context-menu-item:hover { color: var(--on-accent) !important; }
-    .st-bar, .st-tray { position: absolute; z-index: 5; left: 50%; transform: translateX(-50%); background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--line); box-shadow: var(--shadow); }
-    .st-bar { bottom: var(--st-bottom, 14px); display: flex; align-items: center; gap: 1px; padding: 4px; border-radius: 14px; max-width: calc(100% - 16px); }
-    .st-bar[hidden], .st-tray[hidden], .st-chip[hidden] { display: none; }
-    .st-tool { display: grid; place-items: center; flex: none; width: 32px; height: 32px; padding: 0; color: var(--muted); cursor: pointer; background: transparent; border: 0; border-radius: 10px; transition: color var(--t1), background var(--t1); }
-    .st-tool:hover { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
-    .st-tool.on { color: var(--on-accent); background: var(--accent); }
-    .st-gap { flex: none; width: 1px; height: 16px; margin: 0 4px; background: var(--line); }
-    /* one row of styles */
-    .st-tray { bottom: calc(var(--st-bottom, 14px) + 48px); display: flex; align-items: center; gap: 3px; padding: 4px 7px; border-radius: 12px; width: max-content; max-width: calc(100% - 16px); }
-    .st-dot { flex: none; width: 18px; height: 18px; margin: 0 1px; padding: 0; cursor: pointer; background: var(--dot); border: 0; border-radius: 50%; outline: 2px solid transparent; outline-offset: 1px; transition: transform var(--t1); }
-    html.st-dark .st-dot { filter: invert(93%) hue-rotate(180deg); }
-    .st-dot:hover { transform: scale(1.12); }
-    .st-dot.on { outline-color: var(--accent); }
-    html.st-dark .st-dot.on { outline-color: color-mix(in srgb, var(--accent) 60%, #000); }
-    .st-chip { display: grid; place-items: center; flex: none; min-width: 26px; height: 26px; padding: 0 5px; font: inherit; font-size: .76rem; font-weight: 600; color: var(--muted); cursor: pointer; background: transparent; border: 0; border-radius: 8px; transition: color var(--t1), background var(--t1); }
-    .st-chip:hover { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
-    .st-chip.on { color: var(--text); background: color-mix(in srgb, var(--accent) 22%, transparent); }
-    .st-chip svg { width: 15px; height: 15px; }
-    /* how saving is going: a small dot that fades, and words only if there's something you should know */
-    .st-status { position: absolute; z-index: 5; right: 14px; top: 10px; max-width: min(72vw, 460px); padding: 2px 4px; font-size: .78rem; line-height: 1.5; color: var(--muted); text-align: right; pointer-events: none; }
-    .st-status a { pointer-events: auto; color: var(--accent); }
-    html.st-full .st-status { top: 62px; }
-    .st-status.busy, .st-status.done { font-size: 0; }
-    .st-status.busy::after, .st-status.done::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
-    .st-status.done::after { background: var(--good); animation: st-fade 2.2s var(--ease) forwards; }
-    @keyframes st-fade { 0%, 50% { opacity: 1; } 100% { opacity: 0; } }
-    .st-status.bad { color: var(--bad); }
-    .st-failed { display: grid; place-content: center; justify-items: center; gap: 12px; height: 100%; color: var(--muted); }
   </style>
 </head>
 <body data-title="Station">
   <script>window.fluentio?.bar?.()</script>
-  <main class="st-main">
-    <header class="st-head" id="top">
+  <main class="sn-main">
+    <header class="sn-head" id="top">
       <a class="back" href="../study/">← <span data-fill="studyTitle">Modules</span></a>
-      <h1>🎨 <span data-fill="stationTitle">Station</span></h1>
-      <p class="lead">Your whiteboard, for working things out while you study: ideas, flowcharts and diagrams. The button in its corner makes it as big as the window.</p>
+      <h1>🗂️ <span data-fill="stationTitle">Station</span></h1>
+      <p class="lead">Notes in folders that link to each other with [[double brackets]], tables to compare things side by side, and a journal of what you decided and why.</p>
     </header>
-    <div id="room">
-      <div id="board"></div>
-      <button type="button" class="st-expand" id="expand" title="Make it as big as the window" aria-label="Make it as big as the window" aria-pressed="false"></button>
-      <div id="status" class="st-status" role="status"></div>
-      <div id="tray" class="st-tray" hidden></div>
-      <div id="tools" class="st-bar stagger" role="toolbar" aria-label="Drawing tools" hidden></div>
-    </div>
+    <div id="sn" class="sn"><noscript><p class="sn-none">Station needs JavaScript.</p></noscript></div>
   </main>
   <script type="module" src="app.js"></script>
 </body>
