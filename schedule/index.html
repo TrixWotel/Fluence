@@ -41,11 +41,12 @@
     .sc-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-left: auto; }
     .sc-range { margin: 0 6px 0 0; color: var(--muted); font-size: .98rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .sc-range b { color: var(--text); font-size: 1.2rem; font-weight: 650; letter-spacing: -0.01em; }
-    main.sc-main.filled { padding-top: 10px; padding-bottom: 8px; }
-    main.sc-main.filled .sc-top { margin-bottom: 10px; }
-    main.sc-main.filled .sc-tabs a { padding: 5px 13px; }
-    main.sc-main.filled .sc-step { width: 32px; height: 32px; font-size: 1.15rem; }
-    main.sc-main.filled .sc-tools .btn.pill { padding: 6px 14px; }
+    main.sc-main.filled { padding-top: 6px; padding-bottom: 16px; }
+    main.sc-main.filled .sc-top { margin-bottom: 6px; }
+    main.sc-main.filled .sc-tabs a { padding: 4px 12px; font-size: .88rem; }
+    main.sc-main.filled .sc-step { width: 30px; height: 30px; font-size: 1.1rem; }
+    main.sc-main.filled .sc-tools .btn.pill { padding: 5px 13px; font-size: .9rem; }
+    main.sc-main.filled .sc-range b { font-size: 1.05rem; }
 
     /* "which Day is it": asked once, in place */
     .sc-ask { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; margin: -6px 0 24px; font-size: 1rem; color: var(--muted); }
@@ -55,19 +56,19 @@
     /* the calendar: the days across, the hours down, and only what matters on it */
     .cal { --axis: 56px; position: relative; }
     .cal-head, .cal-all, .cal-body { display: grid; grid-template-columns: var(--axis) repeat(var(--cols), minmax(0, 1fr)); column-gap: 8px; }
-    .cal-dh { display: flex; justify-content: center; align-items: baseline; gap: 6px; min-width: 0; padding: 0 2px 4px; font: inherit; color: inherit; background: none; border: 0; border-radius: 10px; }
+    .cal-dh { display: flex; justify-content: center; align-items: baseline; gap: 6px; min-width: 0; padding: 0 2px 2px; font: inherit; color: inherit; background: none; border: 0; border-radius: 10px; }
     button.cal-dh { cursor: pointer; }
     button.cal-dh:hover .wd { color: var(--text); }
     .cal-dh .wd { color: var(--muted); font-size: .76rem; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
     /* (every date in the same 30-pixel box, today's lit, so they all sit on one line) */
-    .cal-dh .dn { display: inline-grid; place-items: center; height: 26px; font-size: 1.15rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+    .cal-dh .dn { display: inline-grid; place-items: center; height: 24px; font-size: 1.05rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
     .cal-dh .dn.label { font-size: 1.05rem; }
     .cal-dh.today .wd { color: var(--text); }
-    .cal-dh.today .dn:not(.label) { min-width: 26px; padding: 0 5px; box-sizing: border-box; color: var(--on-accent, #fff); background: var(--accent); border-radius: 999px; }
+    .cal-dh.today .dn:not(.label) { min-width: 24px; padding: 0 5px; box-sizing: border-box; color: var(--on-accent, #fff); background: var(--accent); border-radius: 999px; }
     .cal-dh.today .dn.label { color: var(--accent); }
-    .cal-all { margin-bottom: 6px; }
+    .cal-all { margin-bottom: 4px; }
     .cal-ad { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-    .cal-chip { display: flex; align-items: center; min-width: 0; padding: 2px 8px; font: inherit; font-size: .76rem; line-height: 1.3; text-align: left; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c, var(--accent)) 18%, transparent); border: 0; border-radius: 8px; }
+    .cal-chip { display: flex; align-items: center; min-width: 0; padding: 1px 7px; font: inherit; font-size: .72rem; line-height: 1.25; text-align: left; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c, var(--accent)) 18%, transparent); border: 0; border-radius: 8px; }
     .cal-chip > span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .cal-chip.dl { --c: #e3a53d; font-weight: 600; }
     .cal-chip.off { --c: var(--muted); color: var(--muted); cursor: default; }
@@ -105,8 +106,6 @@
     .cal-b.quiet, .cal-b.routine, .cal-b.sleep { color: color-mix(in srgb, var(--text) 75%, transparent); background: color-mix(in srgb, var(--text) 5%, var(--bg)); }
     .cal-b.quiet:hover, .cal-b.quiet:focus-visible, .cal-b.routine:hover, .cal-b.routine:focus-visible, .cal-b.sleep:hover, .cal-b.sleep:focus-visible { background: color-mix(in srgb, var(--text) 10%, var(--bg)); }
     .cal-b.quiet > b, .cal-b.routine > b, .cal-b.sleep > b { font-weight: 500; }
-    /* (sleep goes on past the foot of the day) */
-    .cal-b.sleep { -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent); mask-image: linear-gradient(to bottom, #000 45%, transparent); }
     .cal-b.done { opacity: .42; }
     .cal-b.now { z-index: 2; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent); }
     /* crossing off: a line drawn through the name, left to right, as it fades; undoing takes it back the same way */
