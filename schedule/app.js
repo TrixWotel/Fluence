@@ -3,7 +3,9 @@
 // the player so nothing's hidden and nothing scrolls: your classes on the Day they're on (from Classes), your own blocks,
 // and what has set times (a lesson, School, a meal, the walk home), with deadlines at the top of their day and a line for
 // now (free time and the night stay out of it). What's yours you check off; the rest crosses itself off once it's over.
-// Today is what's on now, how to start it, and the day in order with a circle to check each thing off. Classes,
+// On the week the top row hides for the room (its key, ⌃B to start with, shows it; Keep leaves it), and a swipe to the side,
+// like ← and →, goes a week on or back. Today is what's on now, how to start it, and the day in order with a circle to
+// check each thing off. Classes,
 // Deadlines, Sleep and the rest are pages: Markdown you can change (Edit), kept as you type.
 // They're in this browser ('fluentio.schedule', kit/plan.js) and go with your progress to GitHub (kit/progress.js), so every
 // browser has the same plan, and Home and the bar know it too.
@@ -25,6 +27,17 @@ if (f && p && D && box) {
   let flush = null, drawn = '', shift = 0, picked = '', pop = null, pl = null, fitHour = 0;
   // fresh: what a click just checked off or undid ({ key, on }), drawn crossing out (or back) once
   let fresh = null;
+  // the top row (the tabs, the week's dates, Edit plan) is hidden on the week, for the room, and its key (Settings → Keys,
+  // ⌃B to start with) shows it; Keep, on the row, leaves it there. This browser remembers Keep ('fluentio:schedule', not
+  // part of your progress). slide: which way the week just went (a swipe, ← or →, or ‹ and ›)
+  const ROW = 'fluentio:schedule', rowKey = () => f.key.meant(f.settings.keys?.scheduleBar || ''), keepRow = () => !!(read(ROW) || {}).keep;
+  let rowShown = false, slide = 0;
+  const rowOn = () => keepRow() || rowShown;
+  function toggleRow(on = !rowOn()) {
+    if (!on && keepRow()) write(ROW, { ...(read(ROW) || {}), keep: false });
+    rowShown = on;
+    draw();
+  }
   const crossing = (key) => (fresh && fresh.key === key && f.moving() ? (fresh.on ? 'crossing' : 'uncrossing') : '');
 
   // ---------- the pages, laid out ----------
@@ -180,8 +193,8 @@ if (f && p && D && box) {
       marks.map((m) => el('span', { className: m === b.lo ? 'first' : null, style: `top:${sc.y(m)}` }, hourName(m))),
       folds.map((top) => el('span', { className: 'fold', style: `top:${top}` }, '⋯')));
     const allDay = days.some((d) => d.dls.length || d.rot?.off || d.items.some((it) => it.at == null && it.check));
-    return el('div', { className: `cal${fill ? ' fill' : ''}`, style: `--cols:${days.length};--hour:${hour}px;--gap:${GAP}px` },
-      el('div', { className: 'cal-head' }, el('span', {}), ...days.map(head)),
+    return el('div', { className: `cal${fill ? ' fill' : ''}${slide && days[0]?.date && f.moving() ? ` slide-${slide > 0 ? 'next' : 'prev'}` : ''}`, style: `--cols:${days.length};--hour:${hour}px;--gap:${GAP}px` },
+      el('div', { className: 'cal-head' }, el('span', { className: 'cal-corner' }, fill && !rowOn() ? el('button', { type: 'button', className: 'row-show', title: `Show the top row${rowKey() ? ` (${f.key.shown(rowKey())})` : ''}`, 'aria-label': 'Show the top row', onclick: () => toggleRow(true) }, rowKey() ? f.key.shown(rowKey()) : '···') : null), ...days.map(head)),
       allDay ? el('div', { className: 'cal-all' }, el('span', {}), ...days.map(dueOf)) : null,
       el('div', { className: 'cal-body', style: `height:${pos(sc.hours, sc.folds)}`, 'data-hours': String(sc.hours), 'data-folds': String(sc.folds) }, axis, ...days.map((d) => column(d, sc.y, b, marks, folds, hour, ask))));
   }
@@ -429,7 +442,8 @@ if (f && p && D && box) {
       el('div', { className: 'sc-tools' },
         el('p', { className: 'sc-range' }, el('b', {}, range)),
         el('div', { className: 'sc-nav' }, step(-1, 'The week before'), shift ? el('button', { type: 'button', className: 'btn pill', onclick: () => { shift = 0; picked = ''; draw(); } }, 'This week') : null, step(1, 'The week after')),
-        editBtn(doc.id, 'Edit plan')),
+        editBtn(doc.id, 'Edit plan'),
+        phone.matches ? null : el('button', { type: 'button', className: 'sc-keep', 'aria-pressed': String(keepRow()), title: keepRow() ? 'Kept here. Click to hide it again (its key shows it)' : `Keep this row here${rowKey() ? ` (${f.key.shown(rowKey())} shows and hides it)` : ''}`, onclick: () => { write(ROW, { ...(read(ROW) || {}), keep: !keepRow() }); rowShown = true; draw(); } }, svg('eye'), 'Keep')),
       phone.matches ? el('div', { className: 'sc-days', role: 'tablist', 'aria-label': 'Days' }, dates7.map((d, i) => el('button', {
         type: 'button', role: 'tab', 'aria-selected': String(keys[i] === p.dayKey(sel)), className: keys[i] === pl.st.key ? 'today' : '',
         title: fmt(d, { weekday: 'long', month: 'long', day: 'numeric' }), onclick: () => { picked = keys[i]; draw(); },
@@ -437,7 +451,11 @@ if (f && p && D && box) {
       grid(shown.map(dayOf), { hour: phone.matches ? 60 : fitHour || 52, fill: !phone.matches, ask: ask ? p.dayKey(ask) : '' }),
     ];
   }
-  function go(n) { shift += n; picked = ''; draw(); }
+  function go(n) {
+    const sel = picked ? p.dateOf(picked) : null;
+    shift += n; slide = n; picked = phone.matches && sel ? p.dayKey(addDays(sel, 7 * n)) : '';
+    draw();
+  }
 
   // ---------- Classes: your school's days, the way the school shows them ----------
   function classes(doc, docs) {
@@ -589,13 +607,16 @@ if (f && p && D && box) {
       todo ? tab(`#${todo.id}`, todo.title, here === todo.id) : null,
       tab('#pages', 'Pages', here === 'pages' || rest.some((d) => d.id === here)));
     // (a new page rises in; the same page drawn again, with the clock or a check, is just there)
-    const where = `${here}/${r.mode}/${shift}/${picked}`, page = el('section', { className: `sc-page${where !== drawn && f.moving() ? ' rise' : ''}`, 'aria-label': doc ? doc.title : 'Today' }, ...views);
+    // (another week of the same view slides in instead: see slide)
+    const where = `${here}/${r.mode}/${shift}/${picked}`, view = (w) => w.split('/').slice(0, 2).join('/'), page = el('section', { className: `sc-page${view(where) !== view(drawn) && f.moving() ? ' rise' : ''}`, 'aria-label': doc ? doc.title : 'Today' }, ...views);
     drawn = where;
     box.replaceChildren(el('div', { className: 'sc-top' }, tabs, tools), page);
     // (the week, fitted to the window)
-    box.closest('main')?.classList.toggle('filled', !!page.querySelector('.cal.fill'));
+    const weekShown = !!page.querySelector('.cal.fill');
+    box.closest('main')?.classList.toggle('filled', weekShown);
+    box.closest('main')?.classList.toggle('row-hidden', weekShown && !rowOn());
     fitWeek();
-    fresh = null;
+    fresh = null; slide = 0;
     // (a link to a page that isn't here any more shows Today, and says so in the address)
     if (!doc && r.id && r.id !== 'today' && r.id !== 'pages') history.replaceState(null, '', '#today');
   }
@@ -613,10 +634,32 @@ if (f && p && D && box) {
   // a card closes with Escape or a click anywhere else; in the week, ← and → go a week back and on
   addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && pop) { closePop(); return; }
-    if (e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+    if (!typing && rowKey() && f.key.meant(f.key.pressed(e)) === rowKey() && box.querySelector('.cal.fill')) { e.preventDefault(); toggleRow(); return; }
+    if (e.metaKey || e.ctrlKey || e.altKey || typing) return;
     if (!box.querySelector('[aria-label="The week before"]')) return;
     if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); } else if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
   });
+  // (a swipe to the side, two fingers on a trackpad or a finger on a screen, goes a week on or back: one week a swipe)
+  const weekUp = () => !!box.querySelector('[aria-label="The week before"]') && !flush;
+  let swipeX = 0, swipeQuiet = 0, swiped = false, touch = null;
+  box.addEventListener('wheel', (e) => {
+    if (!weekUp() || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    clearTimeout(swipeQuiet);
+    swipeQuiet = setTimeout(() => { swipeX = 0; swiped = false; }, 240);
+    if (swiped) return;
+    swipeX += e.deltaX;
+    if (Math.abs(swipeX) >= 70) { swiped = true; closePop(); go(swipeX > 0 ? 1 : -1); }
+  }, { passive: false });
+  box.addEventListener('touchstart', (e) => { touch = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() } : null; }, { passive: true });
+  box.addEventListener('touchend', (e) => {
+    const t = touch, end = e.changedTouches[0];
+    touch = null;
+    if (!t || !end || !weekUp()) return;
+    const dx = end.clientX - t.x, dy = end.clientY - t.y;
+    if (Math.abs(dx) >= 60 && Math.abs(dx) > 1.6 * Math.abs(dy) && Date.now() - t.t < 800) { closePop(); go(dx < 0 ? 1 : -1); }
+  }, { passive: true });
   addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && !e.target.closest?.('.cal-b, .cal-chip, .cal-dh, .ag-name')) closePop(); }, true);
   // (the week fits again when the window changes, when the player comes or goes, and when a look or the fonts load)
   let sized = 0;

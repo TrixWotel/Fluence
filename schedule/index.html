@@ -47,6 +47,21 @@
     main.sc-main.filled .sc-step { width: 30px; height: 30px; font-size: 1.1rem; }
     main.sc-main.filled .sc-tools .btn.pill { padding: 5px 13px; font-size: .9rem; }
     main.sc-main.filled .sc-range b { font-size: 1.05rem; }
+    /* on the week the top row hides for the room: its key (or the handle in the calendar's corner) shows it, and Keep
+       leaves it */
+    main.sc-main.row-hidden .sc-top { display: none; }
+    .cal-corner { display: flex; align-items: center; justify-content: center; min-width: 0; }
+    .row-show { padding: 1px 7px; font: inherit; font-size: .7rem; line-height: 1.5; color: var(--muted); cursor: pointer; background: color-mix(in srgb, var(--text) 6%, transparent); border: 0; border-radius: 999px; opacity: .75; transition: opacity var(--t1), color var(--t1); }
+    .row-show:hover, .row-show:focus-visible { opacity: 1; color: var(--text); outline: none; }
+    .sc-keep { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font: inherit; font-size: .86rem; font-weight: 600; color: var(--muted); cursor: pointer; background: none; border: 1px solid var(--line); border-radius: 999px; transition: color var(--t1), background var(--t1); }
+    .sc-keep:hover { color: var(--text); }
+    .sc-keep svg { width: 15px; height: 15px; }
+    .sc-keep[aria-pressed="true"] { color: var(--on-accent, #fff); background: var(--accent); border-color: var(--accent); }
+    /* a week on or back slides in from that side */
+    .cal.slide-next > * { animation: sc-from-right .26s var(--ease) both; }
+    .cal.slide-prev > * { animation: sc-from-left .26s var(--ease) both; }
+    @keyframes sc-from-right { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+    @keyframes sc-from-left { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
 
     /* "which Day is it": asked once, in place */
     .sc-ask { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; margin: -6px 0 24px; font-size: 1rem; color: var(--muted); }

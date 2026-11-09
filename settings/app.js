@@ -302,7 +302,7 @@ function names() {
 
 // a key you can change: click it, then press the new one. Esc keeps the old one, Delete (or Backspace) turns it off,
 // and a key another action had moves here (that one is left with none)
-const ACTIONS = () => [['search', 'Search', `Pages, subjects${f.spacesOn ? ', and your data, code and notes' : ''}. / works too, when you aren’t typing.`], ['home', 'Home', ''], ['study', s.studyTitle, ''], ['music', s.musicTitle, ''], ['schedule', s.scheduleTitle, ''], ...(f.spacesOn ? [['data', s.dataTitle, ''], ['code', s.codeTitle, ''], ['notes', s.notesTitle, '']] : [])];
+const ACTIONS = () => [['search', 'Search', `Pages, subjects${f.spacesOn ? ', and your data, code and notes' : ''}. / works too, when you aren’t typing.`], ['home', 'Home', ''], ['study', s.studyTitle, ''], ['music', s.musicTitle, ''], ['schedule', s.scheduleTitle, ''], ...(f.scheduleOn?.() ? [['scheduleBar', `${s.scheduleTitle}’s top row`, `Shows or hides the row with ${s.scheduleTitle}’s tabs, the week’s dates and Edit plan, so the week has the room. Keep, on that row, leaves it there.`]] : []), ...(f.spacesOn ? [['data', s.dataTitle, ''], ['code', s.codeTitle, ''], ['notes', s.notesTitle, '']] : [])];
 // (keys a browser usually keeps for itself, like ⌘T, or ⌘K in Fluent, never reach the page)
 const kept = (k) => { const t = f.key.meant(k); return /^(Shift\+)?Meta\+([0-9TWNQRLKEPSFDHMYZXCVAOG,])$/.test(t) || /^Ctrl\+(Shift\+)?Tab$/.test(t); };
 let recording = null;                               // how to stop the key being recorded
