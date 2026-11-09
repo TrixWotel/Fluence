@@ -95,7 +95,6 @@
     .cal-hours span.first { transform: none; }
     .cal-col { position: relative; min-width: 0; }
     .cal-col.today { background-color: color-mix(in srgb, var(--accent) 3%, transparent); border-radius: 10px; }
-    .cal-hl { position: absolute; left: 0; right: 0; height: 1px; pointer-events: none; background: color-mix(in srgb, var(--line) 55%, transparent); }
     /* (a stretch nothing's in, folded away: a band of fine lines, and ⋯ by the hours) */
     .cal-fold { position: absolute; left: 0; right: 0; height: var(--gap); pointer-events: none; border-radius: 6px; background: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--text) 6%, transparent) 5px 6px); }
     .cal-hours span.fold { transform: translateY(calc(var(--gap) / 2 - 50%)); letter-spacing: .12em; }

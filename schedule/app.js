@@ -239,9 +239,7 @@ if (f && p && D && box) {
     return el('div', { className: `cal-ad${d.today ? ' today' : ''}` }, chips);
   }
   function column(d, y, b, marks, folds, hour, ask) {
-    const col = el('div', { className: `cal-col${d.today ? ' today' : ''}` },
-      marks.map((m) => el('i', { className: 'cal-hl', style: `top:${y(m)}` })),
-      folds.map((top) => el('i', { className: 'cal-fold', style: `top:${top}` })));
+    const col = el('div', { className: `cal-col${d.today ? ' today' : ''}` }, folds.map((top) => el('i', { className: 'cal-fold', style: `top:${top}` })));
     for (const o of lanes(blocksOf(d))) col.append(block(d, o, y, hour, ask === d.key));
     // (now: a line under the blocks, so it never runs through one, and a dot at the edge; the block on now is lit)
     if (d.today && pl && pl.st.m >= b.lo && pl.st.m <= b.hi) col.append(el('div', { className: 'cal-now', style: `top:${y(pl.st.m)}` }), el('div', { className: 'cal-dot', style: `top:${y(pl.st.m)}`, title: `Now, ${p.clockAmPm(pl.st.m)}` }));
