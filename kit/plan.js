@@ -141,9 +141,11 @@
     return x.name || start ? x : null;
   }
   // a section: days ("## Monday"), a switch ("## On game days", "## In exam weeks", "## On trip days, only":
-  // only means the switch's lines are all there is to check off), or anything else, which is left alone
+  // only means the switch's lines are all there is to check off), the steps before lights out ("## Before lights out",
+  // "## Bedtime"), or anything else, which is left alone
   function section(title) {
     const t = title.replace(/[*_`]/g, '').trim(), evening = /\b(nights?|evenings?|tonight)\b/i.test(t);
+    if (/^(?:before\s+(?:lights\s+out|bed|bedtime|sleep(?:ing)?)|bedtime)\b/i.test(t)) return { kind: 'bed', title: t, days: new Set(), evening: true, lines: [] };
     const sw = /^(?:on|in|during)\s+(.+?)\s+(days?|weeks?|weekends?|nights?)\b(.*)$/i.exec(t);
     if (sw && !daysIn(sw[1]).size && !/^(school|week|weekend|every|each|all|the)$/i.test(sw[1].trim())) {
       const unit = sw[2].toLowerCase().replace(/s$/, ''), name = `${cap(sw[1].trim())} ${unit}`;
@@ -451,6 +453,18 @@
     const wd = date.getDay();
     let items = [];
     for (const s of plan.sections) if (s.kind === 'days' && s.days.has(wd)) for (const p of placed(s, wd)) if (fits(p.x, date, plan.ref)) items.push(itemOf(p));
+    // the steps before lights out, in order, each as long as its minutes, the last ending at that night's lights out (so
+    // they move when it does). A step of the night, not something to check off
+    const l = lightsOut(plan, date);
+    for (const s of l ? plan.sections : []) {
+      if (s.kind !== 'bed') continue;
+      const steps = s.lines.filter((x) => x.min > 0 && (!x.days || x.days.has(wd)) && fits(x, date, plan.ref));
+      let at = l.at - steps.reduce((n, x) => n + x.min, 0);
+      for (const x of steps) {
+        items.push({ id: `bed|${x.name.toLowerCase()}`, at, end: at + x.min, set: true, name: x.name, min: x.min, check: false, link: x.link, note: x.note, night: true, special: false, by: '', bed: true });
+        at += x.min;
+      }
+    }
     // a line for some dates only (once a month, every other week, from a date) takes the place of the usual one at its
     // time, or with its name
     const special = items.filter((i) => i.special);

@@ -35,7 +35,7 @@
     boardTitle: 'Board', boardFont: 'Inter', boardTools: ['freedraw', 'rectangle', 'diamond', 'ellipse', 'arrow', 'text'], boardMenu: true, boardFull: false,
     stationTitle: 'Station', stationSources: true,
     musicTitle: 'Music',
-    scheduleTitle: 'Schedule',
+    scheduleTitle: 'Schedule', scheduleRepo: '',
     studyTitle: 'Modules',
     studyIntro: 'Pick a subject. Take a test, learn it one topic at a time, or practise any question.',
     study: [
@@ -270,6 +270,11 @@
   window.fluentio = {
     settings: s, site, DEFAULTS, FONTS, BOARD_FONTS, fontSheet, root, read, write, el, svg, icon, logo, key, spacesOn: SPACES_ON,
     wait: (promise) => { waits.push(Promise.resolve(promise).catch(() => {})); return promise; },
+    // (Schedule is there only in a browser connected to the Database settings.js names for it, scheduleRepo)
+    scheduleOn: () => {
+      const want = String(site.scheduleRepo || '').trim().toLowerCase();
+      return !want || ['fluentio:music', 'fluentio:github'].some((k) => { const c = read(k); return !!c?.token && String(c.repo || '').trim().toLowerCase() === want; });
+    },
     link: (href) => new URL(String(href || ''), root).href,
     moving: () => s.animations !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches,
     // your docs and sheets (Data), code (Code) and notes (Notes), and their folders: kept in this browser only (Settings

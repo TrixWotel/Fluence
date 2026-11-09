@@ -19,7 +19,7 @@
     { id: 'data', title: f.settings.dataTitle, href: f.link('data/'), icon: 'database', key: keyFor('data') },
     { id: 'code', title: f.settings.codeTitle, href: f.link('code/'), icon: 'code', key: keyFor('code') },
     { id: 'notes', title: f.settings.notesTitle, href: f.link('notes/'), icon: 'note', key: keyFor('notes') },
-  ].filter((x) => f.spacesOn || !['data', 'code', 'notes'].includes(x.id));
+  ].filter((x) => (f.spacesOn || !['data', 'code', 'notes'].includes(x.id)) && (x.id !== 'schedule' || f.scheduleOn()));
   // a link into Data, Code or Notes (a Quick button's, say), left out while they're off
   const offLink = (href) => !f.spacesOn && /^(data|code|notes|workspace)\//.test(f.link(href).slice(f.root.length));
   // the space this page is in (a subject's page is in Modules, whose folder is study/), or what it is: 'settings', say
@@ -121,7 +121,7 @@
   // nothing in Schedule itself, which says so already. A click goes to Schedule. Settings → Home can leave it out of the bar
   let pill = null, asked = false;
   function bringPlan() {
-    if (asked || f.settings.planBar === false) return;
+    if (asked || f.settings.planBar === false || !f.scheduleOn()) return;
     try { if (!(localStorage.getItem('fluentio.schedule') || '').includes('"docs"')) return; } catch { return; }
     asked = true;
     document.head.append(el('script', { src: f.link('kit/plan.js'), onload: paintPill }));
@@ -129,7 +129,7 @@
   function paintPill() {
     const p = window.fluentioPlan;
     if (!pill) return;
-    const plan = p && f.settings.planBar !== false && where() !== 'schedule' ? p.current() : null, st = plan ? p.status(plan, p.load(f.read), Date.now()) : null;
+    const plan = p && f.settings.planBar !== false && f.scheduleOn() && where() !== 'schedule' ? p.current() : null, st = plan ? p.status(plan, p.load(f.read), Date.now()) : null;
     let name = '', more = '', late = false;
     if (st?.late) { name = 'Past lights out'; more = p.clockAmPm(st.lights.at + st.lights.later); late = true; }
     else if (st?.night && st.lights) { name = 'Lights out'; more = p.lightsWords({ at: st.lights.at, later: 0 }); }

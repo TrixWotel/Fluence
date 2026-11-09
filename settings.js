@@ -123,6 +123,10 @@ window.FLUENTIO_SETTINGS = {
 
   // Schedule (schedule/), your plan: its name in the bar and on its page
   scheduleTitle: 'Schedule',
+  // whose it is: Schedule (its space, its page, the plan on Home and in the bar) is there only in a browser connected to
+  // this Database (Music, or Settings → Database), where its pages are kept; anywhere else it isn't there at all. Leave it
+  // empty for anyone's
+  scheduleRepo: 'TrixWotel/Database',
 
   // Modules (the study/ page): its title, the line under it, and its subjects in this order (color is the subject's
   // own color)

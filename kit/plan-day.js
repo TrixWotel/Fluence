@@ -8,10 +8,11 @@
   const P = () => window.fluentioPlan;
   const cap = (s) => s[0].toUpperCase() + s.slice(1);
 
-  // the plan and where today is in it (null with no plan; Home leaves it out when Settings → Home says so)
+  // the plan and where today is in it (null with no plan, or in a browser that isn't its owner's; Home leaves it out when
+  // Settings → Home says so)
   function now(t = Date.now(), { home = false } = {}) {
     const p = P();
-    if (!p || (home && f.settings.planHome === false)) return null;
+    if (!p || !f.scheduleOn?.() || (home && f.settings.planHome === false)) return null;
     const plan = p.current();
     if (!plan) return null;
     const state = p.load(read);
