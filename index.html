@@ -11,6 +11,7 @@
   <script src="kit/plan.js"></script>
   <script src="kit/plan-day.js"></script>
   <script src="kit/assistant.js"></script>
+  <script src="kit/notice.js"></script>
   <link rel="modulepreload" href="kit/welcome.js">
   <link rel="stylesheet" href="kit/site.css">
   <style>
@@ -116,6 +117,16 @@
     .list small { margin-left: auto; padding-left: 10px; color: var(--muted); white-space: nowrap; }
     /* Today: the date, how far through the year, and what's coming */
     .date b { display: block; font-size: 1.7rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+    /* Since you were here: what happened since your last visit, a line each, with the date and where you left off beside */
+    .tile.since { flex-direction: column; align-items: stretch; }
+    .since-body { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 14px 26px; align-items: start; }
+    .since-side { display: grid; gap: 14px; align-content: start; }
+    .news { list-style: none; margin: 0 -8px; padding: 0; display: grid; gap: 2px; }
+    .news a { display: grid; gap: 1px; padding: 6px 8px; border-radius: calc(var(--radius) * .6); color: var(--text); text-decoration: none; transition: background var(--t1), transform var(--t2) var(--ease); }
+    .news a:hover { background: color-mix(in srgb, var(--c) 10%, transparent); transform: translateX(3px); }
+    .news b { font-weight: 600; font-size: .98rem; }
+    .news small { color: var(--muted); font-size: .86rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    @media (max-width: 560px) { .since-body { grid-template-columns: minmax(0, 1fr); } }
     /* Question of the day: answer it right here */
     .tile.wide2 { grid-column: auto; }
     .qd-text { font-size: 1.06rem; }
@@ -253,12 +264,27 @@
           const b = f.read(`fluentio.${id}${key}`);
           if (!b || !b.text) continue;
           m.bests++; bests++;
-          if (b.when && (!best || b.when > best.at)) best = { test: what.replace(/^the the /, 'the '), text: b.text, at: b.when };
+          if (b.when && (!best || b.when > best.at)) best = { test: what.replace(/^the the /, 'the '), text: b.text, at: b.when, id };
         }
       }
       const geo = Object.keys(f.read('fluentio.geo.best') || {}).length;
       bests += geo;
       const folderOf = (x) => String(x.link || '').replace(/^\.?\//, '').split('/')[0];
+      const FOLDER = Object.fromEntries(Object.entries(IN).flatMap(([folder, ids]) => ids.map((id) => [id, folder])));
+      // what's been tricky: the topic you've got right least often, after three tries at least
+      let worst = null;
+      for (const [id, folder] of Object.entries(FOLDER)) for (const [topic, st] of Object.entries(f.read(`fluentio.${id}.learn`) || {})) {
+        if (!st || st.learned || (st.tried || 0) < 3 || id === 'essays') continue;
+        const rate = (st.right || 0) / st.tried;
+        if (rate < 0.67 && (!worst || rate < worst.rate)) worst = { topic, right: st.right || 0, tried: st.tried, rate, name: NAMES[id], href: link(`${folder}/#${id}/learn/${encodeURIComponent(topic)}`) };
+      }
+      // what's new since your last visit, and how far the cards have turned (kit/notice.js), so each card shows something
+      // a little different each time you come back. What you checked off on your plan is named from the plan
+      const P = window.fluentioPlan, D = window.fluentioPlanDay, yours = f.scheduleOn() && P ? P.current() : null;
+      const nameOf = (x) => { try { const day = P.dateOf(x.key), it = P.day(yours, day, P.switchesOn(yours, P.load(f.read), day)).find((i) => i.id === x.id); return it ? D.short(it) : ''; } catch { return ''; } };
+      const noticed = window.fluentioNotice ? window.fluentioNotice.visit({ read: f.read, write: f.write, now, nameOf: yours ? nameOf : null }) : { news: [], turn: 1, last: null };
+      const turnOf = (ways) => ways[(noticed.turn || 1) % ways.length];
+      const newsList = (news) => el('ul', { className: 'news' }, news.map((x) => el('li', {}, el('a', { href: link(x.href) }, el('b', {}, x.text), x.list?.length ? el('small', {}, window.fluentioNotice.list(x.list)) : null))));
       const welcomed = f.wait(import(link('kit/welcome.js')));
       // your music, as this browser last saw it: what's playing (or was), and how many songs there are
       const tunes = f.read('fluentio.music.library') || {}, playing = f.read('fluentio.music.player') || {}, songs = Array.isArray(tunes.songs) ? tunes.songs : [];
@@ -274,6 +300,7 @@
         }).catch(() => {});
       }
       const plural = (n, word) => `${n.toLocaleString('en-US')} ${word}${n === 1 ? '' : 's'}`;
+      const agoWords = (t) => { const h = Math.round((now - (t || 0)) / 3600000), d = Math.round(h / 24); return h < 1 ? 'just now' : h < 24 ? `${h} ${h === 1 ? 'hour' : 'hours'} ago` : d === 1 ? 'yesterday' : d < 14 ? `${d} days ago` : `${Math.round(d / 7)} weeks ago`; };
       const ago = (t) => { const m = Math.round((Date.now() - (t || 0)) / 60000); return m < 1 ? 'now' : m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} d`; };
       const items = f.workspace.items().sort((a, b) => (b.edited || 0) - (a.edited || 0));
       const ICON = { note: 'note', doc: 'doc', table: 'table', code: 'code' };
@@ -298,11 +325,18 @@
           el('div', { className: 'row' }, button('New note', link('notes/#new/note')), button('New file', link('code/#new/code')))),
         study: () => {
           const last = f.last(), done = last ? Math.max(0, last.learned || 0) : 0, of = last ? Math.max(1, last.total || 1) : 1;
-          return tile('', 'var(--accent)', head('study', s.studyTitle, link('study/')), ...(last ? [
+          const goOn = () => [
             el('a', { className: 'continue', href: last.href }, el('span', { className: 'muted small' }, 'Continue'), el('b', {}, last.topic || last.test || 'Learning')),
             el('div', { className: 'meter', role: 'img', 'aria-label': `${done} of ${of} topics learned` }, el('div', { style: `width:${Math.round((100 * done) / of)}%` })),
             el('p', { className: 'muted small' }, `${last.test ? last.test + ' · ' : ''}${done} of ${plural(of, 'topic')} learned`),
-          ] : [
+          ];
+          const news = noticed.news.filter((x) => x.kind === 'learned' || x.kind === 'best');
+          const ways = last ? [goOn] : [];
+          if (worst) ways.push(() => [el('a', { className: 'continue', href: worst.href }, el('span', { className: 'muted small' }, 'Tricky lately'), el('b', {}, worst.topic)), el('p', { className: 'muted small' }, `${worst.right} of ${worst.tried} right in ${worst.name}. A few more tries, and it’s yours.`)]);
+          if (best) ways.push(() => [el('a', { className: 'continue', href: link(`${FOLDER[best.id] || 'study'}/#${best.id}`) }, el('span', { className: 'muted small' }, 'A best to beat'), el('b', {}, best.text)), el('p', { className: 'muted small' }, `In ${best.test}, ${agoWords(best.at)}.`)]);
+          if (learned || bests) ways.push(() => [el('div', { className: 'stats' }, [[learned, 'topic learned', 'topics learned'], [visits.streak, 'day in a row', 'days in a row'], [bests, 'best score', 'best scores']].map(([n, one, many]) => el('div', { className: 'stat' }, el('b', {}, n.toLocaleString('en-US')), el('span', {}, n === 1 ? one : many))))]);
+          if (news.length) return tile('', 'var(--accent)', head('study', s.studyTitle, link('study/')), el('span', { className: 'muted small' }, 'Since you were here'), newsList(news.slice(0, 3)), ...(last ? goOn().slice(0, 1) : []));
+          return tile('', 'var(--accent)', head('study', s.studyTitle, link('study/')), ...(ways.length ? turnOf(ways)() : [
             el('p', { className: 'muted' }, 'Pick a subject to start.'),
             el('div', { className: 'chips' }, s.study.map((x) => {
               const chip = el('a', { className: 'chip', href: link(x.link) }, `${x.emoji || ''} ${x.title || ''}`.trim());
@@ -323,13 +357,42 @@
         },
         today: () => {
           const d = new Date(now), start = new Date(d.getFullYear(), 0, 1), days = Math.round((midnight(now) - start) / 86400000) + 1;
-          const of = new Date(d.getFullYear(), 1, 29).getMonth() === 1 ? 366 : 365, soon = el('ul', { className: 'list' });
+          const of = new Date(d.getFullYear(), 1, 29).getMonth() === 1 ? 366 : 365;
           const when = (h) => { const n = h.days === 0 ? (h.left > 0 ? `through ${h.to.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'today') : h.days === 1 ? 'tomorrow' : `in ${h.days} days`; return h.off ? `off ${n}` : n; };
-          welcomed.then(({ upcoming }) => soon.replaceChildren(...upcoming(d, 3, s.showDaysOff ? s.daysOff : []).map((h) => el('li', {}, el('span', {}, `${h.emoji} ${h.name}`, el('small', {}, when(h))))))).catch(() => {});
+          const row = (text, side, href) => el('li', {}, el(href ? 'a' : 'span', { href }, text, side ? el('small', {}, side) : null));
+          const pl = yours && D ? D.now(now, { home: true }) : null, st = pl?.st;
+          // under the date, in turn: your plan (what's on and what's next), what's due, the days off, how your week's going
+          const ways = [() => { const soon = el('ul', { className: 'list' }); welcomed.then(({ upcoming }) => soon.replaceChildren(...upcoming(d, 3, s.showDaysOff ? s.daysOff : []).map((h) => row(`${h.emoji} ${h.name}`, when(h))))).catch(() => {}); return soon; }];
+          if (st) {
+            ways.push(() => el('ul', { className: 'list' },
+              st.now ? row(`Now: ${D.short(st.now)}`, `${P.leftWords(P.left(st.now, st.m))} left`, link('schedule/#today')) : null,
+              st.next ? row(`Next: ${D.short(st.next)}`, P.clockAmPm(st.next.at), link('schedule/#today')) : null,
+              st.of ? row(`${st.done} of ${st.of} checked off`, st.streak > 1 ? `${st.streak} days in a row` : '', link('schedule/#today')) : null,
+              st.lights ? row('Lights out', P.lightsWords(st.lights), link('schedule/#week')) : null));
+            const due = st.deadlines.slice(0, 3);
+            if (due.length) ways.push(() => el('ul', { className: 'list' }, due.map((x) => row(x.what.replace(/,? due 9 AM$/, ''), P.dayWords(x), link('schedule/#deadlines')))));
+            const plan = P.load(f.read), sunday = new Date(midnight(now) - new Date(now).getDay() * 86400000);
+            let done = 0, outOf = 0, top = null;
+            for (let i = 0; i <= new Date(now).getDay(); i++) {
+              const day = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i), rec = plan.days[P.dayKey(day)] || {}, n = Object.keys(rec.done || {}).length;
+              done += n; outOf += rec.of || 0;
+              if (n && (!top || n > top.n)) top = { n, day };
+            }
+            if (done) ways.push(() => el('ul', { className: 'list' }, row(outOf ? `${done} of ${outOf} checked off this week` : `${done} checked off this week`, '', link('schedule/#week')), top ? row('Your best day so far', `${top.day.toLocaleDateString('en-US', { weekday: 'long' })}, ${top.n} done`) : null, st.streak > 1 ? row('Days in a row', String(st.streak)) : null));
+          }
           return tile('', 'var(--accent-2)', head('calendar', d.toLocaleDateString('en-US', { weekday: 'long' })),
             el('div', { className: 'date' }, el('b', {}, d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })), el('span', { className: 'muted small' }, `Day ${days} of ${of}`)),
             el('div', { className: 'meter', role: 'img', 'aria-label': `Day ${days} of ${of}` }, el('div', { style: `width:${Math.round((100 * days) / of)}%` })),
-            soon);
+            turnOf(ways)());
+        },
+        // Since you were here: Modules and Today as one wide card, when a lot happened since your last visit
+        since: () => {
+          const d = new Date(now), last = f.last();
+          return tile('wide since', 'var(--accent)', head('spark', 'Since you were here'),
+            el('div', { className: 'since-body' }, newsList(noticed.news.slice(0, 5)),
+              el('div', { className: 'since-side' },
+                el('div', { className: 'date' }, el('b', {}, d.toLocaleDateString('en-US', { weekday: 'long' })), el('span', { className: 'muted small' }, d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }))),
+                last ? el('a', { className: 'continue', href: last.href }, el('span', { className: 'muted small' }, 'Continue'), el('b', {}, last.topic || last.test || 'Learning')) : null)));
         },
         // one practice question a day, from a different subject each day (one without a figure, answered with a choice, a
         // number or a word), answered right here
@@ -422,8 +485,14 @@
                 return box.replaceChildren(...[top, now, side, feature ? buttons : null].filter(Boolean));
               }
               seek = null;
+              const added = noticed.news.some((x) => x.kind === 'songs') && noticed.last ? newest.filter((x) => (x.added || 0) > noticed.last) : [];
+              const older = newest.slice(Math.floor(newest.length / 2)), mix = older.map((x, i) => [x, ((i + 1) * 2654435761 * (noticed.turn || 1)) % 4294967296]).sort((p, q) => p[1] - q[1]).map(([x]) => x);
+              const ways = [['Newest', newest]];
+              if (liked.length >= 3) ways.push(['Liked', liked]);
+              if (older.length >= 4) ways.push(['Rediscover', mix]);
+              const [label, picks] = added.length ? ['New since last time', added] : turnOf(ways);
               box.replaceChildren(top, el('p', { className: 'muted small' }, `${lib.plural(all.length, 'song')} · ${lib.total(all)}`),
-                el('div', { className: 'side' }, el('h3', {}, 'Newest'), el('ul', { className: 'm-mini' }, newest.slice(0, feature ? 5 : 4).map((x, i) => row(x, newest, i)))), buttons);
+                el('div', { className: 'side' }, el('h3', {}, label), el('ul', { className: 'm-mini' }, picks.slice(0, feature ? 5 : 4).map((x, i) => row(x, picks, i)))), buttons);
             };
             fill();
             for (const w of ['song', 'state', 'queue']) player.events.addEventListener(w, fill);
@@ -461,16 +530,21 @@
         today: 30, quick: 24, workspace: items.length ? 58 : 4, data: 4,
       };
       const allowed = s.home.filter((k, i, all) => TILES[k] && all.indexOf(k) === i);
-      const order = mode === 'auto' ? [...allowed].sort((a, b) => (SCORE[b] || 0) - (SCORE[a] || 0))
+      const ranked = mode === 'auto' ? [...allowed].sort((a, b) => (SCORE[b] || 0) - (SCORE[a] || 0))
         : mode === 'classic' ? allowed : LAYOUTS[mode].filter((k) => allowed.includes(k));
+      // (Modules, Today and Music are always the first three, in that order; what they show is what changes. When three
+      // things or more happened since your last visit, Modules and Today are one wide card of them)
+      // (with Classic, the first three are the ones Settings → Home puts first)
+      const three = mode === 'classic' ? allowed.slice(0, 3) : ['study', 'today', 'music'].filter((k) => allowed.includes(k)), merged = noticed.news.length >= 3 && three.includes('study') && three.includes('today');
+      const order = [...(merged ? three.flatMap((k) => (k === 'study' ? ['since'] : k === 'today' ? [] : [k])) : three), ...ranked.filter((k) => !three.includes(k))];
       let featureMusic = false, shown = [];
-      const TILE_ICON = { music: 'music', study: 'study', progress: 'chart', today: 'calendar', question: 'spark', quick: 'bolt', workspace: 'clock', data: 'database' };
-      const NAME = { music: s.musicTitle, study: s.studyTitle, progress: 'Your progress', today: 'Today', question: 'Question of the day', quick: 'Quick', workspace: 'Recent', data: s.dataTitle };
+      const TILE_ICON = { music: 'music', study: 'study', progress: 'chart', today: 'calendar', question: 'spark', quick: 'bolt', workspace: 'clock', data: 'database', since: 'spark' };
+      const NAME = { music: s.musicTitle, study: s.studyTitle, progress: 'Your progress', today: 'Today', question: 'Question of the day', quick: 'Quick', workspace: 'Recent', data: s.dataTitle, since: 'Since you were here' };
       const fit = (list) => {
         const cols = matchMedia('(min-width: 900px)').matches ? 3 : matchMedia('(min-width: 561px)').matches ? 2 : 1, out = [];
         featureMusic = cols === 3 && list[0] === 'music' && (layout === 'music' || layout === 'calm' || (mode === 'auto' && music?.playing && evening));
         let used = 0;
-        for (const k of list) { const w = k === 'music' && featureMusic ? 2 : 1; if (used + w <= cols) { out.push(k); used += w; } }
+        for (const k of list) { const w = (k === 'music' && featureMusic) || k === 'since' ? Math.min(2, cols) : 1; if (used + w <= cols) { out.push(k); used += w; } }
         $('tiles').style.setProperty('--cols', cols);
         return out;
       };

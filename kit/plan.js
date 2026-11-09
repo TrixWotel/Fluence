@@ -187,15 +187,26 @@
     if (t1 < t0) t1 = new Date(new Date(t1).getFullYear() + 1, b.mo, b.d).getTime();
     return { t: t0, end: t1, what, two: !!slash };
   }
-  // (each deadline knows its line, so Schedule can check it off there)
+  // (each deadline knows its line, so Schedule can check it off there). Under a heading like "## Every year" (or
+  // "## Birthdays") a date comes back each year, and isn't something to check off
   function readDeadlines(text, ref) {
     const out = [];
-    let year = null;
+    let year = null, yearly = false;
+    const now = new Date().getFullYear(), from = Math.min(now, new Date(ref || Date.now()).getFullYear());
     for (const [n, line] of String(text).split('\n').entries()) {
-      const h = /^#{1,6}\s+.*?\b(\d{4})\b/.exec(line);
-      if (h) { year = +h[1]; continue; }
+      const h = /^#{1,6}\s+(.*)$/.exec(line);
+      if (h) {
+        yearly = /\b(every\s+year|each\s+year|yearly|birthdays?|anniversar(?:y|ies))\b/i.test(h[1]);
+        const y = /\b(\d{4})\b/.exec(h[1]);
+        if (y) year = +y[1]; else if (yearly) year = null;
+        continue;
+      }
       const li = /^\s*(?:[-*+]|\d+[.)])\s+(?:\[( |x|X)\]\s+)?(.*)$/.exec(line);
       if (!li) continue;
+      if (yearly) {
+        for (let y = from - 1; y <= now + 1; y++) { const x = readDated(li[2].trim(), ref, y); if (x?.what) out.push({ ...x, done: false, yearly: true, line: n }); }
+        continue;
+      }
       let t = li[2].trim(), done = /x/i.test(li[1] || '');
       if (/^~~.*~~/.test(t)) { done = true; t = t.replace(/~~/g, ''); }
       if (/\((?:done|finished)\)\s*$/i.test(t)) { done = true; t = t.replace(/\s*\((?:done|finished)\)\s*$/i, ''); }

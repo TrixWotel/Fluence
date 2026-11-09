@@ -18,7 +18,9 @@
     const state = p.load(read);
     return { plan, state, st: p.status(plan, state, t) };
   }
-  const short = (it) => it.name.replace(/:.*$/, '').trim();
+  // a thing's short name: what's before a colon ("Web: personal site" is Web), but something of yours at a class's time is
+  // what comes after the class's name ("Lab: write-up" is write-up), since the time already says which class
+  const short = (it) => (it.kind === 'class' && it.check && /:\s*\S/.test(it.name) ? it.name.slice(it.name.indexOf(':') + 1) : it.name).replace(/:.*$/, '').trim();
   const either = (xs) => (xs.length < 2 ? xs[0] : `${xs.slice(0, -1).join(', ')} or ${xs.at(-1)}`);
   const lower = (s) => (/^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s);
   // what the plan says now: bed when it's past lights out, the night and how today went once the night starts, then
