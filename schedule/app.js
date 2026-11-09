@@ -1,9 +1,10 @@
 // Schedule: your plan, a space of its own in the bar, laid out like Music: tabs at the top, a view's name big under them,
-// and nothing boxed in. Week is the week by the hour, the way a school's schedule shows it: your classes on the Day they're
-// on (from Classes), your own blocks, and what has set times, with deadlines at the top of their day and a line for now
-// (meals, the walk, free time and the night stay out of it). Today is what's on now, how to start it, and the day in order
-// with a circle to check each thing off. Classes, Deadlines, Sleep and the rest are pages: Markdown you can change (Edit),
-// kept as you type.
+// and nothing boxed in. Week is the week by the hour, the way a school's schedule shows it, sized to fit the window down to
+// the player so nothing's hidden and nothing scrolls: your classes on the Day they're on (from Classes), your own blocks,
+// and what has set times (a lesson, School, a meal, the walk home), with deadlines at the top of their day and a line for
+// now (free time and the night stay out of it). What's yours you check off; the rest crosses itself off once it's over.
+// Today is what's on now, how to start it, and the day in order with a circle to check each thing off. Classes,
+// Deadlines, Sleep and the rest are pages: Markdown you can change (Edit), kept as you type.
 // They're in this browser ('fluentio.schedule', kit/plan.js) and go with your progress to GitHub (kit/progress.js), so every
 // browser has the same plan, and Home and the bar know it too.
 // Links: #week (the calendar), #today, #pages, #<page> (#classes, #deadlines, …), #<page>/edit to change one, #new.
@@ -19,8 +20,9 @@ if (f && p && D && box) {
   const fmt = (d, o) => d.toLocaleDateString('en-US', o);
   const phone = matchMedia('(max-width: 760px)');
   const route = () => { const [id = '', mode = ''] = decodeURIComponent(location.hash.slice(1)).split('/'); return { id, mode }; };
-  // flush keeps what's being typed; shift is the week showing (0 is this one) and picked its day on a phone; pl is the plan
-  let flush = null, drawn = '', shift = 0, picked = '', pop = null, pl = null, kept = { at: '', top: 0 };
+  // flush keeps what's being typed; shift is the week showing (0 is this one) and picked its day on a phone; pl is the plan;
+  // fitHour is how tall an hour of the week was the last time it was fitted to the window
+  let flush = null, drawn = '', shift = 0, picked = '', pop = null, pl = null, fitHour = 0;
 
   // ---------- the pages, laid out ----------
   // (a [[link]] goes to one of these pages, or a note in Station; a web address opens in a new tab)
@@ -64,8 +66,9 @@ if (f && p && D && box) {
   const span = (a, b) => `${p.clock(a)}${ap(a) === ap(b) ? '' : ` ${ap(a)}`} – ${p.clockAmPm(b)}`;
   const short = (it) => D.short(it);
   const key = (name) => name.toLowerCase().split(/[:·,(]/)[0].trim();
-  // a color for each class (Classes' "## Colors", or the next one along), and for anything else with set times, by its name
-  const PALETTE = p.COLORS.filter((c) => c !== 'gray');
+  // a color for each class (Classes' "## Colors", or the next one along), and for anything else with set times that Colors
+  // names (a lesson); School is gray, and something set that Colors doesn't name (a meal, the walk home) stays quiet
+  const PALETTE = p.COLORS.filter((c) => c !== 'gray'), SCHOOL = /^school\b/i;
   let colors = {};
   function colorsFor(plan) {
     colors = { ...plan?.classes?.colors };
@@ -77,19 +80,23 @@ if (f && p && D && box) {
       }
     }
   }
-  const hash = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
-  const colorOf = (it, kind) => (it.kind === 'class' ? it.color || colors[key(it.cls || it.name)] || '' : kind === 'event' ? (/^school\b/i.test(it.name) ? 'gray' : colors[key(it.name)] || PALETTE[hash(key(it.name)) % PALETTE.length]) : '');
-  const kindOf = (it) => (it.check ? 'mine' : it.kind === 'class' ? 'class' : it.set && !it.steps ? 'event' : 'routine');
+  const colorOf = (it, kind) => (it.kind === 'class' ? it.color || colors[key(it.cls || it.name)] || '' : kind === 'event' ? (SCHOOL.test(it.name) ? 'gray' : colors[key(it.name)] || '') : '');
+  const kindOf = (it) => (it.check ? 'mine' : it.kind === 'class' ? 'class' : it.set && !it.steps ? (SCHOOL.test(it.name) || colors[key(it.name)] ? 'event' : 'quiet') : 'routine');
 
-  // what a day holds: its things (done or not), its Day of the rotation, lights out and what's due
+  // what a day holds: its things (done or not), its Day of the rotation, lights out and what's due. What isn't yours to
+  // check off (a class, a lesson, a meal) is crossed off once it's over
   function dayOf(date) {
     const k = p.dayKey(date), rec = pl.state.days[k] || {}, t = date.getTime();
     const items = p.day(pl.plan, date, p.switchesOn(pl.plan, pl.state, date));
-    for (const it of items) it.done = it.check && !!rec.done?.[it.id];
+    for (const it of items) {
+      it.done = it.check && !!rec.done?.[it.id];
+      it.over = !it.check && it.at != null && it.end != null && (k < pl.st.key || (k === pl.st.key && it.end <= pl.st.m));
+    }
     return { date, key: k, items, rot: p.rotationOf(pl.plan.classes, date), lights: p.lightsOut(pl.plan, date), dls: pl.plan.deadlines.filter((x) => x.t <= t && t <= x.end), today: k === pl.st.key, past: k < pl.st.key };
   }
-  // what's shown: classes, what you check off, and what has set times (a lesson, School). Meals, the walk and free time
-  // aren't; in the week neither is the night or anything under a quarter of an hour, and Today has the night as one
+  // what's shown: classes, what you check off, and what has set times (a lesson, School, a meal, the walk home). Free time
+  // and a line with neither an end nor minutes aren't; in the week neither is the night or anything under a quarter of an
+  // hour, and Today has the night as one
   const worth = (it) => it.check || it.kind === 'class' || it.set;
   function blocksOf(d, { day = false } = {}) {
     const out = [];
@@ -122,29 +129,46 @@ if (f && p && D && box) {
     close();
     return out;
   }
-  // the hours shown: from the hour of the first thing shown to the hour after the last
+  // the hours shown: from the hour of the first thing shown to the half hour after the last
   function bounds(days) {
     let lo = Infinity, hi = -Infinity;
     for (const d of days) for (const it of blocksOf(d)) { lo = Math.min(lo, it.at); hi = Math.max(hi, it.end); }
     if (!Number.isFinite(lo)) { lo = 8 * 60; hi = 20 * 60; }
     lo = Math.floor(lo / 60) * 60;
-    return { lo, hi: Math.max(lo + 4 * 60, Math.ceil(hi / 60) * 60) };
+    return { lo, hi: Math.max(lo + 4 * 60, Math.ceil(hi / 30) * 30) };
   }
-  // (an hour is 60 pixels)
-  function grid(days, { fit = false, hour = 60 } = {}) {
-    const { lo, hi } = bounds(days), y = (m) => ((m - lo) / 60) * hour;
+  // where a time is, in hours from the top (the page sets how tall an hour is, --hour)
+  const at = (h) => `calc(var(--hour) * ${+h.toFixed(4)})`;
+  // a block's size, from how tall it is: tiny shows its name, small its name and when it starts, the rest when it ends too
+  // (bare, on a small window, is just the block: its card says the rest)
+  const sizeOf = (min, hour) => { const h = (min / 60) * hour - 2; return h < 11 ? 'bare' : h < 17 ? 'tiny' : h < 34 ? 'small' : h >= 64 ? 'tall' : ''; };
+  // (an hour is 60 pixels, or in the week as tall as fits the window: fill)
+  function grid(days, { hour = 60, fill = false, ask = '' } = {}) {
+    const { lo, hi } = bounds(days), y = (m) => at((m - lo) / 60);
     const hours = el('div', { className: 'cal-hours', 'aria-hidden': 'true' });
-    for (let m = lo; m < hi; m += 60) hours.append(el('span', { className: m === lo ? 'first' : null, style: `top:${y(m)}px` }, hourName(m)));
+    for (let m = lo; m < hi; m += 60) hours.append(el('span', { className: m === lo ? 'first' : null, style: `top:${y(m)}` }, hourName(m)));
     const allDay = days.some((d) => d.dls.length || d.rot?.off || d.items.some((it) => it.at == null && it.check));
-    const sc = el('div', { className: 'cal-scroll' }, el('div', { className: 'cal-body', style: `height:${y(hi)}px` }, hours, ...days.map((d) => column(d, y, lo, hi))));
-    // (where it opens: a little before now on today, or else at the first thing of the morning)
-    const today = days.find((d) => d.today && d.date), first = Math.min(...days.flatMap((d) => blocksOf(d).map((it) => it.at)), hi);
-    sc.dataset.top = String(Math.max(0, today && pl.st.m >= lo && pl.st.m <= hi ? y(pl.st.m) - 150 : y(Math.max(lo, first - 30))));
-    sc.addEventListener('scroll', () => { closePop(); kept = { at: drawn, top: sc.scrollTop }; }, { passive: true });
-    return el('div', { className: `cal${fit ? ' fit' : ''}`, style: `--cols:${days.length};--hour:${hour}px` },
+    return el('div', { className: `cal${fill ? ' fill' : ''}`, style: `--cols:${days.length};--hour:${hour}px` },
       el('div', { className: 'cal-head' }, el('span', {}), ...days.map(head)),
       allDay ? el('div', { className: 'cal-all' }, el('span', {}), ...days.map(dueOf)) : null,
-      sc);
+      el('div', { className: 'cal-body', style: `height:${y(hi)}`, 'data-hours': String((hi - lo) / 60) }, hours, ...days.map((d) => column(d, y, lo, hi, hour, ask))));
+  }
+  // the week fills the window down to the player: an hour as tall as fits, 34 to 72 pixels (on a window too small for
+  // that the page scrolls as a whole), and each block shows what fits on it
+  function fitWeek() {
+    const cal = box.querySelector('.cal.fill'), body = cal?.querySelector('.cal-body');
+    if (!body) return;
+    const px = (x, k) => parseFloat(getComputedStyle(x)[k]) || 0;
+    let top = 0;   // (where it starts on the page, whatever's moving in)
+    for (let x = body; x; x = x.offsetParent) top += x.offsetTop;
+    const room = innerHeight - top - px(document.body, 'paddingBottom') - px(box.closest('main') || box, 'paddingBottom');
+    fitHour = Math.min(72, Math.max(34, Math.floor((room / +body.dataset.hours) * 10) / 10));
+    cal.style.setProperty('--hour', `${fitHour}px`);
+    for (const b of cal.querySelectorAll('.cal-b')) {
+      b.classList.remove('bare', 'tiny', 'small', 'tall');
+      const s = sizeOf(+b.dataset.min, fitHour);
+      if (s) b.classList.add(s);
+    }
   }
   // a day's head: the day, and its Day of the rotation (click it to put the weeks right) or that there's no school
   function head(d) {
@@ -162,30 +186,34 @@ if (f && p && D && box) {
     for (const it of d.items.filter((i) => i.at == null && i.check)) chips.push(el('button', { type: 'button', className: `cal-chip mine${it.done ? ' done' : ''}`, title: it.name, onclick: (e) => show(d, it, e.currentTarget) }, el('span', {}, short(it))));
     return el('div', { className: `cal-ad${d.today ? ' today' : ''}` }, chips);
   }
-  function column(d, y, lo, hi) {
+  function column(d, y, lo, hi, hour, ask) {
     const col = el('div', { className: `cal-col${d.today ? ' today' : ''}` });
-    for (const o of lanes(blocksOf(d))) col.append(block(d, o, y));
+    for (const o of lanes(blocksOf(d))) col.append(block(d, o, y, hour, ask === d.key));
     // (now: a line under the blocks, so it never runs through one, and a dot at the edge; the block on now is lit)
-    if (d.today && pl && pl.st.m >= lo && pl.st.m <= hi) col.append(el('div', { className: 'cal-now', style: `top:${y(pl.st.m)}px` }), el('div', { className: 'cal-dot', style: `top:${y(pl.st.m)}px`, title: `Now, ${p.clockAmPm(pl.st.m)}` }));
+    if (d.today && pl && pl.st.m >= lo && pl.st.m <= hi) col.append(el('div', { className: 'cal-now', style: `top:${y(pl.st.m)}` }), el('div', { className: 'cal-dot', style: `top:${y(pl.st.m)}`, title: `Now, ${p.clockAmPm(pl.st.m)}` }));
     return col;
   }
-  // a block: a class in its color, something of yours, or something with set times (a lesson, School). Its name, and its
-  // times when there's room; the rest is on its card
-  function block(d, { it, lane, of }, y) {
-    const kind = kindOf(it);
-    const h = Math.max(4, y(it.end) - y(it.at) - 3), size = h < 34 ? 'small' : h >= 64 ? 'tall' : '';
-    const small = size === 'small';
-    const now = d.today && pl && pl.st.m >= it.at && pl.st.m < it.end;
+  // a block: a class in its color, something of yours, something set (a lesson, School), or a meal or the walk home,
+  // quieter. Its name, and its times when there's room; the rest is on its card. Until Classes says which Day it is,
+  // School asks, since your classes take its place
+  function block(d, { it, lane, of }, y, hour, ask) {
+    const kind = kindOf(it), min = it.end - it.at, size = sizeOf(min, hour);
+    // (School asks even once it's over, and isn't crossed off while it does, so the question reads plainly)
+    const now = d.today && pl && pl.st.m >= it.at && pl.st.m < it.end, asking = ask && SCHOOL.test(it.name) && !!d.date, crossed = it.done || (it.over && !asking);
     const b = el('div', {
-      className: ['cal-b', kind, size, it.done ? 'done' : '', now ? 'now' : ''].filter(Boolean).join(' '),
-      style: `top:${y(it.at)}px;height:${h}px;--lane:${lane};--of:${of}`,
-      role: 'button', tabIndex: 0, 'data-c': colorOf(it, kind) || null,
-      'aria-label': `${it.name}, ${span(it.at, it.end)}${it.where ? `, ${it.where}` : ''}${it.done ? ', checked off' : ''}`,
-      onclick: () => show(d, it, b),
-      onkeydown: (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === b) { e.preventDefault(); show(d, it, b); } },
+      className: ['cal-b', kind, size, crossed ? 'done' : '', now ? 'now' : '', asking ? 'asking' : ''].filter(Boolean).join(' '),
+      style: `top:${y(it.at)};height:max(4px, ${at(min / 60)} - 2px);--lane:${lane};--of:${of}`,
+      role: asking ? 'group' : 'button', tabIndex: asking ? null : 0, 'data-c': colorOf(it, kind) || null, 'data-min': String(min),
+      'aria-label': `${it.name}, ${span(it.at, it.end)}${it.where ? `, ${it.where}` : ''}${it.done ? ', checked off' : crossed ? ', over' : ''}`,
+      onclick: asking ? null : () => show(d, it, b),
+      onkeydown: asking ? null : (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === b) { e.preventDefault(); show(d, it, b); } },
     },
       el('b', {}, short(it)),
-      small ? null : el('small', {}, span(it.at, it.end)));
+      el('small', { className: 'at' }, p.clock(it.at)),
+      el('small', { className: 'span' }, span(it.at, it.end)),
+      asking ? el('div', { className: 'cal-ask' }, el('p', {}, `Which Day is ${fmt(d.date, { weekday: 'long' })}?`),
+        el('div', {}, daysFor(d.date).map((n) => el('button', { type: 'button', className: 'btn', onclick: () => setDay(d.date, n) }, `Day ${n}`))),
+        el('p', { className: 'why' }, 'Pick it and your classes take School’s place.')) : null);
     return b;
   }
   const later = (d) => !d.today && !d.past;
@@ -267,14 +295,18 @@ if (f && p && D && box) {
       el('p', {}, 'Your school’s Days go with the weekdays and the weeks take turns, so the weeks before and after follow.'),
       el('div', { className: 'pop-act' }, daysFor(d.date).map((n) => el('button', { type: 'button', className: `btn${d.rot?.n === n ? ' primary' : ''}`, onclick: () => { closePop(); setDay(d.date, n); } }, `Day ${n}`))));
   }
-  // (until Classes says which Day a date is, the calendar asks, about the first school day showing)
-  function askBanner(dates) {
-    const cl = pl?.plan.classes;
+  // (until Classes says which Day a date is, the calendar asks, about the first school day showing; the week asks on
+  // that day's School)
+  const asked = (dates) => {
+    const cl = pl?.plan.classes, unknown = (d) => p.rotationOf(cl, d)?.n === null && !p.rotationOf(cl, d).off;
     if (!cl || cl.anchors.length || cl.count <= 5) return null;
-    const date = dates.find((d) => p.rotationOf(cl, d)?.n === null && !p.rotationOf(cl, d).off && d.getTime() >= t0()) || dates.find((d) => p.rotationOf(cl, d)?.n === null && !p.rotationOf(cl, d).off);
+    return dates.find((d) => unknown(d) && d.getTime() >= t0()) || dates.find(unknown) || null;
+  };
+  function askBanner(dates) {
+    const date = asked(dates);
     if (!date) return null;
     return el('div', { className: 'sc-ask', role: 'group', 'aria-label': 'Which Day is it' },
-      el('span', {}, el('b', {}, 'Your classes are in. '), `Which Day is ${fmt(date, { weekday: 'long', month: 'short', day: 'numeric' })}?`),
+      el('span', {}, el('b', {}, `Which Day is ${fmt(date, { weekday: 'long', month: 'short', day: 'numeric' })}? `), 'Pick it and your classes take School’s place.'),
       daysFor(date).map((n) => el('button', { type: 'button', className: 'btn', onclick: () => setDay(date, n) }, `Day ${n}`)));
   }
 
@@ -307,14 +339,15 @@ if (f && p && D && box) {
       tomorrow,
     ];
   }
-  // the day in order: classes, your own blocks with a circle to check each off, what has set times, and the night as one
-  // (meals, the walk and free time are left out). What's over is quieter, and what's on now is lit
+  // the day in order: classes, your own blocks with a circle to check each off, what has set times (a lesson, a meal, the
+  // walk home), and the night as one (free time is left out). What's over is quieter, and crossed off unless it was yours
+  // to check off; what's on now is lit
   function agenda(d) {
     const its = [...d.items.filter((it) => it.at == null && it.check), ...blocksOf(d, { day: true })], m = pl.st.m;
     const row = (it) => {
       const now = it.at != null && m >= it.at && m < it.end, over = it.at != null && it.end <= m;
       const sub = it.steps ? it.steps.map(short).join(', ') : it.kind === 'class' && !it.check ? [it.where ? it.where.split(' · ').pop() : '', `until ${p.clock(it.end)}`].filter(Boolean).join(' · ') : it.check ? `${it.min} min` : `until ${p.clockAmPm(it.end)}`;
-      return el('li', { className: ['ag-row', now ? 'now' : '', over && !now ? 'over' : '', it.done ? 'done' : ''].filter(Boolean).join(' '), 'data-c': colorOf(it, kindOf(it)) || null },
+      return el('li', { className: ['ag-row', now ? 'now' : '', over && !now ? 'over' : '', it.done || (over && !it.check) ? 'done' : ''].filter(Boolean).join(' '), 'data-c': colorOf(it, kindOf(it)) || null },
         el('time', {}, it.at == null ? 'Any time' : p.clockAmPm(it.at)),
         el('button', { type: 'button', className: 'ag-name', onclick: (e) => show(d, it, e.currentTarget) }, el('b', {}, it.steps ? 'Night routine' : short(it)), el('small', {}, sub)),
         it.check ? el('button', { type: 'button', className: 'ag-ck', 'aria-pressed': String(!!it.done), 'aria-label': `${it.name}: ${it.done ? 'checked off' : 'not checked off'}`, title: it.done ? 'Checked off. Click to undo' : 'Check it off', onclick: () => mark(d, it, !it.done) }, svg('check')) : el('span', {}));
@@ -343,17 +376,18 @@ if (f && p && D && box) {
     const last = dates7[6], range = `${md(first)} – ${last.getMonth() === first.getMonth() ? last.getDate() : md(last)}${last.getFullYear() === new Date(t0()).getFullYear() ? '' : `, ${last.getFullYear()}`}`;
     const step = (n, label) => el('button', { type: 'button', className: 'sc-step', 'aria-label': label, title: `${label} (${n < 0 ? '←' : '→'})`, onclick: () => go(n) }, n < 0 ? '‹' : '›');
     const days = pl.plan.classes ? dates7.map((x) => p.rotationOf(pl.plan.classes, x)?.n).filter(Boolean) : [];
+    const shown = phone.matches ? [sel] : dates7, ask = asked(shown);
     return [
-      // (the week's name, its dates and Days under it, and the way to the weeks around it and Edit at the side)
-      hero(doc.title, `${range}${days.length > 1 ? ` · Days ${days[0]}–${days.at(-1)}` : days.length ? ` · Day ${days[0]}` : ''}`,
+      // (beside the tabs, so the week has the room: its dates and Days, the way to the weeks around it, and Edit)
+      el('div', { className: 'sc-tools' },
+        el('p', { className: 'sc-range' }, el('b', {}, range), days.length ? el('span', { className: 'days' }, days.length > 1 ? ` · Days ${days[0]}–${days.at(-1)}` : ` · Day ${days[0]}`) : null),
         el('div', { className: 'sc-nav' }, step(-1, 'The week before'), shift ? el('button', { type: 'button', className: 'btn pill', onclick: () => { shift = 0; picked = ''; draw(); } }, 'This week') : null, step(1, 'The week after')),
         editBtn(doc.id, 'Edit plan')),
-      askBanner(dates7),
       phone.matches ? el('div', { className: 'sc-days', role: 'tablist', 'aria-label': 'Days' }, dates7.map((d, i) => el('button', {
         type: 'button', role: 'tab', 'aria-selected': String(keys[i] === p.dayKey(sel)), className: keys[i] === pl.st.key ? 'today' : '',
         title: fmt(d, { weekday: 'long', month: 'long', day: 'numeric' }), onclick: () => { picked = keys[i]; draw(); },
       }, el('b', {}, fmt(d, { weekday: 'short' })), el('span', {}, String(d.getDate()))))) : null,
-      grid((phone.matches ? [sel] : dates7).map(dayOf)),
+      grid(shown.map(dayOf), { hour: phone.matches ? 60 : fitHour || 52, fill: !phone.matches, ask: ask ? p.dayKey(ask) : '' }),
     ];
   }
   function go(n) { shift += n; picked = ''; draw(); }
@@ -366,7 +400,7 @@ if (f && p && D && box) {
     for (let w = 0; w < Math.ceil(cl.count / 5); w++) {
       const days = [1, 2, 3, 4, 5].map((i) => w * 5 + i).filter((n) => n <= cl.count)
         .map((n) => ({ label: `Day ${n}`, key: `day-${n}`, items: p.classItems(cl, n), dls: [], rot: null, lights: null, today: now?.n === n, past: false }));
-      rows.push(el('div', { className: 'sc-wide' }, grid(days, { fit: true, hour: 60 })));
+      rows.push(el('div', { className: 'sc-wide' }, grid(days, { hour: 60 })));
     }
     // (and the rest of the page: what it says first, Rotation, No school, Colors)
     let skip = false;
@@ -414,7 +448,7 @@ if (f && p && D && box) {
   // ---------- changing a page ----------
   const code = (s) => el('code', {}, s);
   const HELP = {
-    week: () => el('p', { className: 'sc-help' }, 'A section for each day or set of days (', code('## Monday'), ', ', code('## Weekdays'), ', ', code('## Sunday to Thursday nights'), '), and a line for each thing: ', code('- 4:30 Homework · 90 min'), '. Minutes mean you check it off, and a time it ends (', code('- 4:00–5:00 Lesson'), ') something set. After a · a line can also have a link, its days, ', code('from Jan 1'), ', ', code('until Mar 1'), ', ', code('odd weeks'), ' or ', code('first Saturday'), '. ', code('## On game days'), ' makes a switch.'),
+    week: () => el('p', { className: 'sc-help' }, 'A section for each day or set of days (', code('## Monday'), ', ', code('## Weekdays'), ', ', code('## Sunday to Thursday nights'), '), and a line for each thing: ', code('- 4:30 Homework · 90 min'), '. Minutes mean you check it off, and a time it ends (', code('- 4:00–5:00 Lesson'), ', ', code('- 7:00–7:30 Dinner'), ') something set, which crosses itself off once it’s over. After a · a line can also have a link, its days, ', code('from Jan 1'), ', ', code('until Mar 1'), ', ', code('odd weeks'), ' or ', code('first Saturday'), '. ', code('## On game days'), ' makes a switch.'),
     classes: () => el('p', { className: 'sc-help' }, 'A section for each of your school’s days (', code('## Day 1'), ') and a line for each class: ', code('- 9:00–9:50 Biology · Room 204'), '. ', code('## Rotation'), ' says which Day a date is (', code('- Nov 9: Day 1'), '), ', code('## No school'), ' has days off (', code('- Nov 26–27 Thanksgiving'), '), and ', code('## Colors'), ' a color for a class (', code('- Biology: teal'), ').'),
     deadlines: () => el('p', { className: 'sc-help' }, 'A line for each date: ', code('- [ ] Dec 12 Project due'), ', or a few days: ', code('- [ ] Apr 28 – May 1 Trip'), '. A heading with a year (', code('## 2027'), ') is the year for the dates under it.'),
     sleep: () => el('p', { className: 'sc-help' }, 'A table of when it’s lights out from when (', code('| Nov 16 | 12:30 AM |'), '), and a line like ', code('Friday and Saturday nights: up to 30 min later'), '.'),
@@ -478,7 +512,7 @@ if (f && p && D && box) {
     const doc = r.id === 'pages' ? null : docs.find((d) => d.id === want), here = r.id === 'pages' ? 'pages' : doc ? doc.id : 'today';
     const todo = docs.find((d) => d.id === 'to-do' || /^to ?do$/i.test(d.title));
     const tabbed = [ids.week, ids.classes, ids.deadlines, todo?.id].filter(Boolean), rest = docs.filter((d) => !tabbed.includes(d.id));
-    const views = here === 'pages' ? pages(rest)
+    const views = (here === 'pages' ? pages(rest)
       : doc
         ? r.mode === 'edit' ? editor(doc)
           : doc.id === ids.week ? week(doc)
@@ -486,7 +520,9 @@ if (f && p && D && box) {
               : doc.id === ids.deadlines ? deadlines(doc, list)
                 : doc.id === ids.sleep ? sleep(doc, list)
                   : [top(doc.title, editBtn(doc.id)), laidOut(doc, list)]
-        : today(docs);
+        : today(docs)).filter(Boolean);
+    // (a view's tools, the week's, go beside the tabs)
+    const tools = views[0]?.classList.contains('sc-tools') ? views.shift() : null;
     // the tabs: the calendar, the pages that go with it, and Pages for the rest (lit too when one of them is open)
     const tab = (href, label, on) => el('a', { href, className: on ? 'on' : null, 'aria-current': on ? 'page' : null }, label);
     const title = (id) => docs.find((d) => d.id === id)?.title;
@@ -497,12 +533,13 @@ if (f && p && D && box) {
       ids.deadlines ? tab(`#${ids.deadlines}`, title(ids.deadlines), here === ids.deadlines) : null,
       todo ? tab(`#${todo.id}`, todo.title, here === todo.id) : null,
       tab('#pages', 'Pages', here === 'pages' || rest.some((d) => d.id === here)));
-    // (a new page rises in; the same page drawn again, with the clock or a check, is just there, scrolled where it was)
-    const where = `${here}/${r.mode}/${shift}/${picked}`, page = el('section', { className: `sc-page${where !== drawn && f.moving() ? ' rise' : ''}`, 'aria-label': doc ? doc.title : 'Today' }, ...views.filter(Boolean));
-    const again = where === drawn;
+    // (a new page rises in; the same page drawn again, with the clock or a check, is just there)
+    const where = `${here}/${r.mode}/${shift}/${picked}`, page = el('section', { className: `sc-page${where !== drawn && f.moving() ? ' rise' : ''}`, 'aria-label': doc ? doc.title : 'Today' }, ...views);
     drawn = where;
-    box.replaceChildren(el('div', { className: 'sc-top' }, tabs), page);
-    for (const sc of page.querySelectorAll('.cal-scroll')) sc.scrollTop = again && kept.at === where ? kept.top : +sc.dataset.top;
+    box.replaceChildren(el('div', { className: 'sc-top' }, tabs, tools), page);
+    // (the week, fitted to the window)
+    box.closest('main')?.classList.toggle('filled', !!page.querySelector('.cal.fill'));
+    fitWeek();
     // (a link to a page that isn't here any more shows Today, and says so in the address)
     if (!doc && r.id && r.id !== 'today' && r.id !== 'pages') history.replaceState(null, '', '#today');
   }
@@ -525,5 +562,10 @@ if (f && p && D && box) {
     if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); } else if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
   });
   addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && !e.target.closest?.('.cal-b, .cal-chip, .cal-rot, .ag-name')) closePop(); }, true);
-  addEventListener('resize', closePop);
+  // (the week fits again when the window changes, when the player comes or goes, and when a look or the fonts load)
+  let sized = 0;
+  addEventListener('resize', () => { closePop(); cancelAnimationFrame(sized); sized = requestAnimationFrame(fitWeek); });
+  new MutationObserver(() => fitWeek()).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
+  document.addEventListener('load', (e) => { if (e.target?.tagName === 'LINK') fitWeek(); }, true);
+  document.fonts?.ready.then(() => fitWeek());
 }

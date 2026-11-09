@@ -36,6 +36,14 @@
     .sc-step { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; font: inherit; font-size: 1.3rem; line-height: 1; color: var(--muted); cursor: pointer; background: none; border: 1px solid var(--line); border-radius: 999px; transition: color var(--t1), background var(--t1); }
     .sc-step:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
 
+    /* the week: its tools beside the tabs (its dates and Days, the weeks around it, Edit), and the calendar down to the
+       player, so it all shows with nothing to scroll */
+    .sc-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-left: auto; }
+    .sc-range { margin: 0 6px 0 0; color: var(--muted); font-size: .98rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .sc-range b { color: var(--text); font-size: 1.2rem; font-weight: 650; letter-spacing: -0.01em; }
+    main.sc-main.filled { padding-top: 18px; padding-bottom: 8px; }
+    main.sc-main.filled .sc-top { margin-bottom: 18px; }
+
     /* "which Day is it": asked once, in place */
     .sc-ask { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; margin: -6px 0 24px; font-size: 1rem; color: var(--muted); }
     .sc-ask b { color: var(--text); font-weight: 600; }
@@ -44,7 +52,6 @@
     /* the calendar: the days across, the hours down, and only what matters on it */
     .cal { --axis: 56px; position: relative; }
     .cal-head, .cal-all, .cal-body { display: grid; grid-template-columns: var(--axis) repeat(var(--cols), minmax(0, 1fr)); column-gap: 8px; }
-    .cal-head, .cal-all { scrollbar-gutter: stable; overflow: hidden; }
     .cal-dh { display: flex; align-items: baseline; gap: 6px; min-width: 0; padding: 0 2px 10px; }
     .cal-dh .wd { color: var(--muted); font-size: .76rem; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
     .cal-dh .dn { font-size: 1.3rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -63,28 +70,46 @@
     .cal-chip.off { --c: var(--muted); color: var(--muted); cursor: default; }
     .cal-chip.done { opacity: .5; }
     .cal-chip.done > span { text-decoration: line-through; }
-    .cal-scroll { max-height: clamp(380px, calc(100vh - 290px), 1500px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
-    .cal.fit .cal-scroll { max-height: none; }
     .cal-body { position: relative; }
     .cal-hours { position: relative; }
     .cal-hours span { position: absolute; right: 6px; color: var(--muted); font-size: .74rem; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; transform: translateY(-50%); }
     .cal-hours span.first { transform: none; }
-    .cal-col { position: relative; min-width: 0; background-image: linear-gradient(to bottom, color-mix(in srgb, var(--line) 75%, transparent) 1px, transparent 1px); background-size: 100% var(--hour); }
+    .cal-col { position: relative; min-width: 0; background-image: linear-gradient(to bottom, color-mix(in srgb, var(--line) 55%, transparent) 1px, transparent 1px); background-size: 100% var(--hour); }
     .cal-col.today { background-color: color-mix(in srgb, var(--accent) 3%, transparent); border-radius: 10px; }
-    .cal-now { position: absolute; left: 0; right: 0; z-index: 0; height: 2px; margin-top: -1px; pointer-events: none; background: #f0524b; }
-    .cal-dot { position: absolute; left: -6px; z-index: 5; width: 11px; height: 11px; margin-top: -5.5px; box-sizing: border-box; background: #f0524b; border: 2px solid var(--bg); border-radius: 50%; }
+    /* (now, in the theme's color) */
+    .cal-now { position: absolute; left: 0; right: 0; z-index: 0; height: 2px; margin-top: -1px; pointer-events: none; background: var(--accent); }
+    .cal-dot { position: absolute; left: -6px; z-index: 5; width: 11px; height: 11px; margin-top: -5.5px; box-sizing: border-box; background: var(--accent); border: 2px solid var(--bg); border-radius: 50%; }
 
-    /* a block: a class in its color, yours, or something with set times; its name, and its times when there's room */
-    .cal-b { --c: color-mix(in srgb, var(--text) 50%, transparent); position: absolute; z-index: 1; left: calc((100%) * var(--lane) / var(--of)); width: calc(100% / var(--of) - 3px); box-sizing: border-box; padding: 6px 9px; overflow: hidden; font-size: .82rem; line-height: 1.25; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c) 22%, var(--bg)); border-radius: 9px; transition: background var(--t1), box-shadow var(--t1); }
-    .cal-b:hover, .cal-b:focus-visible { z-index: 3; background: color-mix(in srgb, var(--c) 32%, var(--bg)); outline: none; }
+    /* a block: a class in its color, yours, or something set; a meal or the walk home, quieter. What's over is crossed
+       off. Its name, and its times when there's room: small has its name and start on one line, tiny just its name */
+    .cal-b { --c: color-mix(in srgb, var(--text) 50%, transparent); position: absolute; z-index: 1; left: calc(100% * var(--lane) / var(--of)); width: calc(100% / var(--of) - 3px); box-sizing: border-box; padding: 6px 9px; overflow: hidden; font-size: .82rem; line-height: 1.25; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c) 20%, var(--bg)); border-radius: 8px; transition: background var(--t1), box-shadow var(--t1), opacity var(--t1); }
+    .cal-b:hover, .cal-b:focus-visible { z-index: 3; background: color-mix(in srgb, var(--c) 30%, var(--bg)); outline: none; }
     .cal-b > b { display: block; overflow: hidden; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
-    .cal-b > small { display: block; overflow: hidden; margin-top: 2px; color: color-mix(in srgb, var(--text) 68%, transparent); font-size: .74rem; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-    .cal-b.small { padding-top: 3px; padding-bottom: 0; font-size: .78rem; }
+    .cal-b > small { display: block; overflow: hidden; margin-top: 2px; color: color-mix(in srgb, var(--text) 62%, transparent); font-size: .74rem; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+    .cal-b > small.at { display: none; }
+    .cal-b.small, .cal-b.tiny { display: flex; align-items: center; gap: 6px; padding: 0 8px; }
+    .cal-b.small > b, .cal-b.tiny > b { flex: 0 1 auto; min-width: 0; }
+    .cal-b.small > small.at { display: block; flex: none; margin: 0; }
+    .cal-b.small > small.span, .cal-b.tiny > small { display: none; }
+    .cal-b.tiny { font-size: .72rem; line-height: 1; border-radius: 5px; }
+    .cal-b.bare { padding: 0; border-radius: 4px; }
+    .cal-b.bare > * { display: none; }
     .cal-b.tall > b { display: -webkit-box; white-space: normal; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .cal-b.mine { --c: color-mix(in srgb, var(--text) 55%, transparent); }
-    .cal-b.done { opacity: .5; }
+    .cal-b.quiet { color: color-mix(in srgb, var(--text) 75%, transparent); background: color-mix(in srgb, var(--text) 5%, var(--bg)); }
+    .cal-b.quiet:hover, .cal-b.quiet:focus-visible { background: color-mix(in srgb, var(--text) 10%, var(--bg)); }
+    .cal-b.quiet > b { font-weight: 500; }
+    .cal-b.done { opacity: .42; }
     .cal-b.done > b { text-decoration: line-through; }
-    .cal-b.now { z-index: 2; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--c) 80%, var(--text)); }
+    .cal-b.now { z-index: 2; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent); }
+    /* (School, until Classes says which Day it is: pick it here) */
+    .cal-b.asking { cursor: default; }
+    .cal-b.asking:hover { background: color-mix(in srgb, var(--c) 20%, var(--bg)); }
+    .cal-ask { display: grid; gap: 8px; margin-top: 14px; }
+    .cal-ask p { margin: 0; font-size: .82rem; font-weight: 600; line-height: 1.35; white-space: normal; }
+    .cal-ask p.why { color: color-mix(in srgb, var(--text) 62%, transparent); font-size: .76rem; font-weight: 400; }
+    .cal-ask div { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cal-ask .btn { padding: 5px 12px; font-size: .8rem; border-radius: 999px; }
     [data-c="teal"] { --c: #2bb3a3; } [data-c="blue"] { --c: #4b8fdc; } [data-c="violet"] { --c: #8f74e0; }
     [data-c="purple"] { --c: #a45cc7; } [data-c="pink"] { --c: #d965a8; } [data-c="red"] { --c: #d45a50; }
     [data-c="orange"] { --c: #e38a3a; } [data-c="gold"] { --c: #d1aa36; } [data-c="olive"] { --c: #93a83c; }
@@ -220,8 +245,9 @@
       .sc-hero { margin-bottom: 18px; }
       .sc-say { font-size: 1.2rem; }
       .cal { --axis: 44px; }
-      .cal-scroll { max-height: none; }
       .cal-b { font-size: .88rem; }
+      .sc-tools { margin-left: 0; }
+      .sc-range .days { display: none; }
       .sc-wide { overflow-x: auto; }
       .sc-wide .cal { min-width: 620px; }
       .ag-row { grid-template-columns: 5.4em minmax(0, 1fr) 30px; gap: 10px; padding-left: 12px; }
