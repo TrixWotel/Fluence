@@ -1,10 +1,12 @@
-// Schedule: your plan as a calendar, in a space of its own in the bar. Week lays the week out by the hour the way a school's
-// schedule does: your classes on the Day they're on (from Classes), your own blocks with a circle to check each one off,
-// deadlines at the top of their day, lights out, and a line for now. Today is the same for the day, with what's on now and
-// how to start it. Classes, Deadlines, Sleep and the rest are pages: Markdown you can change (Edit), kept as you type.
+// Schedule: your plan, a space of its own in the bar, laid out like Music: tabs at the top, a view's name big under them,
+// and nothing boxed in. Week is the week by the hour, the way a school's schedule shows it: your classes on the Day they're
+// on (from Classes), your own blocks, and what has set times, with deadlines at the top of their day and a line for now
+// (meals, the walk, free time and the night stay out of it). Today is what's on now, how to start it, and the day in order
+// with a circle to check each thing off. Classes, Deadlines, Sleep and the rest are pages: Markdown you can change (Edit),
+// kept as you type.
 // They're in this browser ('fluentio.schedule', kit/plan.js) and go with your progress to GitHub (kit/progress.js), so every
 // browser has the same plan, and Home and the bar know it too.
-// Links: #week (the calendar), #today, #<page> (#classes, #deadlines, …), #<page>/edit to change one, #new for a new page.
+// Links: #week (the calendar), #today, #pages, #<page> (#classes, #deadlines, …), #<page>/edit to change one, #new.
 import { blocks, render, esc, linkParts } from '../station/md.js';
 
 const f = window.fluentio, p = window.fluentioPlan, D = window.fluentioPlanDay, box = document.getElementById('sc');
@@ -51,8 +53,10 @@ if (f && p && D && box) {
     p.saveDocs(s, write);
     draw();
   }
-  const top = (title, ...more) => el('div', { className: 'sc-top' }, el('h2', {}, title), el('span', { className: 'grow' }), ...more);
-  const editBtn = (id, label = 'Edit') => el('a', { className: 'btn', href: `#${id}/edit` }, label);
+  // a view's name, big, with a line under it (as Music has), and what it can do at the side
+  const hero = (title, sub, ...more) => el('header', { className: 'sc-hero' }, el('div', {}, el('h1', {}, title), sub ? el('p', {}, sub) : null), el('span', { className: 'grow' }), ...more);
+  const top = (title, ...more) => hero(title, '', ...more);
+  const editBtn = (id, label = 'Edit') => el('a', { className: 'btn pill', href: `#${id}/edit` }, label);
 
   // ---------- the calendar ----------
   const ap = (m) => (Math.floor(m / 60) % 24 < 12 ? 'AM' : 'PM');
@@ -74,7 +78,8 @@ if (f && p && D && box) {
     }
   }
   const hash = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
-  const colorOf = (it, kind) => (it.kind === 'class' ? it.color || colors[key(it.cls || it.name)] || '' : kind === 'event' ? colors[key(it.name)] || PALETTE[hash(key(it.name)) % PALETTE.length] : '');
+  const colorOf = (it, kind) => (it.kind === 'class' ? it.color || colors[key(it.cls || it.name)] || '' : kind === 'event' ? (/^school\b/i.test(it.name) ? 'gray' : colors[key(it.name)] || PALETTE[hash(key(it.name)) % PALETTE.length]) : '');
+  const kindOf = (it) => (it.check ? 'mine' : it.kind === 'class' ? 'class' : it.set && !it.steps ? 'event' : 'routine');
 
   // what a day holds: its things (done or not), its Day of the rotation, lights out and what's due
   function dayOf(date) {
@@ -83,16 +88,19 @@ if (f && p && D && box) {
     for (const it of items) it.done = it.check && !!rec.done?.[it.id];
     return { date, key: k, items, rot: p.rotationOf(pl.plan.classes, date), lights: p.lightsOut(pl.plan, date), dls: pl.plan.deadlines.filter((x) => x.t <= t && t <= x.end), today: k === pl.st.key, past: k < pl.st.key };
   }
-  // (the night's steps are one block)
-  function blocksOf(d) {
+  // what's shown: classes, what you check off, and what has set times (a lesson, School). Meals, the walk and free time
+  // aren't; in the week neither is the night or anything under a quarter of an hour, and Today has the night as one
+  const worth = (it) => it.check || it.kind === 'class' || it.set;
+  function blocksOf(d, { day = false } = {}) {
     const out = [];
     for (const it of d.items) {
       if (it.at == null) continue;
-      const last = out.at(-1);
       if (it.night && !it.check) {
+        if (!day) continue;
+        const last = out.at(-1);
         if (last?.steps && it.at <= last.end + 1) { last.steps.push(it); last.end = Math.max(last.end, it.end); continue; }
         out.push({ ...it, id: `night|${it.id}`, name: 'Night routine', steps: [it] });
-      } else out.push(it);
+      } else if (worth(it) && (day || it.end - it.at >= 15)) out.push(it);
     }
     return out;
   }
@@ -114,26 +122,23 @@ if (f && p && D && box) {
     close();
     return out;
   }
-  // the hours shown: from the hour of the first thing to just past lights out (or the last thing)
+  // the hours shown: from the hour of the first thing shown to the hour after the last
   function bounds(days) {
     let lo = Infinity, hi = -Infinity;
-    for (const d of days) {
-      for (const it of d.items) if (it.at != null) { lo = Math.min(lo, it.at); hi = Math.max(hi, it.end ?? it.at + 30); }
-      if (d.lights) hi = Math.max(hi, d.lights.at + d.lights.later + 30);
-    }
+    for (const d of days) for (const it of blocksOf(d)) { lo = Math.min(lo, it.at); hi = Math.max(hi, it.end); }
     if (!Number.isFinite(lo)) { lo = 8 * 60; hi = 20 * 60; }
     lo = Math.floor(lo / 60) * 60;
     return { lo, hi: Math.max(lo + 4 * 60, Math.ceil(hi / 60) * 60) };
   }
-  // (an hour is 64 pixels in the week, more for a day on its own, less for the school's Days)
-  function grid(days, { fit = false, hour = 64 } = {}) {
+  // (an hour is 60 pixels)
+  function grid(days, { fit = false, hour = 60 } = {}) {
     const { lo, hi } = bounds(days), y = (m) => ((m - lo) / 60) * hour;
     const hours = el('div', { className: 'cal-hours', 'aria-hidden': 'true' });
-    for (let m = lo + 60; m < hi; m += 60) hours.append(el('span', { style: `top:${y(m)}px` }, hourName(m)));
-    const allDay = days.some((d) => d.dls.length || d.rot?.off || d.items.some((it) => it.at == null));
+    for (let m = lo; m < hi; m += 60) hours.append(el('span', { className: m === lo ? 'first' : null, style: `top:${y(m)}px` }, hourName(m)));
+    const allDay = days.some((d) => d.dls.length || d.rot?.off || d.items.some((it) => it.at == null && it.check));
     const sc = el('div', { className: 'cal-scroll' }, el('div', { className: 'cal-body', style: `height:${y(hi)}px` }, hours, ...days.map((d) => column(d, y, lo, hi))));
     // (where it opens: a little before now on today, or else at the first thing of the morning)
-    const today = days.find((d) => d.today && d.date), first = Math.min(...days.flatMap((d) => d.items.filter((it) => it.at != null && !it.night).map((it) => it.at)), hi);
+    const today = days.find((d) => d.today && d.date), first = Math.min(...days.flatMap((d) => blocksOf(d).map((it) => it.at)), hi);
     sc.dataset.top = String(Math.max(0, today && pl.st.m >= lo && pl.st.m <= hi ? y(pl.st.m) - 150 : y(Math.max(lo, first - 30))));
     sc.addEventListener('scroll', () => { closePop(); kept = { at: drawn, top: sc.scrollTop }; }, { passive: true });
     return el('div', { className: `cal${fit ? ' fit' : ''}`, style: `--cols:${days.length};--hour:${hour}px` },
@@ -149,60 +154,41 @@ if (f && p && D && box) {
       d.date && rot?.n ? el('button', { type: 'button', className: 'cal-rot', title: `Day ${rot.n} of your school’s days. Not right? Click to change it.`, onclick: (e) => askDay(d, e.currentTarget) }, `Day ${rot.n}`)
         : rot?.off ? el('span', { className: 'cal-off', title: rot.off }, 'No school') : null);
   }
-  // what's due that day, a day off, and what's on the plan with no time
+  // what's due that day, a day off, and something of yours with no time
   function dueOf(d) {
     const chips = [];
     if (d.rot?.off) chips.push(el('span', { className: 'cal-chip off', title: d.rot.off }, el('span', {}, d.rot.off)));
     for (const x of d.dls) chips.push(el('button', { type: 'button', className: `cal-chip dl${x.done ? ' done' : ''}`, title: x.what, onclick: (e) => showDue(x, e.currentTarget) }, el('span', {}, x.what)));
-    for (const it of d.items.filter((i) => i.at == null)) {
-      chips.push(el('button', { type: 'button', className: `cal-chip ${it.check ? 'mine' : 'info'}${it.done ? ' done' : ''}`, title: it.name, onclick: (e) => show(d, it, e.currentTarget) },
-        it.check ? el('i', { className: 'ring', 'aria-hidden': 'true' }) : null, el('span', {}, short(it))));
-    }
+    for (const it of d.items.filter((i) => i.at == null && i.check)) chips.push(el('button', { type: 'button', className: `cal-chip mine${it.done ? ' done' : ''}`, title: it.name, onclick: (e) => show(d, it, e.currentTarget) }, el('span', {}, short(it))));
     return el('div', { className: `cal-ad${d.today ? ' today' : ''}` }, chips);
   }
   function column(d, y, lo, hi) {
     const col = el('div', { className: `cal-col${d.today ? ' today' : ''}` });
-    // (lights out: a line, and the night after it shaded)
-    if (d.lights) {
-      const at = d.lights.at;
-      if (at < hi) col.append(el('div', { className: 'cal-sleep', style: `top:${y(at)}px;height:${y(hi) - y(at)}px` }));
-      col.append(el('div', { className: 'cal-lights', style: `top:${y(at)}px`, title: `Lights out by ${p.lightsWords(d.lights)}` }, el('span', {}, `Lights out ${p.clock(at)}`)));
-    }
     for (const o of lanes(blocksOf(d))) col.append(block(d, o, y));
     // (now: a line under the blocks, so it never runs through one, and a dot at the edge; the block on now is lit)
     if (d.today && pl && pl.st.m >= lo && pl.st.m <= hi) col.append(el('div', { className: 'cal-now', style: `top:${y(pl.st.m)}px` }), el('div', { className: 'cal-dot', style: `top:${y(pl.st.m)}px`, title: `Now, ${p.clockAmPm(pl.st.m)}` }));
     return col;
   }
-  // a block: a class (in its color), something of yours to check off (with its circle), something with set times (a
-  // lesson, practice), or the rest of the day (meals, the walk, free time, the night)
+  // a block: a class in its color, something of yours, or something with set times (a lesson, School). Its name, and its
+  // times when there's room; the rest is on its card
   function block(d, { it, lane, of }, y) {
-    const kind = it.check ? 'mine' : it.kind === 'class' ? 'class' : it.set && !it.steps ? 'event' : 'routine';
-    const h = Math.max(4, y(it.end) - y(it.at)), size = h < 15 ? 'tiny micro' : h < 22 ? 'tiny' : h < 40 ? 'small' : h >= 64 ? 'tall' : '';
-    const small = size && size !== 'tall';
+    const kind = kindOf(it);
+    const h = Math.max(4, y(it.end) - y(it.at) - 3), size = h < 34 ? 'small' : h >= 64 ? 'tall' : '';
+    const small = size === 'small';
     const now = d.today && pl && pl.st.m >= it.at && pl.st.m < it.end;
     const b = el('div', {
       className: ['cal-b', kind, size, it.done ? 'done' : '', now ? 'now' : ''].filter(Boolean).join(' '),
       style: `top:${y(it.at)}px;height:${h}px;--lane:${lane};--of:${of}`,
       role: 'button', tabIndex: 0, 'data-c': colorOf(it, kind) || null,
       'aria-label': `${it.name}, ${span(it.at, it.end)}${it.where ? `, ${it.where}` : ''}${it.done ? ', checked off' : ''}`,
-      onclick: (e) => { if (!e.target.closest('.cal-ck')) show(d, it, b); },
+      onclick: () => show(d, it, b),
       onkeydown: (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === b) { e.preventDefault(); show(d, it, b); } },
     },
-      el('b', {}, small ? el('time', {}, p.clock(it.at)) : null, small ? ' ' : null, short(it)),
-      small ? null : el('small', {}, span(it.at, it.end)),
-      // (where comes first: the room, then who)
-      small || h < 54 ? null : it.where ? el('small', {}, it.where.split(' · ').reverse().join(' · ')) : it.steps ? el('small', {}, it.steps.map(short).join(', ')) : null,
-      it.check ? check(d, it) : null);
+      el('b', {}, short(it)),
+      small ? null : el('small', {}, span(it.at, it.end)));
     return b;
   }
   const later = (d) => !d.today && !d.past;
-  function check(d, it) {
-    return el('button', {
-      type: 'button', className: 'cal-ck', 'aria-pressed': String(!!it.done), disabled: later(d),
-      'aria-label': `${it.name}: ${it.done ? 'checked off' : 'not checked off'}`, title: later(d) ? 'Not yet' : it.done ? 'Checked off. Click to undo' : 'Check it off',
-      onclick: (e) => { e.stopPropagation(); mark(d, it, !it.done); },
-    }, svg('check'));
-  }
   // checking something off on its day (today's the way Home does it)
   function mark(d, it, on) {
     if (d.today) { D.markDone(it, on); return; }
@@ -214,6 +200,7 @@ if (f && p && D && box) {
   // ---------- a card about a block, a deadline, or a Day ----------
   function closePop() { pop?.remove(); pop = null; }
   function popAt(anchor, title, ...kids) {
+    const r = anchor.getBoundingClientRect();   // (before the card it may be in goes)
     closePop();
     pop = el('div', { className: 'cal-pop', role: 'dialog', 'aria-label': title },
       el('div', { className: 'pop-top' }, el('b', {}, title), el('button', { type: 'button', className: 'pop-x', 'aria-label': 'Close', title: 'Close', onclick: closePop }, svg('x'))), ...kids);
@@ -221,7 +208,7 @@ if (f && p && D && box) {
     // (beside what was clicked, on the side there's room; at the foot of the screen on a phone)
     if (phone.matches) pop.classList.add('sheet');
     else {
-      const r = anchor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+      const w = pop.offsetWidth, h = pop.offsetHeight;
       let x = r.right + 10;
       if (x + w > innerWidth - 10) x = r.left - w - 10;
       if (x < 10) x = Math.min(Math.max(10, r.left), innerWidth - w - 10);
@@ -291,30 +278,48 @@ if (f && p && D && box) {
       daysFor(date).map((n) => el('button', { type: 'button', className: 'btn', onclick: () => setDay(date, n) }, `Day ${n}`)));
   }
 
-  // ---------- Today ----------
+  // ---------- Today: what's on now, then the day in order ----------
   function today(docs) {
     if (!pl) return empty(docs);
     const st = pl.st, w = D.words(pl), it = st.now?.check && !st.now.done ? st.now : null, d = dayOf(st.date);
     if (p.remember(pl.state, st)) p.save(pl.state, write);
-    const card = el('section', { className: 'sc-card', 'aria-label': 'Now' },
-      el('p', { className: 'sc-now' }, w ? `${w.say}${w.ask && !it ? ` ${w.ask}` : ''}` : st.items.length ? 'That’s all on your plan today.' : 'Nothing on your plan today.'),
-      it ? el('div', { className: 'sc-act' },
-        it.place
-          ? el('a', { className: 'btn primary', href: D.hrefOf(it), target: it.place.away ? '_blank' : null, rel: it.place.away ? 'noopener' : null }, `Start ${short(it)}`)
-          : el('button', { type: 'button', className: 'btn primary', onclick: () => D.markDone(it, true) }, `Check off ${short(it)}`),
-        it.how ? el('p', { className: 'sc-how' }, el('b', {}, `${it.how.name}:`), ` ${it.how.text}`) : null) : null,
-      el('div', { className: 'plan-day' }, ...D.panel(pl).filter((n) => n && !n.classList.contains('pd-list'))));
+    const said = d.rot?.n ? `Day ${d.rot.n}` : d.rot?.off || '';
+    const meta = [st.of ? `${st.done} of ${st.of} checked off` : '', st.streak ? `${st.streak} ${st.streak === 1 ? 'day' : 'days'} in a row` : '', st.lights ? `lights out by ${p.lightsWords(st.lights)}` : ''].filter(Boolean).join(' · ');
     // (in the evening, what tomorrow holds)
+    let tomorrow = null;
     if (st.m >= 18 * 60) {
       const next = addDays(st.date, 1), its = p.day(pl.plan, next, p.switchesOn(pl.plan, pl.state, next)).filter((x) => x.check), rot = p.rotationOf(pl.plan.classes, next);
-      if (its.length) card.append(el('p', { className: 'sc-later' }, el('b', {}, `Tomorrow, ${fmt(next, { weekday: 'long' })}${rot?.n ? ` (Day ${rot.n})` : ''}: `), its.map((x) => `${short(x)}${x.at != null ? ` ${p.clock(x.at)}` : ''}`).join(', '), '.'));
+      if (its.length) tomorrow = el('p', { className: 'sc-later' }, el('b', {}, `Tomorrow, ${fmt(next, { weekday: 'long' })}${rot?.n ? ` (Day ${rot.n})` : ''}: `), its.map((x) => `${short(x)}${x.at != null ? ` ${p.clock(x.at)}` : ''}`).join(', '), '.');
     }
-    const said = d.rot?.n ? `Day ${d.rot.n}` : d.rot?.off || '';
     return [
-      top('Today', el('span', { className: 'sc-range' }, `${fmt(st.date, { weekday: 'long', month: 'long', day: 'numeric' })}${said ? ` · ${said}` : ''}`)),
+      hero('Today', `${fmt(st.date, { weekday: 'long', month: 'long', day: 'numeric' })}${said ? ` · ${said}` : ''}`),
       askBanner(Array.from({ length: 7 }, (_, i) => addDays(st.date, i))),
-      el('div', { className: 'sc-today' }, card, grid([d], { hour: 84 })),
+      el('section', { className: 'sc-now', 'aria-label': 'Now' },
+        el('p', { className: 'sc-say' }, w ? `${w.say}${w.ask && !it ? ` ${w.ask}` : ''}` : st.items.length ? 'That’s all on your plan today.' : 'Nothing on your plan today.'),
+        it ? el('div', { className: 'sc-actions' },
+          it.place
+            ? el('a', { className: 'btn primary pill', href: D.hrefOf(it), target: it.place.away ? '_blank' : null, rel: it.place.away ? 'noopener' : null }, `Start ${short(it)}`)
+            : el('button', { type: 'button', className: 'btn primary pill', onclick: () => D.markDone(it, true) }, `Check off ${short(it)}`),
+          it.how ? el('p', { className: 'sc-how' }, el('b', {}, `${it.how.name}:`), ` ${it.how.text}`) : null) : null,
+        meta ? el('p', { className: 'sc-meta' }, meta[0].toUpperCase() + meta.slice(1)) : null),
+      agenda(d),
+      st.switches.length ? el('div', { className: 'sc-switches', role: 'group', 'aria-label': 'Changes to your plan' }, st.switches.map((s) => el('button', { type: 'button', 'aria-pressed': String(s.on), title: s.scope === 'week' ? `${s.name}, for this week` : `${s.name}, for today`, onclick: () => D.flipSwitch(s, !s.on) }, s.name))) : null,
+      tomorrow,
     ];
+  }
+  // the day in order: classes, your own blocks with a circle to check each off, what has set times, and the night as one
+  // (meals, the walk and free time are left out). What's over is quieter, and what's on now is lit
+  function agenda(d) {
+    const its = [...d.items.filter((it) => it.at == null && it.check), ...blocksOf(d, { day: true })], m = pl.st.m;
+    const row = (it) => {
+      const now = it.at != null && m >= it.at && m < it.end, over = it.at != null && it.end <= m;
+      const sub = it.steps ? it.steps.map(short).join(', ') : it.kind === 'class' && !it.check ? [it.where ? it.where.split(' · ').pop() : '', `until ${p.clock(it.end)}`].filter(Boolean).join(' · ') : it.check ? `${it.min} min` : `until ${p.clockAmPm(it.end)}`;
+      return el('li', { className: ['ag-row', now ? 'now' : '', over && !now ? 'over' : '', it.done ? 'done' : ''].filter(Boolean).join(' '), 'data-c': colorOf(it, kindOf(it)) || null },
+        el('time', {}, it.at == null ? 'Any time' : p.clockAmPm(it.at)),
+        el('button', { type: 'button', className: 'ag-name', onclick: (e) => show(d, it, e.currentTarget) }, el('b', {}, it.steps ? 'Night routine' : short(it)), el('small', {}, sub)),
+        it.check ? el('button', { type: 'button', className: 'ag-ck', 'aria-pressed': String(!!it.done), 'aria-label': `${it.name}: ${it.done ? 'checked off' : 'not checked off'}`, title: it.done ? 'Checked off. Click to undo' : 'Check it off', onclick: () => mark(d, it, !it.done) }, svg('check')) : el('span', {}));
+    };
+    return its.length ? el('ol', { className: 'sc-agenda', 'aria-label': 'Today in order' }, its.map(row)) : null;
   }
   function empty(docs) {
     const start = () => {
@@ -337,10 +342,12 @@ if (f && p && D && box) {
     const sel = dates7[keys.indexOf(picked)] || (shift === 0 ? pl.st.date : dates7[1]);
     const last = dates7[6], range = `${md(first)} – ${last.getMonth() === first.getMonth() ? last.getDate() : md(last)}${last.getFullYear() === new Date(t0()).getFullYear() ? '' : `, ${last.getFullYear()}`}`;
     const step = (n, label) => el('button', { type: 'button', className: 'sc-step', 'aria-label': label, title: `${label} (${n < 0 ? '←' : '→'})`, onclick: () => go(n) }, n < 0 ? '‹' : '›');
+    const days = pl.plan.classes ? dates7.map((x) => p.rotationOf(pl.plan.classes, x)?.n).filter(Boolean) : [];
     return [
-      // (the week's name, then the way to the week before and after, and Edit at the end)
-      el('div', { className: 'sc-top' }, el('h2', {}, doc.title), step(-1, 'The week before'), el('span', { className: 'sc-range' }, range), step(1, 'The week after'),
-        shift ? el('button', { type: 'button', className: 'btn', onclick: () => { shift = 0; picked = ''; draw(); } }, 'This week') : null, el('span', { className: 'grow' }), editBtn(doc.id, 'Edit plan')),
+      // (the week's name, its dates and Days under it, and the way to the weeks around it and Edit at the side)
+      hero(doc.title, `${range}${days.length > 1 ? ` · Days ${days[0]}–${days.at(-1)}` : days.length ? ` · Day ${days[0]}` : ''}`,
+        el('div', { className: 'sc-nav' }, step(-1, 'The week before'), shift ? el('button', { type: 'button', className: 'btn pill', onclick: () => { shift = 0; picked = ''; draw(); } }, 'This week') : null, step(1, 'The week after')),
+        editBtn(doc.id, 'Edit plan')),
       askBanner(dates7),
       phone.matches ? el('div', { className: 'sc-days', role: 'tablist', 'aria-label': 'Days' }, dates7.map((d, i) => el('button', {
         type: 'button', role: 'tab', 'aria-selected': String(keys[i] === p.dayKey(sel)), className: keys[i] === pl.st.key ? 'today' : '',
@@ -366,8 +373,7 @@ if (f && p && D && box) {
     const rest = doc.text.split('\n').filter((l) => { const h = /^#{1,6}\s+(.+?)\s*#*\s*$/.exec(l); if (h) skip = /^day\s*\d{1,2}$/i.test(h[1].replace(/[*_`]/g, '').trim()); return !skip; }).join('\n');
     const notes = laidOut({ ...doc, text: rest }, docs);
     return [
-      top(doc.title, editBtn(doc.id)),
-      now?.n ? el('p', { className: 'sc-tonight' }, 'Today is ', el('b', {}, `Day ${now.n}`), '.') : now?.off ? el('p', { className: 'sc-tonight' }, `No school today: ${now.off}.`) : null,
+      hero(doc.title, now?.n ? `Today is Day ${now.n}` : now?.off ? `No school today: ${now.off}` : `Your school’s ${cl.count} days`, editBtn(doc.id)),
       askBanner(Array.from({ length: 14 }, (_, i) => addDays(pl.st.date, i))),
       ...rows,
       notes.textContent.trim() ? notes : null,
@@ -384,14 +390,10 @@ if (f && p && D && box) {
         el('time', {}, dates(x)),
         el('span', { className: 'what' }, x.what), el('small', {}, when(x)));
     };
-    const coming = all.filter((x) => !x.done && x.end >= t0()), past = all.filter((x) => x.done || x.end < t0());
-    // (what else the page says, like a line at the top, comes first: everything but the dates and their years' headings)
-    const lines = new Set(all.map((x) => x.line)), rest = doc.text.split('\n').filter((l, i) => !lines.has(i) && !/^#{2,6}\s+.*\b\d{4}\b/.test(l)).join('\n');
-    const notes = laidOut({ ...doc, text: rest }, docs);
+    // (just the dates: what the page says around them is there when you Edit it)
+    const coming = all.filter((x) => !x.done && x.end >= t0()), past = all.filter((x) => x.done || x.end < t0()), next = coming[0];
     return [
-      top(doc.title, editBtn(doc.id)),
-      notes.textContent.trim() ? notes : null,
-      notes.textContent.trim() ? el('div', { className: 'sc-gap' }) : null,
+      hero(doc.title, next ? `Next: ${next.what}, ${when(next).toLowerCase()}` : 'Nothing coming up', editBtn(doc.id)),
       coming.length ? el('ol', { className: 'sc-dl', 'aria-label': 'Coming up' }, coming.map(row)) : el('p', { className: 'sc-nothing' }, all.length ? 'Nothing coming up. Everything here is done or past.' : 'No dates yet. Edit this page and add a line for each: - [ ] Dec 12 Project due.'),
       past.length ? el('details', { className: 'sc-past' }, el('summary', {}, `Done and past (${past.length})`), el('ol', { className: 'sc-dl' }, [...past].reverse().map(row))) : null,
     ];
@@ -406,7 +408,7 @@ if (f && p && D && box) {
       const tr = page.querySelectorAll('tbody tr')[i];
       if (tr) tr.className = 'now';
     }
-    return [top(doc.title, editBtn(doc.id)), l ? el('p', { className: 'sc-tonight' }, 'Tonight: lights out by ', el('b', {}, p.lightsWords(l)), '.') : null, page];
+    return [hero(doc.title, l ? `Tonight: lights out by ${p.lightsWords(l)}` : '', editBtn(doc.id)), page];
   }
 
   // ---------- changing a page ----------
@@ -446,7 +448,16 @@ if (f && p && D && box) {
       el('button', { type: 'button', className: 'btn', onclick: () => foot.replaceChildren(del) }, 'Keep it'))) }, 'Delete this page');
     foot.append(del);
     const ids = pl?.plan.ids || {}, kind = Object.entries(ids).find(([, id]) => id === doc.id)?.[0] || (['week', 'classes'].includes(doc.id) ? doc.id : '');
-    return [top(doc.title, said, el('button', { type: 'button', className: 'btn primary', onclick: done }, 'Done')), HELP[kind]?.() || null, area, foot];
+    return [hero(doc.title, 'Changing it: what you type is kept as you go', said, el('button', { type: 'button', className: 'btn primary pill', onclick: done }, 'Done')), HELP[kind]?.() || null, area, foot];
+  }
+
+  // ---------- Pages: the rest of your plan, each with its first line ----------
+  const firstLine = (text) => (String(text).split('\n').map((l) => l.trim()).find((l) => l && !/^(#|\||-{3})/.test(l)) || '').replace(/[*_`#>]|\[\[|\]\]/g, '').replace(/^[-+] (\[[ xX]\] )?/, '').slice(0, 160);
+  function pages(list) {
+    return [
+      hero('Pages', `${list.length} ${list.length === 1 ? 'page' : 'pages'} of your plan`, el('a', { className: 'btn pill', href: '#new' }, svg('plus'), 'New page')),
+      list.length ? el('ul', { className: 'sc-pages' }, list.map((d) => el('li', {}, el('a', { href: `#${d.id}` }, el('b', {}, d.title), el('small', {}, firstLine(d.text) || ' '))))) : el('p', { className: 'sc-nothing' }, 'No other pages yet.'),
+    ];
   }
 
   // ---------- the page ----------
@@ -464,38 +475,36 @@ if (f && p && D && box) {
     }
     // (the calendar to start with: the week, or today on a phone)
     const ids = pl?.plan.ids || {}, want = r.id || (phone.matches || !pl ? 'today' : ids.week);
-    const doc = docs.find((d) => d.id === want), here = doc ? doc.id : 'today';
-    const views = doc
-      ? r.mode === 'edit' ? editor(doc)
-        : doc.id === ids.week ? week(doc)
-          : doc.id === ids.classes ? classes(doc, list)
-            : doc.id === ids.deadlines ? deadlines(doc, list)
-              : doc.id === ids.sleep ? sleep(doc, list)
-                : [top(doc.title, editBtn(doc.id)), laidOut(doc, list)]
-      : today(docs);
-    // the left: the calendar, the pages that go with it (with how they stand), and the rest of your pages
-    const row = (href, icon, label, on, extra, cls = '') => el('a', { className: `sc-row${on ? ' on' : ''}${cls}`, href, 'aria-current': on ? 'page' : null }, svg(icon), el('span', { className: 'sc-label' }, label), extra || null);
-    const todo = docs.find((d) => d.id === 'to-do' || /^to ?do$/i.test(d.title)), open = todo ? (todo.text.match(/^\s*[-*+]\s+\[ \]/gm) || []).length : 0;
-    const rot = pl?.plan.classes ? p.rotationOf(pl.plan.classes, pl.st.date) : null, due = pl?.st.deadlines[0];
-    const top4 = [ids.week, ids.classes, ids.deadlines, todo?.id].filter(Boolean), title = (id) => docs.find((d) => d.id === id)?.title;
-    const side = el('nav', { className: 'sc-side', 'aria-label': `${T()}’s pages` },
-      el('div', { className: 'sc-list' },
-        row('#today', 'clock', 'Today', here === 'today', pl?.st.of ? el('small', {}, `${pl.st.done} of ${pl.st.of}`) : null, ' today'),
-        ids.week ? row(`#${ids.week}`, 'calendar', title(ids.week), here === ids.week) : null,
-        ids.classes ? row(`#${ids.classes}`, 'study', title(ids.classes), here === ids.classes, rot?.n ? el('small', {}, `Day ${rot.n}`) : null) : null,
-        ids.deadlines ? row(`#${ids.deadlines}`, 'bolt', title(ids.deadlines), here === ids.deadlines, due ? el('small', {}, p.dayWords(due)) : null) : null,
-        todo ? row(`#${todo.id}`, 'check', todo.title, here === todo.id, open ? el('small', {}, `${open} open`) : null) : null),
-      docs.length > top4.length ? el('p', { className: 'sc-sub' }, 'Pages') : null,
-      el('div', { className: 'sc-list' }, ...docs.filter((d) => !top4.includes(d.id)).map((d) => row(`#${d.id}`, 'note', d.title, here === d.id))),
-      el('a', { className: 'sc-new', href: '#new' }, svg('plus'), 'New page'));
+    const doc = r.id === 'pages' ? null : docs.find((d) => d.id === want), here = r.id === 'pages' ? 'pages' : doc ? doc.id : 'today';
+    const todo = docs.find((d) => d.id === 'to-do' || /^to ?do$/i.test(d.title));
+    const tabbed = [ids.week, ids.classes, ids.deadlines, todo?.id].filter(Boolean), rest = docs.filter((d) => !tabbed.includes(d.id));
+    const views = here === 'pages' ? pages(rest)
+      : doc
+        ? r.mode === 'edit' ? editor(doc)
+          : doc.id === ids.week ? week(doc)
+            : doc.id === ids.classes ? classes(doc, list)
+              : doc.id === ids.deadlines ? deadlines(doc, list)
+                : doc.id === ids.sleep ? sleep(doc, list)
+                  : [top(doc.title, editBtn(doc.id)), laidOut(doc, list)]
+        : today(docs);
+    // the tabs: the calendar, the pages that go with it, and Pages for the rest (lit too when one of them is open)
+    const tab = (href, label, on) => el('a', { href, className: on ? 'on' : null, 'aria-current': on ? 'page' : null }, label);
+    const title = (id) => docs.find((d) => d.id === id)?.title;
+    const tabs = el('nav', { className: 'sc-tabs', 'aria-label': T() },
+      tab('#today', 'Today', here === 'today'),
+      ids.week ? tab(`#${ids.week}`, title(ids.week), here === ids.week) : null,
+      ids.classes ? tab(`#${ids.classes}`, title(ids.classes), here === ids.classes) : null,
+      ids.deadlines ? tab(`#${ids.deadlines}`, title(ids.deadlines), here === ids.deadlines) : null,
+      todo ? tab(`#${todo.id}`, todo.title, here === todo.id) : null,
+      tab('#pages', 'Pages', here === 'pages' || rest.some((d) => d.id === here)));
     // (a new page rises in; the same page drawn again, with the clock or a check, is just there, scrolled where it was)
     const where = `${here}/${r.mode}/${shift}/${picked}`, page = el('section', { className: `sc-page${where !== drawn && f.moving() ? ' rise' : ''}`, 'aria-label': doc ? doc.title : 'Today' }, ...views.filter(Boolean));
     const again = where === drawn;
     drawn = where;
-    box.replaceChildren(side, page);
+    box.replaceChildren(el('div', { className: 'sc-top' }, tabs), page);
     for (const sc of page.querySelectorAll('.cal-scroll')) sc.scrollTop = again && kept.at === where ? kept.top : +sc.dataset.top;
     // (a link to a page that isn't here any more shows Today, and says so in the address)
-    if (!doc && r.id && r.id !== 'today') history.replaceState(null, '', '#today');
+    if (!doc && r.id && r.id !== 'today' && r.id !== 'pages') history.replaceState(null, '', '#today');
   }
 
   draw();
@@ -505,7 +514,7 @@ if (f && p && D && box) {
   const again = () => { if (!flush) draw(); };
   addEventListener('fluence:plan', again);
   addEventListener('storage', (e) => { if (e.key === p.KEY || e.key === p.DOCS) again(); });
-  setInterval(() => { if (!document.hidden && !pop && box.querySelector('.cal-now, .sc-now')) again(); }, 30000);
+  setInterval(() => { if (!document.hidden && !pop && !flush && box.querySelector('.cal-now, .sc-now')) again(); }, 30000);
   phone.addEventListener('change', again);
   addEventListener('pagehide', () => flush?.());
   // a card closes with Escape or a click anywhere else; in the week, ← and → go a week back and on
@@ -515,6 +524,6 @@ if (f && p && D && box) {
     if (!box.querySelector('[aria-label="The week before"]')) return;
     if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); } else if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
   });
-  addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && !e.target.closest?.('.cal-b, .cal-chip, .cal-rot')) closePop(); }, true);
+  addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && !e.target.closest?.('.cal-b, .cal-chip, .cal-rot, .ag-name')) closePop(); }, true);
   addEventListener('resize', closePop);
 }

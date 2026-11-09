@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Schedule · Fluence</title>
-  <meta name="description" content="Your week by the hour: your classes on the day they're on, your own blocks to check off, deadlines and lights out, and pages for the rest of your plan.">
+  <meta name="description" content="Your week by the hour: your classes on the day they're on, your own blocks, and what's due, and today in order.">
   <script src="../settings.js"></script>
   <script src="../kit/look.js"></script>
   <script src="../kit/bar.js"></script>
@@ -14,123 +14,88 @@
   <link rel="modulepreload" href="../station/md.js">
   <link rel="stylesheet" href="../kit/site.css">
   <style>
-    /* a workspace, like Music: no heading, just the frame (the calendar and your pages on the left, the open one on the
-       right) under the bar */
-    main.sc-main { width: 100%; max-width: 1480px; margin: 0 auto; padding: 26px 20px 30px; box-sizing: border-box; flex: 1; }
-    .sc { display: grid; grid-template-columns: 224px minmax(0, 1fr); min-height: 540px; background: var(--card); border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); overflow: hidden; animation: rise var(--t3) var(--ease) backwards; }
-    .sc-none { margin: 0; padding: 28px; color: var(--muted); }
-
-    /* the left: the calendar, the pages that go with it, and the rest; one lit */
-    .sc-side { display: flex; flex-direction: column; gap: 4px; padding: 16px 10px; background: color-mix(in srgb, var(--bg) 62%, var(--card)); border-right: 1px solid var(--line); }
-    .sc-list { display: flex; flex-direction: column; gap: 1px; }
-    .sc-row { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 2px 10px; font-size: 1.02rem; color: var(--text); text-decoration: none; border-radius: 9px; transition: background var(--t1); }
-    .sc-row:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
-    .sc-row.on { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-    .sc-row > svg { flex: none; width: 17px; height: 17px; color: var(--muted); }
-    .sc-row.on > svg, .sc-row.today > svg { color: var(--accent); }
-    .sc-label { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .sc-row small { color: var(--muted); font-size: .86rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .sc-sub { margin: 14px 10px 4px; color: var(--muted); font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
-    .sc-new { display: flex; align-items: center; gap: 10px; min-height: 36px; margin-top: 6px; padding: 2px 10px; color: var(--muted); font-size: .96rem; text-decoration: none; border-radius: 9px; }
-    .sc-new:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
-    .sc-new > svg { width: 16px; height: 16px; }
-
-    /* the right: the open page */
-    .sc-page { min-width: 0; padding: 24px 28px 30px; }
-    .sc-page > * { max-width: 760px; }
-    .sc-page > .cal, .sc-page > .sc-today, .sc-page > .sc-wide, .sc-page > .sc-ask, .sc-page:has(> .cal, > .sc-today, > .sc-wide) > .sc-top { max-width: none; }
+    /* a workspace, laid out like Music: its tabs at the top, then the open view, with nothing boxed in */
+    main.sc-main { width: 100%; max-width: 1180px; margin: 0 auto; padding: 26px 20px 48px; box-sizing: border-box; flex: 1; }
+    .sc-none { margin: 0; color: var(--muted); }
+    .sc-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 22px; }
+    .sc-tabs { display: flex; gap: 2px; max-width: 100%; padding: 3px; overflow-x: auto; background: color-mix(in srgb, var(--card) 55%, transparent); border: 1px solid var(--line); border-radius: 999px; scrollbar-width: none; }
+    .sc-tabs a { display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px; color: var(--muted); font-size: .93rem; font-weight: 550; text-decoration: none; white-space: nowrap; border-radius: 999px; transition: color var(--t1), background var(--t2); }
+    .sc-tabs a:hover, .sc-tabs a.on { color: var(--text); }
+    .sc-tabs a.on { background: var(--card); box-shadow: var(--shadow); }
+    .sc-page { min-width: 0; }
     .sc-page.rise > * { animation: rise var(--t2) var(--ease) backwards; }
-    .sc-top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 14px; }
-    .sc-top h2 { margin: 0; font-size: 1.75rem; font-weight: 650; line-height: 1.2; letter-spacing: -0.015em; }
-    .sc-top .grow { flex: 1; }
-    .sc-top .btn { padding: 6px 14px; font-size: .95rem; }
-    .sc-range { color: var(--muted); font-size: 1.02rem; font-variant-numeric: tabular-nums; }
-    .sc-step { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; font: inherit; font-size: 1.25rem; line-height: 1; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 9px; }
-    .sc-step:hover { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
-    .sc-top h2 + .sc-step { margin-left: 6px; }
-    .sc-top .sc-range + .sc-step { margin-left: -8px; }
-    .sc-top .sc-step + .sc-range { margin-left: -8px; }
+
+    /* a view's name, big, a line under it, and what it can do at the side */
+    .sc-hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 14px; margin: 4px 0 24px; }
+    .sc-hero h1 { margin: 0; font-size: clamp(1.9rem, 4.6vw, 2.8rem); line-height: 1.05; letter-spacing: -0.035em; }
+    .sc-hero p { margin: 8px 0 0; color: var(--muted); font-size: 1.02rem; font-variant-numeric: tabular-nums; }
+    .sc-hero .grow { flex: 1; }
+    .btn.pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; font-weight: 600; border-radius: 999px; }
+    .btn.pill > svg { width: 16px; height: 16px; }
+    .sc-nav { display: inline-flex; align-items: center; gap: 6px; }
+    .sc-step { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; font: inherit; font-size: 1.3rem; line-height: 1; color: var(--muted); cursor: pointer; background: none; border: 1px solid var(--line); border-radius: 999px; transition: color var(--t1), background var(--t1); }
+    .sc-step:hover { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
 
     /* "which Day is it": asked once, in place */
-    .sc-ask { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 14px; padding: 10px 12px 10px 16px; font-size: 1rem; background: color-mix(in srgb, var(--accent) 9%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); border-radius: 12px; }
-    .sc-ask > span { flex: 1 1 260px; }
-    .sc-ask .btn { padding: 6px 14px; font-size: .95rem; }
+    .sc-ask { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; margin: -6px 0 24px; font-size: 1rem; color: var(--muted); }
+    .sc-ask b { color: var(--text); font-weight: 600; }
+    .sc-ask .btn { padding: 6px 14px; font-size: .95rem; border-radius: 999px; }
 
-    /* the calendar: the days across, the hours down */
-    .cal { --axis: 54px; position: relative; overflow: hidden; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
-    .cal-head, .cal-all, .cal-body { display: grid; grid-template-columns: var(--axis) repeat(var(--cols), minmax(0, 1fr)); }
+    /* the calendar: the days across, the hours down, and only what matters on it */
+    .cal { --axis: 56px; position: relative; }
+    .cal-head, .cal-all, .cal-body { display: grid; grid-template-columns: var(--axis) repeat(var(--cols), minmax(0, 1fr)); column-gap: 8px; }
     .cal-head, .cal-all { scrollbar-gutter: stable; overflow: hidden; }
-    .cal-head { border-bottom: 1px solid var(--line); }
-    .cal-dh { display: flex; align-items: center; flex-wrap: wrap; gap: 3px 6px; min-width: 0; padding: 8px 8px 7px; border-left: 1px solid var(--line); }
+    .cal-dh { display: flex; align-items: baseline; gap: 6px; min-width: 0; padding: 0 2px 10px; }
     .cal-dh .wd { color: var(--muted); font-size: .76rem; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
-    .cal-dh .dn { font-size: 1.12rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
-    .cal-dh .dn.label { font-size: 1rem; }
+    .cal-dh .dn { font-size: 1.3rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+    .cal-dh .dn.label { font-size: 1.05rem; }
     .cal-dh.today .wd { color: var(--text); }
-    .cal-dh.today .dn:not(.label) { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 4px; box-sizing: border-box; color: var(--on-accent, #fff); background: var(--accent); border-radius: 999px; }
+    .cal-dh.today .dn:not(.label) { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 5px; box-sizing: border-box; color: var(--on-accent, #fff); background: var(--accent); border-radius: 999px; }
     .cal-dh.today .dn.label { color: var(--accent); }
-    .cal-rot { margin-left: auto; padding: 2px 8px; font: inherit; font-size: .74rem; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; cursor: pointer; background: none; border: 1px solid var(--line); border-radius: 999px; transition: color var(--t1), border-color var(--t1); }
-    .cal-rot:hover { color: var(--text); border-color: color-mix(in srgb, var(--text) 30%, var(--line)); }
-    .cal-off { margin-left: auto; color: var(--muted); font-size: .74rem; white-space: nowrap; }
-    .cal-all { border-bottom: 1px solid var(--line); }
-    .cal-ad { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 5px 4px; border-left: 1px solid var(--line); }
-    .cal-ad.today, .cal-col.today { background-color: color-mix(in srgb, var(--accent) 4%, transparent); }
-    .cal-chip { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 3px 7px; font: inherit; font-size: .78rem; line-height: 1.3; text-align: left; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c, var(--accent)) 17%, var(--card)); border: 0; border-left: 3px solid var(--c, var(--accent)); border-radius: 6px; }
+    .cal-rot, .cal-off { margin-left: auto; color: var(--muted); font-size: .8rem; white-space: nowrap; }
+    .cal-rot { padding: 2px 4px; font: inherit; font-size: .8rem; cursor: pointer; background: none; border: 0; border-radius: 6px; }
+    .cal-rot:hover { color: var(--text); }
+    .cal-all { margin-bottom: 10px; }
+    .cal-ad { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .cal-chip { display: flex; align-items: center; min-width: 0; padding: 4px 9px; font: inherit; font-size: .8rem; line-height: 1.3; text-align: left; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c, var(--accent)) 18%, transparent); border: 0; border-radius: 8px; }
     .cal-chip > span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .cal-chip.dl { --c: #e3a53d; font-weight: 600; }
-    .cal-chip.info, .cal-chip.off { --c: color-mix(in srgb, var(--muted) 70%, transparent); color: var(--muted); }
-    .cal-chip.off { cursor: default; }
+    .cal-chip.off { --c: var(--muted); color: var(--muted); cursor: default; }
     .cal-chip.done { opacity: .5; }
     .cal-chip.done > span { text-decoration: line-through; }
-    .cal-chip .ring { flex: none; width: 9px; height: 9px; border: 1.5px solid currentColor; border-radius: 50%; }
-    .cal-chip:hover:not(.off) { background: color-mix(in srgb, var(--c, var(--accent)) 26%, var(--card)); }
-    .cal-scroll { max-height: clamp(380px, calc(100vh - 200px), 1600px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+    .cal-scroll { max-height: clamp(380px, calc(100vh - 290px), 1500px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
     .cal.fit .cal-scroll { max-height: none; }
     .cal-body { position: relative; }
     .cal-hours { position: relative; }
-    .cal-hours span { position: absolute; right: 8px; color: var(--muted); font-size: .72rem; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; transform: translateY(-50%); }
-    .cal-col { position: relative; min-width: 0; border-left: 1px solid var(--line); background-image: linear-gradient(to bottom, var(--line) 1px, transparent 1px); background-size: 100% var(--hour); }
-    .cal-sleep { position: absolute; left: 0; right: 0; pointer-events: none; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--text) 5%, transparent) 0 5px, transparent 5px 11px); }
-    .cal-lights { position: absolute; left: 0; right: 0; z-index: 2; pointer-events: none; border-top: 1.5px dashed color-mix(in srgb, var(--muted) 75%, transparent); }
-    .cal-lights span { position: absolute; right: 5px; top: 2px; color: var(--muted); font-size: .68rem; white-space: nowrap; }
+    .cal-hours span { position: absolute; right: 6px; color: var(--muted); font-size: .74rem; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; transform: translateY(-50%); }
+    .cal-hours span.first { transform: none; }
+    .cal-col { position: relative; min-width: 0; background-image: linear-gradient(to bottom, color-mix(in srgb, var(--line) 75%, transparent) 1px, transparent 1px); background-size: 100% var(--hour); }
+    .cal-col.today { background-color: color-mix(in srgb, var(--accent) 3%, transparent); border-radius: 10px; }
     .cal-now { position: absolute; left: 0; right: 0; z-index: 0; height: 2px; margin-top: -1px; pointer-events: none; background: #f0524b; }
-    .cal-dot { position: absolute; left: -6px; z-index: 5; width: 11px; height: 11px; margin-top: -5.5px; box-sizing: border-box; background: #f0524b; border: 2px solid var(--card); border-radius: 50%; }
+    .cal-dot { position: absolute; left: -6px; z-index: 5; width: 11px; height: 11px; margin-top: -5.5px; box-sizing: border-box; background: #f0524b; border: 2px solid var(--bg); border-radius: 50%; }
 
-    /* a block: a class in its color, yours with a circle to check off, something with set times, or the rest of the day */
-    .cal-b { --c: var(--accent); position: absolute; z-index: 1; left: calc(3px + (100% - 6px) * var(--lane) / var(--of)); width: calc((100% - 6px) / var(--of) - 2px); box-sizing: border-box; padding: 3px 7px 3px 8px; overflow: hidden; font-size: .78rem; line-height: 1.25; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c) 21%, var(--card)); border-left: 3px solid var(--c); border-radius: 6px; transition: background var(--t1), box-shadow var(--t1); }
-    .cal-b:hover, .cal-b:focus-visible { z-index: 3; background: color-mix(in srgb, var(--c) 32%, var(--card)); outline: none; box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 60%, transparent); }
+    /* a block: a class in its color, yours, or something with set times; its name, and its times when there's room */
+    .cal-b { --c: color-mix(in srgb, var(--text) 50%, transparent); position: absolute; z-index: 1; left: calc((100%) * var(--lane) / var(--of)); width: calc(100% / var(--of) - 3px); box-sizing: border-box; padding: 6px 9px; overflow: hidden; font-size: .82rem; line-height: 1.25; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c) 22%, var(--bg)); border-radius: 9px; transition: background var(--t1), box-shadow var(--t1); }
+    .cal-b:hover, .cal-b:focus-visible { z-index: 3; background: color-mix(in srgb, var(--c) 32%, var(--bg)); outline: none; }
     .cal-b > b { display: block; overflow: hidden; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
-    .cal-b > small { display: block; overflow: hidden; color: color-mix(in srgb, var(--text) 72%, transparent); font-size: .72rem; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-    .cal-b time { color: color-mix(in srgb, var(--text) 70%, transparent); font-weight: 500; font-variant-numeric: tabular-nums; }
-    .cal-b.small, .cal-b.tiny { padding-top: 1px; padding-bottom: 0; }
-    .cal-b.tiny { font-size: .7rem; line-height: 1.15; }
-    .cal-b.tiny > b { font-weight: 550; }
-    .cal-b.micro { padding-top: 0; font-size: .62rem; line-height: 1.05; border-radius: 4px; }
-    .cal-b.micro .cal-ck { top: 0; width: 10px; height: 10px; border-width: 1px; }
-    .cal-b.micro .cal-ck svg { width: 8px; height: 8px; }
+    .cal-b > small { display: block; overflow: hidden; margin-top: 2px; color: color-mix(in srgb, var(--text) 68%, transparent); font-size: .74rem; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+    .cal-b.small { padding-top: 3px; padding-bottom: 0; font-size: .78rem; }
     .cal-b.tall > b { display: -webkit-box; white-space: normal; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .cal-b.mine { padding-right: 24px; }
-    .cal-b.routine { --c: color-mix(in srgb, var(--muted) 45%, transparent); color: var(--muted); background: color-mix(in srgb, var(--text) 4%, var(--card)); }
-    .cal-b.routine > b { font-weight: 500; }
-    .cal-b.done { opacity: .55; }
-    .cal-b.done > b { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--text) 55%, transparent); }
-    .cal-b.now { z-index: 2; box-shadow: 0 0 0 1.5px var(--c), 0 4px 14px rgba(0, 0, 0, .25); }
-    .cal-ck { position: absolute; top: 3px; right: 4px; display: grid; place-items: center; width: 16px; height: 16px; padding: 0; color: transparent; cursor: pointer; background: none; border: 1.5px solid color-mix(in srgb, var(--text) 55%, transparent); border-radius: 50%; }
-    .cal-b.tiny .cal-ck { top: 1px; width: 13px; height: 13px; }
-    .cal-ck svg { width: 11px; height: 11px; stroke-width: 3; }
-    .cal-ck:hover:not(:disabled) { border-color: var(--text); }
-    .cal-ck[aria-pressed="true"] { color: var(--on-accent, #fff); background: var(--accent); border-color: var(--accent); }
-    .cal-ck:disabled { cursor: default; opacity: .45; }
-    .cal [data-c="teal"] { --c: #2bb3a3; } .cal [data-c="blue"] { --c: #4b8fdc; } .cal [data-c="violet"] { --c: #8f74e0; }
-    .cal [data-c="purple"] { --c: #a45cc7; } .cal [data-c="pink"] { --c: #d965a8; } .cal [data-c="red"] { --c: #d45a50; }
-    .cal [data-c="orange"] { --c: #e38a3a; } .cal [data-c="gold"] { --c: #d1aa36; } .cal [data-c="olive"] { --c: #93a83c; }
-    .cal [data-c="green"] { --c: #49ae68; } .cal [data-c="cyan"] { --c: #39b2d4; } .cal [data-c="indigo"] { --c: #6676dc; }
-    .cal [data-c="brown"] { --c: #ad7d55; } .cal [data-c="gray"] { --c: #8a8f98; }
+    .cal-b.mine { --c: color-mix(in srgb, var(--text) 55%, transparent); }
+    .cal-b.done { opacity: .5; }
+    .cal-b.done > b { text-decoration: line-through; }
+    .cal-b.now { z-index: 2; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--c) 80%, var(--text)); }
+    [data-c="teal"] { --c: #2bb3a3; } [data-c="blue"] { --c: #4b8fdc; } [data-c="violet"] { --c: #8f74e0; }
+    [data-c="purple"] { --c: #a45cc7; } [data-c="pink"] { --c: #d965a8; } [data-c="red"] { --c: #d45a50; }
+    [data-c="orange"] { --c: #e38a3a; } [data-c="gold"] { --c: #d1aa36; } [data-c="olive"] { --c: #93a83c; }
+    [data-c="green"] { --c: #49ae68; } [data-c="cyan"] { --c: #39b2d4; } [data-c="indigo"] { --c: #6676dc; }
+    [data-c="brown"] { --c: #ad7d55; } [data-c="gray"] { --c: #8a8f98; }
 
     /* the card about a block: when, where, how, and Start or check it off */
-    .cal-pop { position: fixed; z-index: 60; width: 320px; max-width: calc(100vw - 20px); box-sizing: border-box; padding: 14px 16px 16px; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 14px 44px rgba(0, 0, 0, .38); animation: rise var(--t2) var(--ease) backwards; }
+    .cal-pop { position: fixed; z-index: 60; width: 320px; max-width: calc(100vw - 20px); box-sizing: border-box; padding: 16px 18px 18px; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 14px 44px rgba(0, 0, 0, .38); animation: rise var(--t2) var(--ease) backwards; }
     .cal-pop.sheet { left: 10px; right: 10px; bottom: 10px; width: auto; max-width: none; }
     .pop-top { display: flex; align-items: flex-start; gap: 10px; }
-    .pop-top b { flex: 1; font-size: 1.12rem; font-weight: 650; line-height: 1.3; }
+    .pop-top b { flex: 1; font-size: 1.15rem; font-weight: 650; line-height: 1.3; }
     .pop-x { display: grid; place-items: center; flex: none; width: 28px; height: 28px; margin: -4px -6px 0 0; padding: 0; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 8px; }
     .pop-x:hover { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
     .pop-x svg { width: 16px; height: 16px; }
@@ -141,50 +106,72 @@
     .cal-pop .pop-how a { color: var(--accent); }
     .pop-steps { margin: 8px 0 0; padding: 0; list-style: none; font-size: .95rem; line-height: 1.6; }
     .pop-steps time { display: inline-block; min-width: 3.3em; color: var(--muted); font-variant-numeric: tabular-nums; }
-    .pop-act { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-    .pop-act .btn { padding: 7px 14px; font-size: .95rem; }
+    .pop-act { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .pop-act .btn { padding: 8px 16px; font-size: .95rem; border-radius: 999px; }
 
-    /* Today: what's on now beside the day by the hour */
-    .sc-today { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); align-items: start; gap: 18px; }
-    .sc-card { display: grid; gap: 14px; padding: 18px; background: color-mix(in srgb, var(--bg) 40%, var(--card)); border: 1px solid var(--line); border-radius: 14px; }
-    .sc-now { margin: 0; font-size: 1.32rem; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; text-wrap: balance; }
-    .sc-act { display: grid; gap: 10px; justify-items: start; }
-    .sc-act .btn { padding: 9px 18px; font-weight: 600; }
-    .sc-how { margin: 0; color: var(--muted); font-size: .98rem; line-height: 1.5; }
+    /* Today: what's on now, then the day in order, a row each (like Music's songs) */
+    .sc-now { max-width: 760px; margin: 0 0 26px; }
+    .sc-say { margin: 0; font-size: 1.45rem; font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; text-wrap: balance; }
+    .sc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 16px; }
+    .sc-how { flex: 1 1 280px; margin: 0; color: var(--muted); font-size: .98rem; line-height: 1.5; }
     .sc-how b { color: var(--text); font-weight: 600; }
-    .sc .plan-day { margin: 0; padding: 0; background: none; border: 0; animation: none; }
-    .sc-later { margin: 0; color: var(--muted); font-size: .96rem; line-height: 1.55; }
+    .sc-meta { margin: 14px 0 0; color: var(--muted); font-size: .96rem; }
+    .sc-agenda { display: grid; gap: 2px; max-width: 760px; margin: 0; padding: 0; list-style: none; }
+    .ag-row { position: relative; display: grid; grid-template-columns: 6.4em minmax(0, 1fr) 34px; align-items: center; gap: 16px; min-height: 60px; padding: 4px 12px 4px 16px; border-radius: 14px; transition: background var(--t1), opacity var(--t1); }
+    .ag-row::before { content: ''; position: absolute; left: 4px; top: 14px; bottom: 14px; width: 3px; background: var(--c, transparent); border-radius: 3px; }
+    .ag-row:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+    .ag-row.now { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+    .ag-row.over:not(:hover) { opacity: .45; }
+    .ag-row time { color: var(--muted); font-size: .95rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ag-name { display: grid; gap: 3px; min-width: 0; padding: 0; font: inherit; text-align: left; color: inherit; cursor: pointer; background: none; border: 0; }
+    .ag-name b { overflow: hidden; font-size: 1.05rem; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+    .ag-name small { overflow: hidden; color: var(--muted); font-size: .88rem; white-space: nowrap; text-overflow: ellipsis; }
+    .ag-row.done .ag-name b { color: var(--muted); text-decoration: line-through; }
+    .ag-ck { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; color: transparent; cursor: pointer; background: none; border: 1.5px solid color-mix(in srgb, var(--text) 45%, transparent); border-radius: 50%; transition: background var(--t1), border-color var(--t1); }
+    .ag-ck:hover { border-color: var(--text); }
+    .ag-ck svg { width: 14px; height: 14px; stroke-width: 3; }
+    .ag-ck[aria-pressed="true"] { color: var(--on-accent, #fff); background: var(--accent); border-color: var(--accent); }
+    .sc-switches { display: flex; flex-wrap: wrap; gap: 8px; max-width: 760px; margin: 26px 0 0; }
+    .sc-switches button { padding: 6px 14px; font: inherit; font-size: .9rem; color: var(--muted); cursor: pointer; background: none; border: 1px solid var(--line); border-radius: 999px; transition: color var(--t1), background var(--t1); }
+    .sc-switches button:hover { color: var(--text); }
+    .sc-switches button[aria-pressed="true"] { color: var(--on-accent, #fff); background: var(--accent); border-color: var(--accent); }
+    .sc-later { max-width: 760px; margin: 20px 0 0; color: var(--muted); font-size: .96rem; line-height: 1.55; }
     .sc-later b { color: var(--text); font-weight: 600; }
 
     /* a day at a time, on a phone */
-    .sc-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 0 0 12px; }
-    .sc-days button { display: grid; justify-items: center; gap: 1px; padding: 8px 0 7px; font: inherit; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 10px; transition: background var(--t1), color var(--t1); }
-    .sc-days button b { font-size: .76rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
-    .sc-days button span { font-size: 1.12rem; font-variant-numeric: tabular-nums; color: var(--text); }
+    .sc-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: -8px 0 16px; }
+    .sc-days button { display: grid; justify-items: center; gap: 2px; padding: 8px 0 7px; font: inherit; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 12px; transition: background var(--t1), color var(--t1); }
+    .sc-days button b { font-size: .74rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+    .sc-days button span { font-size: 1.15rem; font-variant-numeric: tabular-nums; color: var(--text); }
     .sc-days button.today b { color: var(--accent); }
     .sc-days button[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 13%, transparent); }
 
-    /* Classes: each week of your school's days, the way the school shows them */
-    .sc-wide { margin: 0 0 14px; }
-    .sc-tonight { margin: 0 0 14px; font-size: 1.1rem; }
+    /* Classes: each week of your school's days */
+    .sc-wide { margin: 0 0 28px; }
 
     /* Deadlines: what's coming, soonest first, each checked off where it is */
-    .sc-dl { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
-    .sc-dl li { display: grid; grid-template-columns: 26px 7.4em minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; min-height: 40px; padding: 3px 8px 3px 4px; border-radius: 10px; }
-    .sc-dl li:hover { background: color-mix(in srgb, var(--text) 3%, transparent); }
+    .sc-dl { display: grid; gap: 2px; max-width: 760px; margin: 0; padding: 0; list-style: none; }
+    .sc-dl li { display: grid; grid-template-columns: 30px 7.4em minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; min-height: 52px; padding: 4px 12px 4px 6px; border-radius: 14px; }
+    .sc-dl li:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
     .sc-dl time { color: var(--muted); font-size: .95rem; font-variant-numeric: tabular-nums; }
-    .sc-dl .what { min-width: 0; overflow-wrap: anywhere; line-height: 1.35; }
+    .sc-dl .what { min-width: 0; font-size: 1.02rem; line-height: 1.35; overflow-wrap: anywhere; }
     .sc-dl small { color: var(--muted); font-size: .9rem; white-space: nowrap; }
-    .sc-dl li.soon small { color: var(--text); font-weight: 600; }
+    .sc-dl li.soon > small { color: var(--text); font-weight: 600; }
     .sc-dl li.done .what { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 55%, transparent); }
-    .sc-past { margin-top: 20px; }
-    .sc-past summary { padding: 4px; color: var(--muted); cursor: pointer; }
+    .sc-past { max-width: 760px; margin-top: 22px; }
+    .sc-past summary { padding: 4px 6px; color: var(--muted); cursor: pointer; }
     .sc-past[open] summary { margin-bottom: 6px; }
-    .sc-gap { height: 14px; }
     .sc-nothing { margin: 8px 4px; color: var(--muted); }
 
+    /* Pages: the rest of your plan, a row each */
+    .sc-pages { display: grid; gap: 2px; max-width: 760px; margin: 0; padding: 0; list-style: none; }
+    .sc-pages a { display: grid; gap: 3px; padding: 12px 16px; color: var(--text); text-decoration: none; border-radius: 14px; transition: background var(--t1); }
+    .sc-pages a:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
+    .sc-pages b { font-size: 1.08rem; font-weight: 600; }
+    .sc-pages small { overflow: hidden; color: var(--muted); font-size: .92rem; white-space: nowrap; text-overflow: ellipsis; }
+
     /* a page, laid out (Station's Markdown) */
-    .sc-md { font-size: 1.08rem; line-height: 1.65; }
+    .sc-md { max-width: 760px; font-size: 1.08rem; line-height: 1.65; }
     .sc-md > :first-child { margin-top: 0; }
     .sc-md p { margin: .4em 0; }
     .sc-md h1, .sc-md h2, .sc-md h3, .sc-md h4 { margin: 1.1em 0 .25em; font-weight: 650; line-height: 1.3; letter-spacing: -0.01em; }
@@ -203,16 +190,16 @@
     .sc-md blockquote { margin: .5em 0; padding: 1px 14px; color: var(--muted); border-left: 3px solid color-mix(in srgb, var(--accent) 50%, var(--line)); }
     .sc-md .tbl { margin: .5em 0; overflow-x: auto; }
     .sc-md table { width: 100%; font-size: 1.02rem; line-height: 1.5; border-collapse: collapse; }
-    .sc-md th, .sc-md td { padding: 8px 12px; text-align: left; vertical-align: top; border: 1px solid var(--line); }
-    .sc-md th { font-weight: 650; background: color-mix(in srgb, var(--text) 4%, transparent); }
+    .sc-md th, .sc-md td { padding: 8px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+    .sc-md th { font-weight: 650; color: var(--muted); }
     .sc-md tr.now td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
     .sc-md hr { margin: 1em 0; border: 0; border-top: 1px solid var(--line); }
     .sc-md mark { color: inherit; background: color-mix(in srgb, #ffd43b 45%, transparent); border-radius: 3px; padding: 0 2px; }
 
     /* changing a page: its Markdown, kept as you type */
-    .sc-help { margin: -4px 0 12px; color: var(--muted); font-size: .98rem; line-height: 1.55; }
+    .sc-help { max-width: 760px; margin: -8px 0 14px; color: var(--muted); font-size: .98rem; line-height: 1.55; }
     .sc-help code { padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); border-radius: 5px; }
-    .sc-text { display: block; width: 100%; min-height: 320px; box-sizing: border-box; padding: 14px 16px; font: inherit; font-size: 1.04rem; line-height: 1.6; color: var(--text); resize: vertical; background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid var(--line); border-radius: 12px; tab-size: 2; }
+    .sc-text { display: block; width: 100%; max-width: 860px; min-height: 320px; box-sizing: border-box; padding: 14px 16px; font: inherit; font-size: 1.04rem; line-height: 1.6; color: var(--text); resize: vertical; background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid var(--line); border-radius: 14px; tab-size: 2; }
     .sc-text:focus { outline: none; border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); background: var(--card); }
     .sc-saved { color: var(--muted); font-size: .92rem; }
     .sc-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-top: 14px; }
@@ -222,31 +209,23 @@
 
     /* nothing yet */
     .sc-empty { display: grid; justify-items: start; gap: 12px; max-width: 560px; }
-    .sc-empty h2 { margin: 0; font-size: 1.6rem; font-weight: 650; }
+    .sc-empty h2 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 650; letter-spacing: -0.03em; }
     .sc-empty p { margin: 0; color: var(--muted); font-size: 1.05rem; line-height: 1.55; }
+    .sc-empty .btn { border-radius: 999px; }
 
-    /* narrower: the pages go across the top, and Today's card above the day */
-    @media (max-width: 1180px) {
-      .sc { grid-template-columns: minmax(0, 1fr); min-height: 0; }
-      .sc-side { flex-direction: row; align-items: center; gap: 4px; padding: 8px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); scrollbar-width: none; }
-      .sc-list { flex-direction: row; gap: 4px; }
-      .sc-sub { display: none; }
-      .sc-row, .sc-new { flex: none; min-height: 36px; margin: 0; padding: 2px 12px; white-space: nowrap; }
-      .sc-label { overflow: visible; }
-      .sc-today { grid-template-columns: minmax(0, 1fr); }
-    }
+    /* a phone */
     @media (max-width: 760px) {
-      main.sc-main { padding: 14px 10px 26px; }
-      .sc-row > svg, .sc-new > svg { display: none; }
-      .sc-page { padding: 18px 12px 24px; }
-      .sc-top h2 { font-size: 1.45rem; }
-      .sc-now { font-size: 1.18rem; }
-      .cal { --axis: 46px; }
+      main.sc-main { padding: 16px 12px 30px; }
+      .sc-top { margin-bottom: 16px; }
+      .sc-hero { margin-bottom: 18px; }
+      .sc-say { font-size: 1.2rem; }
+      .cal { --axis: 44px; }
       .cal-scroll { max-height: none; }
-      .cal-b { font-size: .84rem; }
+      .cal-b { font-size: .88rem; }
       .sc-wide { overflow-x: auto; }
       .sc-wide .cal { min-width: 620px; }
-      .sc-dl li { grid-template-columns: 24px 5.6em minmax(0, 1fr); }
+      .ag-row { grid-template-columns: 5.4em minmax(0, 1fr) 30px; gap: 10px; padding-left: 12px; }
+      .sc-dl li { grid-template-columns: 26px 5.6em minmax(0, 1fr); }
       .sc-dl li small { grid-column: 3; margin-top: -6px; }
     }
   </style>

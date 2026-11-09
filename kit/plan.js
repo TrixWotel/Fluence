@@ -358,7 +358,7 @@
   }
   // a new page, after the others: its id (from its name, and a number when that one's taken)
   function newDoc(state, title, text, now = Date.now()) {
-    const base = /^(new|today)$/.test(idOf(title)) ? `${idOf(title)}-page` : idOf(title);   // (#new and #today are Schedule's own)
+    const base = /^(new|today|pages)$/.test(idOf(title)) ? `${idOf(title)}-page` : idOf(title);   // (#new, #today and #pages are Schedule's own)
     let id = base;
     for (let n = 2; state.docs[id]; n++) id = `${base}-${n}`;
     const made = Math.max(now, ...Object.values(state.docs).map((d) => (+d.made || 0) + 1));
