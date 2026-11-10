@@ -156,6 +156,12 @@ html.has-bar body { padding-top: var(--bar-h); }
 .pd-check[aria-pressed="true"] { background: var(--good); border-color: var(--good); }
 .pd-check[aria-pressed="true"] .i { opacity: 1; }
 .pd-dot { justify-self: center; width: 6px; height: 6px; border-radius: 50%; background: color-mix(in srgb, var(--muted) 55%, transparent); }
+.plan-day [hidden] { display: none !important; }
+/* (where there isn't room for all of today: how many more, or crossed off before what's shown) */
+.pd-row.pd-more { min-height: 30px; color: var(--muted); font-size: .92rem; }
+.pd-row.pd-more .pd-dot { visibility: hidden; }
+.pd-row.pd-more a.pd-name { color: inherit; text-decoration: none; }
+.pd-row.pd-more a.pd-name:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .pd-foot { display: flex; flex-wrap: wrap; gap: 4px 18px; padding: 0 4px; color: var(--muted); font-size: .94rem; }
 .pd-foot b { color: var(--text); font-weight: 600; }
 .pd-switches { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 2px; }
@@ -174,6 +180,21 @@ html.has-bar body { padding-top: var(--bar-h); }
 .now-pill.late { border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); background: color-mix(in srgb, var(--bad) 11%, var(--card)); }
 .now-pill.late .dot { background: var(--bad); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 22%, transparent); }
 @media (max-width: 1100px) { .now-pill b { display: none; } }
+/* an alert for your plan (kit/alerts.js): under the bar at the right, as each thing on it starts */
+.alerts { position: fixed; top: calc(var(--bar-h) + 10px); right: 14px; z-index: 45; display: grid; gap: 8px; width: min(380px, calc(100vw - 28px)); pointer-events: none; }
+.alert { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 12px 10px 12px 14px; color: var(--text); text-align: left; pointer-events: auto;
+  background: color-mix(in srgb, var(--card) 94%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: calc(var(--radius) + 4px);
+  box-shadow: 0 12px 32px rgb(0 0 0 / .22); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); animation: alert-in var(--t3) var(--spring) both; }
+.alert-ic { display: grid; place-items: center; width: 34px; height: 34px; color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: 50%; }
+.alert-ic .i { width: 18px; height: 18px; }
+.alert-words { display: grid; gap: 2px; min-width: 0; }
+.alert-words b { overflow: hidden; font-weight: 650; white-space: nowrap; text-overflow: ellipsis; }
+.alert-words span { color: var(--muted); font-size: .88rem; line-height: 1.35; overflow-wrap: anywhere; }
+.alert-go { padding: 5px 13px; font-size: .88rem; }
+.alert-x { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 50%; transition: color var(--t1), background var(--t1); }
+.alert-x:hover { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
+.alert-x .i { width: 16px; height: 16px; }
+@keyframes alert-in { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
 @media (max-width: 680px) { .find span, .find kbd { display: none; } .find { width: 34px; padding: 0; justify-content: center; } .spaces a { padding: 5px 10px; } }
 @media (max-width: 500px) { .topbar { grid-template-columns: 1fr auto; padding: 0 10px; } .topbar .brand { display: none; } .spaces { justify-self: start; } }
 /* (five spaces by name don't fit across a phone, so there each is its icon) */

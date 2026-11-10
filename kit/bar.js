@@ -102,11 +102,11 @@
     pill = el('a', { className: 'now-pill', href: f.link('schedule/'), hidden: true });
     document.body.prepend(el('header', { className: 'topbar' }, brand, nav, el('div', { className: 'tools' }, pill, find, gear)));
     document.documentElement.classList.add('has-bar');
-    // what's on your plan now, on every page (kit/plan.js, brought in once there's a plan in Schedule)
-    if (window.fluentioPlan) paintPill(); else bringPlan();
+    // what's on your plan now, on every page, and its alerts (kit/plan.js, brought in once there's a plan in Schedule)
+    bringPlan();
     setInterval(() => { if (!document.hidden) paintPill(); }, 30000);
     addEventListener('fluence:plan', paintPill);
-    addEventListener('storage', (e) => { if (e.key === 'fluentio.plan' || e.key === 'fluentio.schedule') { if (window.fluentioPlan) paintPill(); else bringPlan(); } });
+    addEventListener('storage', (e) => { if (e.key === 'fluentio.plan' || e.key === 'fluentio.schedule') bringPlan(); });
     // the music player, when there's a song to carry on with (Music's page and the home page bring it themselves)
     if ((f.read('fluentio.music.player') || {}).queue?.length && document.body.dataset.music !== 'off') {
       // (asked for all at once, not one after another as each finds it needs the next)
@@ -114,17 +114,27 @@
       f.wait(import(f.link('kit/music/player.js')).then((m) => m.mount()).catch(() => {}));
     }
   };
-  addEventListener('fluentio:settings', () => { if (nav) drawNav(); paintPill(); });
+  addEventListener('fluentio:settings', () => { if (nav) drawNav(); paintPill(); bringPlan(); });
 
   // ---------- your plan, now ----------
   // a block you're due to be doing (and how long it has left), or at night, when it's lights out; nothing otherwise, and
-  // nothing in Schedule itself, which says so already. A click goes to Schedule. Settings → Home can leave it out of the bar
-  let pill = null, asked = false;
+  // nothing in Schedule itself, which says so already. A click goes to Schedule. Settings → Home can leave it out of the bar.
+  // And an alert as each thing on the plan starts (kit/alerts.js), whichever page is open
+  let pill = null, asked = false, alerts = false;
   function bringPlan() {
-    if (asked || f.settings.planBar === false || !f.scheduleOn()) return;
+    if (!f.scheduleOn()) return;
+    if (window.fluentioPlan) return planHere();
+    if (asked) return;
     try { if (!(localStorage.getItem('fluentio.schedule') || '').includes('"docs"')) return; } catch { return; }
     asked = true;
-    document.head.append(el('script', { src: f.link('kit/plan.js'), onload: paintPill }));
+    document.head.append(el('script', { src: f.link('kit/plan.js'), onload: planHere }));
+  }
+  function planHere() {
+    paintPill();
+    if (window.fluentioAlerts) return window.fluentioAlerts.start(f);
+    if (alerts) return;
+    alerts = true;
+    document.head.append(el('script', { src: f.link('kit/alerts.js'), onload: () => window.fluentioAlerts?.start(f) }));
   }
   function paintPill() {
     const p = window.fluentioPlan;
@@ -133,7 +143,7 @@
     let name = '', more = '', late = false;
     if (st?.late) { name = 'Past lights out'; more = p.clockAmPm(st.lights.at + st.lights.later); late = true; }
     else if (st?.night && st.lights) { name = 'Lights out'; more = p.lightsWords({ at: st.lights.at, later: 0 }); }
-    else if (st?.now?.check && !st.now.done) { name = st.now.name.replace(/:.*$/, '').trim(); more = `${p.leftWords(p.left(st.now, st.m))} left`; }
+    else if (st?.now?.check) { name = st.now.name.replace(/:.*$/, '').trim(); more = `${p.leftWords(p.left(st.now, st.m))} left`; }
     pill.hidden = !name;
     if (!name) return;
     pill.classList.toggle('late', late);

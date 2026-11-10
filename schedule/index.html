@@ -10,6 +10,7 @@
   <script src="../kit/bar.js"></script>
   <script src="../kit/plan.js"></script>
   <script src="../kit/plan-day.js"></script>
+  <script src="../kit/alerts.js"></script>
   <link rel="modulepreload" href="app.js">
   <link rel="modulepreload" href="../station/md.js">
   <link rel="stylesheet" href="../kit/site.css">
@@ -53,10 +54,11 @@
     .cal-corner { display: flex; align-items: center; justify-content: center; min-width: 0; }
     .row-show { padding: 1px 7px; font: inherit; font-size: .7rem; line-height: 1.5; color: var(--muted); cursor: pointer; background: color-mix(in srgb, var(--text) 6%, transparent); border: 0; border-radius: 999px; opacity: .75; transition: opacity var(--t1), color var(--t1); }
     .row-show:hover, .row-show:focus-visible { opacity: 1; color: var(--text); outline: none; }
-    .sc-keep { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font: inherit; font-size: .86rem; font-weight: 600; color: var(--muted); cursor: pointer; background: none; border: 1px solid var(--line); border-radius: 999px; transition: color var(--t1), background var(--t1); }
-    .sc-keep:hover { color: var(--text); }
-    .sc-keep svg { width: 15px; height: 15px; }
+    .sc-keep, .sc-alerts { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font: inherit; font-size: .86rem; font-weight: 600; color: var(--muted); cursor: pointer; background: none; border: 1px solid var(--line); border-radius: 999px; transition: color var(--t1), background var(--t1); }
+    .sc-keep:hover, .sc-alerts:hover { color: var(--text); }
+    .sc-keep svg, .sc-alerts svg { width: 15px; height: 15px; }
     .sc-keep[aria-pressed="true"] { color: var(--on-accent, #fff); background: var(--accent); border-color: var(--accent); }
+    .sc-alerts[aria-pressed="true"] { color: var(--text); }
     /* a week on or back slides in from that side */
     .cal.slide-next > * { animation: sc-from-right .26s var(--ease) both; }
     .cal.slide-prev > * { animation: sc-from-left .26s var(--ease) both; }
@@ -83,7 +85,7 @@
     .cal-dh.today .dn.label { color: var(--accent); }
     .cal-all { margin-bottom: 4px; }
     .cal-ad { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-    .cal-chip { display: flex; align-items: center; min-width: 0; padding: 1px 7px; font: inherit; font-size: .72rem; line-height: 1.25; text-align: left; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c, var(--accent)) 18%, transparent); border: 0; border-radius: 8px; }
+    .cal-chip { display: flex; align-items: center; min-width: 0; -webkit-user-select: none; user-select: none; padding: 1px 7px; font: inherit; font-size: .72rem; line-height: 1.25; text-align: left; color: var(--text); cursor: default; background: color-mix(in srgb, var(--c, var(--accent)) 18%, transparent); border: 0; border-radius: 8px; }
     .cal-chip > span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .cal-chip.dl { --c: #e3a53d; font-weight: 600; }
     .cal-chip.off { --c: var(--muted); color: var(--muted); cursor: default; }
@@ -104,7 +106,7 @@
 
     /* a block: a class in its color, yours, or something set; a meal or the walk home, quieter. What's over is crossed
        off. Its name, and its times when there's room: small has its name and start on one line, tiny just its name */
-    .cal-b { --c: color-mix(in srgb, var(--text) 50%, transparent); position: absolute; z-index: 1; left: calc(100% * var(--lane) / var(--of)); width: calc(100% / var(--of) - 3px); box-sizing: border-box; padding: 6px 9px; overflow: hidden; font-size: .82rem; line-height: 1.25; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--c) 20%, var(--bg)); border-radius: 8px; transition: background var(--t1), box-shadow var(--t1), opacity var(--t1); }
+    .cal-b { --c: color-mix(in srgb, var(--text) 50%, transparent); position: absolute; z-index: 1; left: calc(100% * var(--lane) / var(--of)); width: calc(100% / var(--of) - 3px); box-sizing: border-box; padding: 6px 9px; overflow: hidden; font-size: .82rem; line-height: 1.25; color: var(--text); cursor: default; background: color-mix(in srgb, var(--c) 20%, var(--bg)); border-radius: 8px; transition: background var(--t1), box-shadow var(--t1), opacity var(--t1); -webkit-user-select: none; user-select: none; }
     .cal-b:hover, .cal-b:focus-visible { z-index: 3; background: color-mix(in srgb, var(--c) 30%, var(--bg)); outline: none; }
     .cal-b > b { display: block; overflow: hidden; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
     .cal-b > small { display: block; overflow: hidden; margin-top: 2px; color: color-mix(in srgb, var(--text) 58%, transparent); font-size: .74rem; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
@@ -126,15 +128,9 @@
     .cal-b > b > span, .ag-name b > span, .cal-chip > span { background: linear-gradient(currentColor, currentColor) no-repeat 0 55% / 0 1.5px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
     .cal-b.done > b > span, .ag-row.done .ag-name b > span, .cal-chip.done > span { background-size: 100% 1.5px; }
     .cal-b.crossing > b > span, .ag-row.crossing .ag-name b > span, .cal-chip.crossing > span { animation: sc-strike .4s var(--ease) both; }
-    .cal-b.uncrossing > b > span, .ag-row.uncrossing .ag-name b > span, .cal-chip.uncrossing > span { animation: sc-unstrike .3s var(--ease) both; }
     .cal-b.crossing, .cal-chip.crossing { animation: sc-dim .5s ease both; }
-    .cal-b.uncrossing, .cal-chip.uncrossing { animation: sc-undim .3s ease both; }
-    .ag-row.crossing .ag-ck { animation: sc-tick .34s cubic-bezier(.34, 1.56, .64, 1) both; }
     @keyframes sc-strike { from { background-size: 0 1.5px; } to { background-size: 100% 1.5px; } }
-    @keyframes sc-unstrike { from { background-size: 100% 1.5px; } to { background-size: 0 1.5px; } }
     @keyframes sc-dim { from { opacity: 1; } 40% { opacity: 1; } to { opacity: .42; } }
-    @keyframes sc-undim { from { opacity: .42; } to { opacity: 1; } }
-    @keyframes sc-tick { 0% { transform: scale(.6); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
     /* (School, until Classes says which Day it is: pick it here) */
     .cal-b.asking { cursor: default; }
     .cal-b.asking:hover { background: color-mix(in srgb, var(--c) 20%, var(--bg)); }
@@ -159,6 +155,7 @@
     .pop-x svg { width: 16px; height: 16px; }
     .cal-pop p { margin: 6px 0 0; font-size: .95rem; line-height: 1.5; }
     .cal-pop .pop-when { margin-top: 2px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .cal-pop .pop-note { color: var(--muted); font-size: .88rem; }
     .cal-pop .pop-how { color: var(--muted); }
     .cal-pop .pop-how b { color: var(--text); font-weight: 600; }
     .cal-pop .pop-how a { color: var(--accent); }
@@ -175,20 +172,16 @@
     .sc-how b { color: var(--text); font-weight: 600; }
     .sc-meta { margin: 14px 0 0; color: var(--muted); font-size: .96rem; }
     .sc-agenda { display: grid; gap: 2px; max-width: 760px; margin: 0; padding: 0; list-style: none; }
-    .ag-row { position: relative; display: grid; grid-template-columns: 6.4em minmax(0, 1fr) 34px; align-items: center; gap: 16px; min-height: 60px; padding: 4px 12px 4px 16px; border-radius: 14px; transition: background var(--t1), opacity var(--t1); }
+    .ag-row { position: relative; display: grid; grid-template-columns: 6.4em minmax(0, 1fr); align-items: center; gap: 16px; min-height: 60px; padding: 4px 12px 4px 16px; border-radius: 14px; transition: background var(--t1), opacity var(--t1); }
     .ag-row::before { content: ''; position: absolute; left: 4px; top: 14px; bottom: 14px; width: 3px; background: var(--c, transparent); border-radius: 3px; }
     .ag-row:hover { background: color-mix(in srgb, var(--text) 4%, transparent); }
     .ag-row.now { background: color-mix(in srgb, var(--accent) 10%, transparent); }
     .ag-row.over:not(:hover) { opacity: .45; }
     .ag-row time { color: var(--muted); font-size: .95rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .ag-name { display: grid; gap: 3px; min-width: 0; padding: 0; font: inherit; text-align: left; color: inherit; cursor: pointer; background: none; border: 0; }
+    .ag-name { display: grid; gap: 3px; min-width: 0; -webkit-user-select: none; user-select: none; padding: 0; font: inherit; text-align: left; color: inherit; cursor: default; background: none; border: 0; }
     .ag-name b { overflow: hidden; font-size: 1.05rem; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
     .ag-name small { overflow: hidden; color: var(--muted); font-size: .88rem; white-space: nowrap; text-overflow: ellipsis; }
     .ag-row.done .ag-name b { color: var(--muted); }
-    .ag-ck { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; color: transparent; cursor: pointer; background: none; border: 1.5px solid color-mix(in srgb, var(--text) 45%, transparent); border-radius: 50%; transition: background var(--t1), border-color var(--t1); }
-    .ag-ck:hover { border-color: var(--text); }
-    .ag-ck svg { width: 14px; height: 14px; stroke-width: 3; }
-    .ag-ck[aria-pressed="true"] { color: var(--on-accent, #fff); background: var(--accent); border-color: var(--accent); }
     .sc-switches { display: flex; flex-wrap: wrap; gap: 8px; max-width: 760px; margin: 26px 0 0; }
     .sc-switches button { padding: 6px 14px; font: inherit; font-size: .9rem; color: var(--muted); cursor: pointer; background: none; border: 1px solid var(--line); border-radius: 999px; transition: color var(--t1), background var(--t1); }
     .sc-switches button:hover { color: var(--text); }
@@ -283,7 +276,7 @@
       .sc-range .days { display: none; }
       .sc-wide { overflow-x: auto; }
       .sc-wide .cal { min-width: 620px; }
-      .ag-row { grid-template-columns: 5.4em minmax(0, 1fr) 30px; gap: 10px; padding-left: 12px; }
+      .ag-row { grid-template-columns: 5.4em minmax(0, 1fr); gap: 10px; padding-left: 12px; }
       .sc-dl li { grid-template-columns: 26px 5.6em minmax(0, 1fr); }
       .sc-dl li small { grid-column: 3; margin-top: -6px; }
     }

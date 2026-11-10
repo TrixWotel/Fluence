@@ -177,15 +177,20 @@
     .layouts .chip .i { width: 14px; height: 14px; }
     @media (max-width: 560px) { .tile.music.feature, .tile.wide { grid-column: auto; } .welcome a { white-space: normal; } }
 
-    /* the assistant: what it notices, what it offers, and a place to tell it what you want */
-    main.layout-assistant { max-width: 680px; }
-    .aide { display: grid; gap: 14px; }
-    .aide-orb { width: 40px; height: 40px; border-radius: 50%; justify-self: var(--anchor); background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--accent) 35%, #fff), var(--accent) 48%, var(--accent-2)); box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 45%, transparent); animation: rise var(--t3) var(--ease) backwards, aide-breathe calc(4.5s / var(--speed)) ease-in-out infinite; }
-    @keyframes aide-breathe { 50% { transform: scale(1.09); } }
+    /* the assistant: what it notices across the top, what it offers (and a place to tell it what you want) beside today's
+       plan, and under them what it sees of your music, studying and notes. Wide, so it fits one screen */
+    main.layout-assistant { max-width: 1200px; }
+    .aide { display: grid; gap: clamp(12px, 2.2vh, 20px); }
+    .aide-top { display: grid; gap: 4px; }
     .aide-hello { margin: 0; color: var(--muted); font-size: .98rem; text-align: var(--anchor-text); animation: fade-in var(--t2) var(--ease) backwards; }
-    .aide-line { margin: 0; font-size: clamp(1.3rem, 3.1vw, 1.8rem); line-height: 1.3; font-weight: 650; letter-spacing: -.02em; text-align: var(--anchor-text); text-wrap: pretty; }
+    .aide-line { margin: 0; font-size: clamp(1.3rem, 2.6vw, 1.75rem); line-height: 1.3; font-weight: 650; letter-spacing: -.02em; text-align: var(--anchor-text); text-wrap: balance; }
     .aide-line .w { display: inline-block; animation: rise var(--t2) var(--ease) backwards; animation-delay: calc(var(--n) * 16ms / var(--speed)); }
-    .aide-options { display: grid; gap: 8px; margin-top: 4px; }
+    .aide-cols { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px 22px; align-items: start; }
+    .aide-main { display: grid; gap: 12px; align-content: start; min-width: 0; }
+    .aide-side { display: grid; min-width: 0; }
+    .aide-side > .plan-day { margin-top: 0; }
+    .aide-side > .tile { padding: 16px 18px; }
+    .aide-options { display: grid; gap: 8px; }
     .aide-option { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 14px 11px 11px; color: inherit; font: inherit; text-align: left; text-decoration: none; cursor: pointer; background: color-mix(in srgb, var(--card) 86%, transparent); border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); transition: border-color var(--t1), transform var(--t2) var(--spring), background var(--t1); }
     .aide-option:hover { border-color: var(--accent); transform: translateX(3px); }
     .aide-option:active { transform: scale(.99); }
@@ -196,11 +201,9 @@
     .aide-text b { font-weight: 620; overflow-wrap: anywhere; }
     .aide-text small { color: var(--muted); font-size: .88rem; }
     .aide-key { flex: none; display: grid; place-items: center; width: 22px; height: 22px; font: inherit; font-size: .76rem; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; }
-    .aide-other { justify-self: start; padding: 2px 4px; font: inherit; font-size: .88rem; color: var(--muted); cursor: pointer; background: none; border: 0; }
+    .aide-other { justify-self: start; padding: 0 4px; font: inherit; font-size: .88rem; color: var(--muted); cursor: pointer; background: none; border: 0; }
     .aide-other:hover { color: var(--text); text-decoration: underline; }
     .aide-other[hidden] { display: none; }
-    main.anchor-center .aide-other { justify-self: center; }
-    main.anchor-right .aide-other { justify-self: end; }
     .aide-thread { display: grid; gap: 14px; }
     .aide-thread:empty { display: none; }
     .aide-turn { display: grid; gap: 8px; scroll-margin: 72px 0 112px; animation: rise var(--t2) var(--ease) backwards; }
@@ -213,12 +216,63 @@
     .aide-input::placeholder { color: var(--muted); }
     .aide-send { flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; color: var(--on-accent, #fff); cursor: pointer; background: var(--accent); border: 0; border-radius: 50%; }
     .aide-send .i { width: 16px; height: 16px; }
-    .aide-chips { display: flex; flex-wrap: wrap; justify-content: var(--anchor); gap: 6px; }
+    .aide-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .aide-chips .chip { padding: 3px 11px; font: inherit; font-size: .86rem; color: var(--muted); cursor: pointer; }
     .aide-chips .chip:hover { color: var(--text); }
     .aide-line .w.still { animation: none; }
     .aide-first.stagger > * { animation-delay: calc((var(--n, 0) * 45ms + 240ms) / var(--speed)); }
-    .aide > .aide-ask, .aide > .aide-chips, .aide > .aide-other { animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(340ms / var(--speed)); }
+    .aide-main > .aide-ask, .aide-main > .aide-chips, .aide-main > .aide-other { animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(340ms / var(--speed)); }
+    /* what it sees: your music, your studying, your notes, a card each */
+    .aide-glance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .aide-card { --c: var(--accent); display: grid; gap: 10px; align-content: start; min-width: 0; padding: 14px 16px 16px; background: color-mix(in srgb, var(--card) 86%, transparent); border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); animation: rise var(--t3) var(--ease) backwards; animation-delay: calc(400ms / var(--speed)); }
+    .aide-card:nth-child(2) { animation-delay: calc(450ms / var(--speed)); }
+    .aide-card:nth-child(3) { animation-delay: calc(500ms / var(--speed)); }
+    .aide-card p { margin: 0; }
+    .aide-card-head { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--text); font-weight: 650; text-decoration: none; }
+    .aide-card-head .aide-ic { width: 32px; height: 32px; }
+    .aide-card-head .aide-ic .i { width: 17px; height: 17px; }
+    .aide-card-head small { margin-left: auto; color: var(--muted); font-size: .86rem; font-weight: 400; white-space: nowrap; }
+    .aide-card-head .m-bars { margin-left: auto; }
+    .aide-card-head > .i:last-child { flex: none; width: 16px; height: 16px; color: var(--muted); opacity: 0; transform: translateX(-4px); transition: opacity var(--t2), transform var(--t2) var(--spring); }
+    .aide-card-head > :is(small, .m-bars) + .i:last-child { margin-left: 6px; }
+    .aide-card-head > b + .i:last-child { margin-left: auto; }
+    .aide-card-head:hover > .i:last-child { opacity: 1; transform: none; }
+    .aide-rows { display: grid; gap: 1px; margin: 0 -8px; }
+    .aide-row { display: flex; align-items: baseline; gap: 10px; min-width: 0; padding: 5px 8px; color: var(--text); font-size: .95rem; text-decoration: none; border-radius: calc(var(--radius) * .6); transition: background var(--t1); }
+    .aide-row:hover { background: color-mix(in srgb, var(--c) 10%, transparent); }
+    .aide-row span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .aide-row small { margin-left: auto; padding-left: 6px; color: var(--muted); font-size: .86rem; white-space: nowrap; }
+    .aide-continue { display: grid; gap: 1px; color: var(--text); text-decoration: none; }
+    .aide-continue small { color: var(--muted); font-size: .84rem; }
+    .aide-continue b { overflow: hidden; font-size: 1.06rem; white-space: nowrap; text-overflow: ellipsis; transition: color var(--t1); }
+    .aide-continue:hover b { color: var(--c); }
+    .aide-card .meter { height: 6px; }
+    .aide-card .row { margin-top: 0; }
+    .aide-card .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: .9rem; }
+    .aide-card .btn .i, .aide-card .btn svg { width: 15px; height: 15px; }
+    .aide-song { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .aide-song .t { flex: 1; min-width: 0; display: grid; line-height: 1.3; }
+    .aide-song .t b, .aide-song .t small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .aide-song .t small { color: var(--muted); font-size: .88rem; }
+    .aide-play, .aide-skip { flex: none; display: grid; place-items: center; width: 34px; height: 34px; padding: 0; color: var(--text); cursor: pointer; background: color-mix(in srgb, var(--text) 9%, transparent); border: 0; border-radius: 50%; transition: transform var(--t2) var(--spring), background var(--t1); }
+    .aide-play { color: var(--on-accent, #fff); background: var(--accent); }
+    .aide-play:hover, .aide-skip:hover { transform: scale(1.06); }
+    .aide-play svg, .aide-skip svg { width: 15px; height: 15px; }
+    .aide-next { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    /* (on a smaller window, a little less: no chips, and the cards show their first two lines) */
+    .aide.tight { gap: 12px; }
+    .aide.tight .aide-chips { display: none; }
+    .aide.tight .aide-card { gap: 8px; padding: 12px 14px 13px; }
+    .aide.tight .aide-card .meter + p, .aide.tight .aide-rows > :nth-child(n + 3) { display: none; }
+    /* (a window wide and tall enough has all of it in one screen, above the player: the page doesn't scroll) */
+    @media (min-width: 900px) and (min-height: 600px) {
+      html.aide-fit body { height: 100svh; min-height: 0; }
+    }
+    @media (max-width: 899px) {
+      main.layout-assistant { max-width: 680px; }
+      .aide-cols { grid-template-columns: minmax(0, 1fr); }
+      .aide-glance { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    }
     @media (max-width: 560px) { .aide-key { display: none; } }
   </style>
 </head>
@@ -279,10 +333,9 @@
         if (rate < 0.67 && (!worst || rate < worst.rate)) worst = { topic, right: st.right || 0, tried: st.tried, rate, name: NAMES[id], href: link(`${folder}/#${id}/learn/${encodeURIComponent(topic)}`) };
       }
       // what's new since your last visit, and how far the cards have turned (kit/notice.js), so each card shows something
-      // a little different each time you come back. What you checked off on your plan is named from the plan
+      // a little different each time you come back
       const P = window.fluentioPlan, D = window.fluentioPlanDay, yours = f.scheduleOn() && P ? P.current() : null;
-      const nameOf = (x) => { try { const day = P.dateOf(x.key), it = P.day(yours, day, P.switchesOn(yours, P.load(f.read), day)).find((i) => i.id === x.id); return it ? D.short(it) : ''; } catch { return ''; } };
-      const noticed = window.fluentioNotice ? window.fluentioNotice.visit({ read: f.read, write: f.write, now, nameOf: yours ? nameOf : null }) : { news: [], turn: 1, last: null };
+      const noticed = window.fluentioNotice ? window.fluentioNotice.visit({ read: f.read, write: f.write, now }) : { news: [], turn: 1, last: null };
       const turnOf = (ways) => ways[(noticed.turn || 1) % ways.length];
       const newsList = (news) => el('ul', { className: 'news' }, news.map((x) => el('li', {}, el('a', { href: link(x.href) }, el('b', {}, x.text), x.list?.length ? el('small', {}, window.fluentioNotice.list(x.list)) : null))));
       const welcomed = f.wait(import(link('kit/welcome.js')));
@@ -361,24 +414,15 @@
           const when = (h) => { const n = h.days === 0 ? (h.left > 0 ? `through ${h.to.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'today') : h.days === 1 ? 'tomorrow' : `in ${h.days} days`; return h.off ? `off ${n}` : n; };
           const row = (text, side, href) => el('li', {}, el(href ? 'a' : 'span', { href }, text, side ? el('small', {}, side) : null));
           const pl = yours && D ? D.now(now, { home: true }) : null, st = pl?.st;
-          // under the date, in turn: your plan (what's on and what's next), what's due, the days off, how your week's going
+          // under the date, in turn: your plan (what's on and what's next), what's due, the days off
           const ways = [() => { const soon = el('ul', { className: 'list' }); welcomed.then(({ upcoming }) => soon.replaceChildren(...upcoming(d, 3, s.showDaysOff ? s.daysOff : []).map((h) => row(`${h.emoji} ${h.name}`, when(h))))).catch(() => {}); return soon; }];
           if (st) {
             ways.push(() => el('ul', { className: 'list' },
               st.now ? row(`Now: ${D.short(st.now)}`, `${P.leftWords(P.left(st.now, st.m))} left`, link('schedule/#today')) : null,
               st.next ? row(`Next: ${D.short(st.next)}`, P.clockAmPm(st.next.at), link('schedule/#today')) : null,
-              st.of ? row(`${st.done} of ${st.of} checked off`, st.streak > 1 ? `${st.streak} days in a row` : '', link('schedule/#today')) : null,
               st.lights ? row('Lights out', P.lightsWords(st.lights), link('schedule/#week')) : null));
             const due = st.deadlines.slice(0, 3);
             if (due.length) ways.push(() => el('ul', { className: 'list' }, due.map((x) => row(x.what.replace(/,? due 9 AM$/, ''), P.dayWords(x), link('schedule/#deadlines')))));
-            const plan = P.load(f.read), sunday = new Date(midnight(now) - new Date(now).getDay() * 86400000);
-            let done = 0, outOf = 0, top = null;
-            for (let i = 0; i <= new Date(now).getDay(); i++) {
-              const day = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i), rec = plan.days[P.dayKey(day)] || {}, n = Object.keys(rec.done || {}).length;
-              done += n; outOf += rec.of || 0;
-              if (n && (!top || n > top.n)) top = { n, day };
-            }
-            if (done) ways.push(() => el('ul', { className: 'list' }, row(outOf ? `${done} of ${outOf} checked off this week` : `${done} checked off this week`, '', link('schedule/#week')), top ? row('Your best day so far', `${top.day.toLocaleDateString('en-US', { weekday: 'long' })}, ${top.n} done`) : null, st.streak > 1 ? row('Days in a row', String(st.streak)) : null));
           }
           return tile('', 'var(--accent-2)', head('calendar', d.toLocaleDateString('en-US', { weekday: 'long' })),
             el('div', { className: 'date' }, el('b', {}, d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })), el('span', { className: 'muted small' }, `Day ${days} of ${of}`)),

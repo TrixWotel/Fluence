@@ -209,6 +209,14 @@ function motion() {
     set('Drifting colors', 'The soft colors moving slowly behind the pages.', toggle(s.floatingColors, (v) => { s.floatingColors = v; save(); }, 'Drifting colors')));
 }
 
+// alerts for your plan (kit/alerts.js): when, and notifications where the browser lets the site show them
+function alertsRow() {
+  const A = window.fluentioAlerts;
+  if (!A || !f.scheduleOn?.()) return null;
+  return set('Alerts for your plan', `As each thing on it starts, a note at the top of any page of the site that’s open: School and your classes, your blocks, a lesson, the meals and the walks, the night’s steps and lights out. ${A.allowWords()}`,
+    seg(A.CHOICES, s.planAlerts, (v) => { s.planAlerts = v; save(); }, 'Alerts for your plan'),
+    A.canAsk() ? el('button', { type: 'button', className: 'btn', onclick: () => A.ask().then(() => draw()) }, svg('bell'), 'Show them as notifications') : null);
+}
 function home() {
   const names = TILES(), all = Object.keys(names);
   const order = [...s.home.filter((k) => all.includes(k)), ...all.filter((k) => !s.home.includes(k))];
@@ -228,9 +236,10 @@ function home() {
     set('Welcome', 'A greeting on the home page, and a line that changes with the time, the date, holidays, your music and what you’ve been doing.', toggle(s.greeting, (v) => { s.greeting = v; save(); }, 'Greeting')),
     set('Layout', 'Assistant says what it notices about what you’ve been doing, and offers what would help, with a tile when you ask for one. The others are tiles that fit one screen: Auto picks them by what you’ve been doing and the time of day, and Classic is always your tiles, in their order.',
       seg([['assistant', 'Assistant'], ['auto', 'Auto'], ['classic', 'Classic'], ['study', 'Study first'], ['music', 'Music first'], ['calm', 'Calm']], s.homeLayout || 'assistant', (v) => { s.homeLayout = v; save(); draw(); }, 'Home layout')),
-    set('Your plan', `From ${s.scheduleTitle}: its Week has your days, Deadlines your dates and Sleep when it’s lights out. With the Assistant layout, Home says what’s on now and lists today, with a check for each thing you check off.`,
+    set('Your plan', `From ${s.scheduleTitle}: its Week has your days, Deadlines your dates and Sleep when it’s lights out. With the Assistant layout, Home says what’s on now and lists today, each thing crossed off once its time is over.`,
       toggle(s.planHome !== false, (v) => { s.planHome = v; save(); }, 'Your plan on Home')),
     set('Your plan in the bar', 'What you’re due to be doing and how long it has left, on every page, and at night, when it’s lights out.', toggle(s.planBar !== false, (v) => { s.planBar = v; save(); }, 'Your plan in the bar')),
+    alertsRow(),
     set('Text', 'The page stays in the middle of the window. This is where its words and buttons sit: along its left edge, in the middle, or along its right edge. Left and Right take what’s inside the tiles along too. Center leaves that on the left.',
       seg([['left', 'Left'], ['center', 'Center'], ['right', 'Right']], s.homeAlign || 'center', (v) => { s.homeAlign = v; save(); }, 'Where the home page’s text sits')),
     set('Tiles', 'For every layout but Assistant: which show on the home page, and in what order.', tiles),

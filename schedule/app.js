@@ -2,10 +2,11 @@
 // and nothing boxed in. Week is the week by the hour, the way a school's schedule shows it, sized to fit the window down to
 // the player so nothing's hidden and nothing scrolls: your classes on the Day they're on (from Classes), your own blocks,
 // and what has set times (a lesson, School, a meal, the walk home), with deadlines at the top of their day and a line for
-// now (free time and the night stay out of it). What's yours you check off; the rest crosses itself off once it's over.
+// now (free time and the night stay out of it). Everything crosses itself off once its time is over (drawn crossing out,
+// if you're looking), and a double-click (or a right-click) on anything has its card. Each thing has an alert as it starts,
+// on any page of the site that's open (kit/alerts.js; Alerts, on the top row and on Today, says when).
 // On the week the top row hides for the room (its key, ⌃B to start with, shows it; Keep leaves it), and a swipe to the side,
-// like ← and →, goes a week on or back. Today is what's on now, how to start it, and the day in order with a circle to
-// check each thing off. Classes,
+// like ← and →, goes a week on or back. Today is what's on now, how to start it, and the day in order. Classes,
 // Deadlines, Sleep and the rest are pages: Markdown you can change (Edit), kept as you type.
 // They're in this browser ('fluentio.schedule', kit/plan.js) and go with your progress to GitHub (kit/progress.js), so every
 // browser has the same plan, and Home and the bar know it too.
@@ -25,8 +26,8 @@ if (f && p && D && box) {
   // flush keeps what's being typed; shift is the week showing (0 is this one) and picked its day on a phone; pl is the plan;
   // fitHour is how tall an hour of the week was the last time it was fitted to the window
   let flush = null, drawn = '', shift = 0, picked = '', pop = null, pl = null, fitHour = 0;
-  // fresh: what a click just checked off or undid ({ key, on }), drawn crossing out (or back) once
-  let fresh = null;
+  // what was crossed off the last time this view was drawn: what's crossed itself off since is drawn crossing out, once
+  let wasOver = null, nowOver = new Set();
   // the top row (the tabs, the week's dates, Edit plan) is hidden on the week, for the room, and its key (Settings → Keys,
   // ⌃B to start with) shows it; Keep, on the row, leaves it there. This browser remembers Keep ('fluentio:schedule', not
   // part of your progress). slide: which way the week just went (a swipe, ← or →, or ‹ and ›)
@@ -38,7 +39,7 @@ if (f && p && D && box) {
     rowShown = on;
     draw();
   }
-  const crossing = (key) => (fresh && fresh.key === key && f.moving() ? (fresh.on ? 'crossing' : 'uncrossing') : '');
+  const crossing = (key, over) => { if (!over) return ''; nowOver.add(key); return wasOver && !wasOver.has(key) && f.moving() ? 'crossing' : ''; };
 
   // ---------- the pages, laid out ----------
   // (a [[link]] goes to one of these pages, or a note in Station; a web address opens in a new tab)
@@ -99,15 +100,12 @@ if (f && p && D && box) {
   const colorOf = (it, kind) => (it.kind === 'class' ? it.color || colors[key(it.cls || it.name)] || '' : kind === 'event' ? (SCHOOL.test(it.name) ? 'gray' : colors[key(it.name)] || '') : '');
   const kindOf = (it) => (it.check ? 'mine' : it.kind === 'class' ? 'class' : it.set && !it.steps ? (SCHOOL.test(it.name) || colors[key(it.name)] ? 'event' : 'quiet') : 'routine');
 
-  // what a day holds: its things (done or not), its Day of the rotation, lights out, sleep, and what's due. What isn't
-  // yours to check off (a class, a lesson, a meal) is crossed off once it's over
+  // what a day holds: its things, its Day of the rotation, lights out, sleep, and what's due. Each thing is crossed off
+  // once its time is over (one with no time, once the day is)
   function dayOf(date) {
-    const k = p.dayKey(date), rec = pl.state.days[k] || {}, t = date.getTime();
+    const k = p.dayKey(date), t = date.getTime();
     const items = p.day(pl.plan, date, p.switchesOn(pl.plan, pl.state, date));
-    for (const it of items) {
-      it.done = it.check && !!rec.done?.[it.id];
-      it.over = !it.check && it.at != null && it.end != null && (k < pl.st.key || (k === pl.st.key && it.end <= pl.st.m));
-    }
+    for (const it of items) it.over = k < pl.st.key || (k === pl.st.key && it.at != null && it.end != null && it.end <= pl.st.m);
     // (sleep: from lights out to the first thing the next morning; the week shows where it starts)
     const lights = p.lightsOut(pl.plan, date);
     let sleep = null;
@@ -225,17 +223,22 @@ if (f && p && D && box) {
       onclick: school ? (e) => askDay(d, e.currentTarget) : null,
     }, d.date ? [el('span', { className: 'wd' }, fmt(d.date, { weekday: 'short' })), el('span', { className: 'dn' }, String(d.date.getDate()))] : el('span', { className: 'dn label' }, d.label));
   }
-  // a click checks off what's yours, and again undoes it; a right-click (or the menu key) has its card
-  const CLICK = 'Click to check it off, again to undo. Right-click for more';
-  const more = (fn) => (e) => { e.preventDefault(); fn(e.currentTarget); };
-  // what's due that day, a day off, and something of yours with no time
+  // a double-click on anything has its card, and so do a right-click (or the menu key) and Enter; a click does nothing
+  const opens = (fn) => ({
+    ondblclick: (e) => { e.preventDefault(); fn(e.currentTarget); },
+    oncontextmenu: (e) => { e.preventDefault(); fn(e.currentTarget); },
+    onkeydown: (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); fn(e.currentTarget); } },
+  });
+  // what's due that day (crossed off on a day that's gone, or once Deadlines says it's done; a birthday isn't), a day off,
+  // and something of yours with no time (crossed off once the day's over)
   function dueOf(d) {
     const chips = [];
     if (d.rot?.off) chips.push(el('span', { className: 'cal-chip off', title: d.rot.off }, el('span', {}, d.rot.off)));
-    for (const x of d.dls) chips.push(x.yearly
-      ? el('button', { type: 'button', className: 'cal-chip day', title: x.what, onclick: (e) => showDue(x, e.currentTarget), oncontextmenu: more((at) => showDue(x, at)) }, el('span', {}, x.what))
-      : el('button', { type: 'button', className: ['cal-chip dl', x.done ? 'done' : '', crossing(`dl|${x.line}`)].filter(Boolean).join(' '), 'aria-pressed': String(!!x.done), title: `${x.what}. ${CLICK}`, onclick: () => tick(x, !x.done), oncontextmenu: more((at) => showDue(x, at)) }, el('span', {}, x.what)));
-    for (const it of d.items.filter((i) => i.at == null && i.check)) chips.push(el('button', { type: 'button', className: ['cal-chip mine', it.done ? 'done' : '', crossing(`${d.key}|${it.id}`)].filter(Boolean).join(' '), 'aria-pressed': String(!!it.done), title: `${it.name}. ${CLICK}`, onclick: () => mark(d, it, !it.done), oncontextmenu: more((at) => show(d, it, at)) }, el('span', {}, short(it))));
+    for (const x of d.dls) {
+      const over = !x.yearly && (x.done || d.past);
+      chips.push(el('button', { type: 'button', className: ['cal-chip', x.yearly ? 'day' : 'dl', over ? 'done' : '', crossing(`dl|${x.line}|${d.key}`, over)].filter(Boolean).join(' '), title: x.what, ...opens((at) => showDue(x, at)) }, el('span', {}, x.what)));
+    }
+    for (const it of d.items.filter((i) => i.at == null && i.check)) chips.push(el('button', { type: 'button', className: ['cal-chip mine', it.over ? 'done' : '', crossing(`${d.key}|${it.id}`, it.over)].filter(Boolean).join(' '), title: it.name, ...opens((at) => show(d, it, at)) }, el('span', {}, short(it))));
     return el('div', { className: `cal-ad${d.today ? ' today' : ''}` }, chips);
   }
   function column(d, y, b, marks, folds, hour, ask) {
@@ -246,23 +249,18 @@ if (f && p && D && box) {
     return col;
   }
   // a block: a class in its color, something of yours, something set (a lesson, School), and quieter, a meal, the walk
-  // home, the night and sleep. Just its name and when it starts; its card has the rest. A click checks off what's yours
-  // (again undoes it) and opens the card of anything else. Until Classes says which Day it is, School asks, since your
-  // classes take its place
+  // home, the night and sleep. Just its name and when it starts, crossed off once it's over; its card (a double-click)
+  // has the rest. Until Classes says which Day it is, School asks, since your classes take its place
   function block(d, { it, lane, of }, y, hour, ask) {
     const kind = it.sleep ? 'sleep' : kindOf(it), min = it.end - it.at, size = sizeOf(min, hour), end = it.sleep ? it.wake ?? it.end : it.end;
     // (School asks even once it's over, and isn't crossed off while it does, so the question reads plainly)
-    const now = d.today && pl && pl.st.m >= it.at && pl.st.m < end, asking = ask && SCHOOL.test(it.name) && !!d.date, crossed = it.done || (it.over && !asking);
-    const task = it.check && !!d.date, act = () => (task ? mark(d, it, !it.done) : show(d, it, b));
+    const now = d.today && pl && pl.st.m >= it.at && pl.st.m < end, asking = ask && SCHOOL.test(it.name) && !!d.date, crossed = !!it.over && !asking;
     const b = el('div', {
-      className: ['cal-b', kind, size, crossed ? 'done' : '', now ? 'now' : '', asking ? 'asking' : '', crossing(`${d.key}|${it.id}`)].filter(Boolean).join(' '),
+      className: ['cal-b', kind, size, crossed ? 'done' : '', now ? 'now' : '', asking ? 'asking' : '', crossing(`${d.key}|${it.id}`, crossed)].filter(Boolean).join(' '),
       style: `top:${y(it.at)};height:max(4px, ${pos(min / 60)} - 2px);--lane:${lane};--of:${of}`,
       role: asking ? 'group' : 'button', tabIndex: asking ? null : 0, 'data-c': colorOf(it, kind) || null, 'data-min': String(min),
-      'aria-pressed': task ? String(!!it.done) : null, title: task ? CLICK : null,
-      'aria-label': `${it.steps ? 'Night routine' : it.name}, ${span(it.at, end)}${it.where ? `, ${it.where}` : ''}${it.done ? ', checked off' : crossed ? ', over' : ''}`,
-      onclick: asking ? null : act,
-      oncontextmenu: asking ? null : more(() => show(d, it, b)),
-      onkeydown: asking ? null : (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === b) { e.preventDefault(); act(); } },
+      'aria-label': `${it.steps ? 'Night routine' : it.name}, ${span(it.at, end)}${it.where ? `, ${it.where}` : ''}${crossed ? ', over' : ''}`,
+      ...(asking ? {} : opens(() => show(d, it, b))),
     },
       el('b', {}, el('span', {}, it.steps ? 'Night routine' : short(it))),
       el('small', {}, it.sleep && it.wake != null ? `until ${p.clock(it.wake)}` : p.clock(it.at)),
@@ -270,14 +268,6 @@ if (f && p && D && box) {
         el('div', {}, daysFor(d.date).map((n) => el('button', { type: 'button', className: 'btn', onclick: () => setDay(d.date, n) }, `Day ${n}`))),
         el('p', { className: 'why' }, 'Pick it and your classes take School’s place.')) : null);
     return b;
-  }
-  // checking something off on its day (today's the way Home does it)
-  function mark(d, it, on) {
-    fresh = { key: `${d.key}|${it.id}`, on };
-    if (d.today) { D.markDone(it, on); return; }
-    p.check(pl.state, d.key, it.id, on);
-    p.save(pl.state, write);
-    dispatchEvent(new CustomEvent('fluence:plan'));
   }
 
   // ---------- a card about a block, a deadline, or a Day ----------
@@ -310,9 +300,8 @@ if (f && p && D && box) {
       it.steps ? el('ol', { className: 'pop-steps' }, it.steps.map((s) => el('li', {}, el('time', {}, p.clock(s.at)), s.min ? `${s.name} · ${s.min} min` : s.name))) : null,
       it.sleep ? el('p', {}, 'From lights out to the first thing the next morning. ', pl.plan.ids.sleep ? el('a', { href: `#${pl.plan.ids.sleep}` }, 'Sleep') : null) : null,
       how ? el('p', { className: 'pop-how' }, el('b', {}, `${how.name}: `), how.text, ' ', el('a', { href: `#${pl.plan.ids.how}` }, 'More')) : null,
-      (it.check && d.date) || place ? el('div', { className: 'pop-act' },
-        place ? el('a', { className: 'btn primary', href: place.away ? place.href : link(place.href), target: place.away ? '_blank' : null, rel: place.away ? 'noopener' : null }, `Start ${short(it)}`) : null,
-        it.check && d.date ? el('button', { type: 'button', className: `btn${place ? '' : ' primary'}`, onclick: () => { closePop(); mark(d, it, !it.done); } }, it.done ? 'Not done after all' : 'Check it off') : null) : null);
+      place ? el('div', { className: 'pop-act' },
+        el('a', { className: 'btn primary', href: place.away ? place.href : link(place.href), target: place.away ? '_blank' : null, rel: place.away ? 'noopener' : null }, `Start ${short(it)}`)) : null);
   }
   // (Nov 13, Feb 5/6, Apr 28 – May 1, with the year when it isn't this one; and how soon)
   const md = (t) => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -329,18 +318,26 @@ if (f && p && D && box) {
     if (n < 0) return x.end >= t0() ? 'Now' : `${-n} ${n === -1 ? 'day' : 'days'} ago`;
     return n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `In ${n} days`;
   }
-  function tick(x, done) {
-    fresh = { key: `dl|${x.line}`, on: done };
-    const id = pl.plan.ids.deadlines, s = p.loadDocs(read);
-    if (s.docs[id]) keep(id, p.markDeadline(s.docs[id].text, x.line, done));
-  }
   function showDue(x, anchor) {
     popAt(anchor, x.what,
       el('p', { className: 'pop-when' }, `${dates(x)} · ${when(x)}`),
       x.yearly ? el('p', {}, 'Every year.') : null,
-      el('div', { className: 'pop-act' },
-        x.yearly ? null : el('button', { type: 'button', className: 'btn primary', onclick: () => { closePop(); tick(x, !x.done); } }, x.done ? 'Not done after all' : 'Check it off'),
-        el('a', { className: `btn${x.yearly ? ' primary' : ''}`, href: `#${pl.plan.ids.deadlines}` }, 'All deadlines')));
+      el('div', { className: 'pop-act' }, el('a', { className: 'btn primary', href: `#${pl.plan.ids.deadlines}` }, 'All deadlines')));
+  }
+  // Alerts: when each thing's alert comes (kit/alerts.js), and notifications where this browser lets the site show them
+  const A = window.fluentioAlerts;
+  const alertsBtn = () => (A ? el('button', { type: 'button', className: 'sc-alerts', 'aria-pressed': String(A.leadOf(f.settings.planAlerts) != null), title: 'When each thing’s alert comes', onclick: (e) => showAlerts(e.currentTarget) }, svg('bell'), 'Alerts') : null);
+  function showAlerts(anchor) {
+    const pick = (v) => {
+      f.save({ ...f.settings, planAlerts: v });
+      for (const b of box.querySelectorAll('.sc-alerts')) b.setAttribute('aria-pressed', String(A.leadOf(v) != null));
+      showAlerts(anchor);
+    };
+    popAt(anchor, 'Alerts',
+      el('p', {}, 'An alert as each thing on your plan starts, on any page of the site that’s open: School and your classes, your blocks, a lesson, the meals and the walks, the night’s steps and lights out.'),
+      el('div', { className: 'pop-act', role: 'group', 'aria-label': 'When' }, A.CHOICES.map(([v, name]) => el('button', { type: 'button', className: `btn${v === f.settings.planAlerts ? ' primary' : ''}`, 'aria-pressed': String(v === f.settings.planAlerts), onclick: () => pick(v) }, name))),
+      el('p', { className: 'pop-note' }, A.allowWords()),
+      A.canAsk() ? el('div', { className: 'pop-act' }, el('button', { type: 'button', className: 'btn', onclick: () => A.ask().then(() => showAlerts(anchor)) }, svg('bell'), 'Show them as notifications')) : null);
   }
   // which Day a date is: the weekday's Days to choose from, and the weeks around it follow
   const daysFor = (date) => Array.from({ length: Math.ceil(pl.plan.classes.count / 5) }, (_, i) => date.getDay() + 5 * i);
@@ -371,10 +368,9 @@ if (f && p && D && box) {
   // ---------- Today: what's on now, then the day in order ----------
   function today(docs) {
     if (!pl) return empty(docs);
-    const st = pl.st, w = D.words(pl), it = st.now?.check && !st.now.done ? st.now : null, d = dayOf(st.date);
-    if (p.remember(pl.state, st)) p.save(pl.state, write);
+    const st = pl.st, w = D.words(pl), it = st.now?.check ? st.now : null, d = dayOf(st.date);
     const said = d.rot?.n ? `Day ${d.rot.n}` : d.rot?.off || '';
-    const meta = [st.of ? `${st.done} of ${st.of} checked off` : '', st.streak ? `${st.streak} ${st.streak === 1 ? 'day' : 'days'} in a row` : '', st.lights ? `lights out by ${p.lightsWords(st.lights)}` : ''].filter(Boolean).join(' · ');
+    const meta = st.lights ? `Lights out by ${p.lightsWords(st.lights)}` : '';
     // (in the evening, what tomorrow holds)
     let tomorrow = null;
     if (st.m >= 18 * 60) {
@@ -382,34 +378,30 @@ if (f && p && D && box) {
       if (its.length) tomorrow = el('p', { className: 'sc-later' }, el('b', {}, `Tomorrow, ${fmt(next, { weekday: 'long' })}${rot?.n ? ` (Day ${rot.n})` : ''}: `), its.map((x) => `${short(x)}${x.at != null ? ` ${p.clock(x.at)}` : ''}`).join(', '), '.');
     }
     return [
-      hero('Today', `${fmt(st.date, { weekday: 'long', month: 'long', day: 'numeric' })}${said ? ` · ${said}` : ''}`),
+      hero('Today', `${fmt(st.date, { weekday: 'long', month: 'long', day: 'numeric' })}${said ? ` · ${said}` : ''}`, alertsBtn()),
       askBanner(Array.from({ length: 7 }, (_, i) => addDays(st.date, i))),
       el('section', { className: 'sc-now', 'aria-label': 'Now' },
         el('p', { className: 'sc-say' }, w ? `${w.say}${w.ask && !it ? ` ${w.ask}` : ''}` : st.items.length ? 'That’s all on your plan today.' : 'Nothing on your plan today.'),
-        it ? el('div', { className: 'sc-actions' },
-          it.place
-            ? el('a', { className: 'btn primary pill', href: D.hrefOf(it), target: it.place.away ? '_blank' : null, rel: it.place.away ? 'noopener' : null }, `Start ${short(it)}`)
-            : el('button', { type: 'button', className: 'btn primary pill', onclick: () => D.markDone(it, true) }, `Check off ${short(it)}`),
+        it && (it.place || it.how) ? el('div', { className: 'sc-actions' },
+          it.place ? el('a', { className: 'btn primary pill', href: D.hrefOf(it), target: it.place.away ? '_blank' : null, rel: it.place.away ? 'noopener' : null }, `Start ${short(it)}`) : null,
           it.how ? el('p', { className: 'sc-how' }, el('b', {}, `${it.how.name}:`), ` ${it.how.text}`) : null) : null,
-        meta ? el('p', { className: 'sc-meta' }, meta[0].toUpperCase() + meta.slice(1)) : null),
+        meta ? el('p', { className: 'sc-meta' }, meta) : null),
       agenda(d),
       st.switches.length ? el('div', { className: 'sc-switches', role: 'group', 'aria-label': 'Changes to your plan' }, st.switches.map((s) => el('button', { type: 'button', 'aria-pressed': String(s.on), title: s.scope === 'week' ? `${s.name}, for this week` : `${s.name}, for today`, onclick: () => D.flipSwitch(s, !s.on) }, s.name))) : null,
       tomorrow,
     ];
   }
-  // the day in order: classes, your own blocks with a circle to check each off, what has set times (a lesson, a meal, the
-  // walk home), the night as one, and sleep (free time is left out). What's over is quieter, and crossed off unless it
-  // was yours to check off; what's on now is lit. A click on one of yours checks it off too (again undoes it), and a
-  // right-click has its card
+  // the day in order: classes, your own blocks, what has set times (a lesson, a meal, the walk home), the night as one,
+  // and sleep (free time is left out). What's over is quieter and crossed off; what's on now is lit. A double-click (or
+  // a right-click) has a thing's card
   function agenda(d) {
     const its = [...d.items.filter((it) => it.at == null && it.check), ...blocksOf(d, { day: true })], m = pl.st.m;
     const row = (it) => {
       const end = it.sleep ? it.wake ?? it.end : it.end, now = it.at != null && m >= it.at && m < end, over = it.at != null && end <= m;
       const sub = it.steps ? it.steps.map(short).join(', ') : it.sleep ? (it.wake != null ? `until ${p.clockAmPm(it.wake)}` : '') : it.kind === 'class' && !it.check ? [it.where ? it.where.split(' · ').pop() : '', `until ${p.clock(it.end)}`].filter(Boolean).join(' · ') : it.check ? `${it.min} min` : `until ${p.clockAmPm(it.end)}`;
-      return el('li', { className: ['ag-row', now ? 'now' : '', over && !now ? 'over' : '', it.done || (over && !it.check) ? 'done' : '', crossing(`${d.key}|${it.id}`)].filter(Boolean).join(' '), 'data-c': colorOf(it, kindOf(it)) || null },
+      return el('li', { className: ['ag-row', now ? 'now' : '', over ? 'over done' : '', crossing(`${d.key}|${it.id}`, over)].filter(Boolean).join(' '), 'data-c': colorOf(it, kindOf(it)) || null },
         el('time', {}, it.at == null ? 'Any time' : p.clockAmPm(it.at)),
-        el('button', { type: 'button', className: 'ag-name', title: it.check ? CLICK : null, onclick: (e) => (it.check ? mark(d, it, !it.done) : show(d, it, e.currentTarget)), oncontextmenu: more((at) => show(d, it, at)) }, el('b', {}, el('span', {}, it.steps ? 'Night routine' : short(it))), el('small', {}, sub)),
-        it.check ? el('button', { type: 'button', className: 'ag-ck', 'aria-pressed': String(!!it.done), 'aria-label': `${it.name}: ${it.done ? 'checked off' : 'not checked off'}`, title: it.done ? 'Checked off. Click to undo' : 'Check it off', onclick: () => mark(d, it, !it.done) }, svg('check')) : el('span', {}));
+        el('button', { type: 'button', className: 'ag-name', ...opens((at) => show(d, it, at)) }, el('b', {}, el('span', {}, it.steps ? 'Night routine' : short(it))), el('small', {}, sub)));
     };
     return its.length ? el('ol', { className: 'sc-agenda', 'aria-label': 'Today in order' }, its.map(row)) : null;
   }
@@ -422,7 +414,7 @@ if (f && p && D && box) {
     };
     return [el('div', { className: 'sc-empty' },
       el('h2', {}, docs.length ? 'There’s no Week page yet' : `Your ${T()} is empty`),
-      el('p', {}, 'A Week page has your days: a section for each day, and a line for each thing with its time. With minutes after it, it’s something to check off, here and on Home.'),
+      el('p', {}, 'A Week page has your days: a section for each day, and a line for each thing with its time and how long it takes. Each crosses itself off once its time is over, here and on Home, and has an alert as it starts.'),
       el('p', {}, docs.length ? 'Start one with a few things in it, and change them to fit your days.' : 'Start with a week, deadlines, lights out and how to study, with a few things in each, and change them to fit your days.'),
       el('button', { type: 'button', className: 'btn primary', onclick: start }, docs.length ? 'Start a week' : 'Start my schedule'))];
   }
@@ -441,6 +433,7 @@ if (f && p && D && box) {
         el('p', { className: 'sc-range' }, el('b', {}, range)),
         el('div', { className: 'sc-nav' }, step(-1, 'The week before'), shift ? el('button', { type: 'button', className: 'btn pill', onclick: () => { shift = 0; picked = ''; draw(); } }, 'This week') : null, step(1, 'The week after')),
         editBtn(doc.id, 'Edit plan'),
+        alertsBtn(),
         phone.matches ? null : el('button', { type: 'button', className: 'sc-keep', 'aria-pressed': String(keepRow()), title: keepRow() ? 'Kept here. Click to hide it again (its key shows it)' : `Keep this row here${rowKey() ? ` (${f.key.shown(rowKey())} shows and hides it)` : ''}`, onclick: () => { write(ROW, { ...(read(ROW) || {}), keep: !keepRow() }); rowShown = true; draw(); } }, svg('eye'), 'Keep')),
       phone.matches ? el('div', { className: 'sc-days', role: 'tablist', 'aria-label': 'Days' }, dates7.map((d, i) => el('button', {
         type: 'button', role: 'tab', 'aria-selected': String(keys[i] === p.dayKey(sel)), className: keys[i] === pl.st.key ? 'today' : '',
@@ -512,7 +505,7 @@ if (f && p && D && box) {
   // ---------- changing a page ----------
   const code = (s) => el('code', {}, s);
   const HELP = {
-    week: () => el('p', { className: 'sc-help' }, 'A section for each day or set of days (', code('## Monday'), ', ', code('## Weekdays'), ', ', code('## Sunday to Thursday nights'), '), and a line for each thing: ', code('- 4:30 Homework · 90 min'), '. Minutes mean you check it off, and a time it ends (', code('- 4:00–5:00 Lesson'), ', ', code('- 7:00–7:30 Dinner'), ') something set, which crosses itself off once it’s over. ', code('## Before lights out'), ' has the night’s steps with their minutes (', code('- Shower · 15 min'), '): they end at lights out, in order, and move when it does. After a · a line can also have a link, its days, ', code('from Jan 1'), ', ', code('until Mar 1'), ', ', code('odd weeks'), ' or ', code('first Saturday'), '. ', code('## On game days'), ' makes a switch.'),
+    week: () => el('p', { className: 'sc-help' }, 'A section for each day or set of days (', code('## Monday'), ', ', code('## Weekdays'), ', ', code('## Sunday to Thursday nights'), '), and a line for each thing: ', code('- 4:30 Homework · 90 min'), '. Minutes say how long it takes, or a time it ends does (', code('- 4:00–5:00 Lesson'), ', ', code('- 7:00–7:30 Dinner'), '). Each thing crosses itself off once its time is over, and has an alert as it starts. ', code('## Before lights out'), ' has the night’s steps with their minutes (', code('- Shower · 15 min'), '): they end at lights out, in order, and move when it does. After a · a line can also have a link, its days, ', code('from Jan 1'), ', ', code('until Mar 1'), ', ', code('odd weeks'), ' or ', code('first Saturday'), '. ', code('## On game days'), ' makes a switch.'),
     classes: () => el('p', { className: 'sc-help' }, 'A section for each of your school’s days (', code('## Day 1'), ') and a line for each class: ', code('- 9:00–9:50 Biology · Room 204'), '. ', code('## Rotation'), ' says which Day a date is (', code('- Nov 9: Day 1'), '), ', code('## No school'), ' has days off (', code('- Nov 26–27 Thanksgiving'), '), and ', code('## Colors'), ' a color for a class (', code('- Biology: teal'), ').'),
     deadlines: () => el('p', { className: 'sc-help' }, 'A line for each date: ', code('- [ ] Dec 12 Project due'), ', or a few days: ', code('- [ ] Apr 28 – May 1 Trip'), '. A heading with a year (', code('## 2027'), ') is the year for the dates under it, and under ', code('## Every year'), ' a date comes back each year, like a birthday (', code('- Jun 1: Birthday'), ').'),
     sleep: () => el('p', { className: 'sc-help' }, 'A table of when it’s lights out from when (', code('| Nov 16 | 12:30 AM |'), '), and a line like ', code('Friday and Saturday nights: up to 30 min later'), '.'),
@@ -582,6 +575,10 @@ if (f && p && D && box) {
     const ids = pl?.plan.ids || {}, want = r.id || (phone.matches || !pl ? 'today' : ids.week);
     const doc = r.id === 'pages' ? null : docs.find((d) => d.id === want), here = r.id === 'pages' ? 'pages' : doc ? doc.id : 'today';
     const todo = docs.find((d) => d.id === 'to-do' || /^to ?do$/i.test(d.title));
+    // (the same view drawn again draws what's crossed itself off since, crossing out)
+    const where = `${here}/${r.mode}/${shift}/${picked}`;
+    if (where !== drawn) wasOver = null;
+    nowOver = new Set();
     const tabbed = [ids.week, ids.classes, ids.deadlines, todo?.id].filter(Boolean), rest = docs.filter((d) => !tabbed.includes(d.id));
     const views = (here === 'pages' ? pages(rest)
       : doc
@@ -604,25 +601,24 @@ if (f && p && D && box) {
       ids.deadlines ? tab(`#${ids.deadlines}`, title(ids.deadlines), here === ids.deadlines) : null,
       todo ? tab(`#${todo.id}`, todo.title, here === todo.id) : null,
       tab('#pages', 'Pages', here === 'pages' || rest.some((d) => d.id === here)));
-    // (a new page rises in; the same page drawn again, with the clock or a check, is just there)
+    // (a new page rises in; the same page drawn again, with the clock, is just there)
     // (another week of the same view slides in instead: see slide)
-    const where = `${here}/${r.mode}/${shift}/${picked}`, view = (w) => w.split('/').slice(0, 2).join('/'), page = el('section', { className: `sc-page${view(where) !== view(drawn) && f.moving() ? ' rise' : ''}`, 'aria-label': doc ? doc.title : 'Today' }, ...views);
-    drawn = where;
+    const view = (w) => w.split('/').slice(0, 2).join('/'), page = el('section', { className: `sc-page${view(where) !== view(drawn) && f.moving() ? ' rise' : ''}`, 'aria-label': doc ? doc.title : 'Today' }, ...views);
+    drawn = where; wasOver = nowOver;
     box.replaceChildren(el('div', { className: 'sc-top' }, tabs, tools), page);
     // (the week, fitted to the window)
     const weekShown = !!page.querySelector('.cal.fill');
     box.closest('main')?.classList.toggle('filled', weekShown);
     box.closest('main')?.classList.toggle('row-hidden', weekShown && !rowOn());
     fitWeek();
-    fresh = null; slide = 0;
+    slide = 0;
     // (a link to a page that isn't here any more shows Today, and says so in the address)
     if (!doc && r.id && r.id !== 'today' && r.id !== 'pages') history.replaceState(null, '', '#today');
   }
 
   draw();
   addEventListener('hashchange', () => { if (route().id !== drawn.split('/')[0]) { shift = 0; picked = ''; } draw(); });
-  // (checking something off, a switch, another tab's changes, and the clock moving on; not while you're typing, or reading
-  // a card)
+  // (a switch, another tab's changes, and the clock moving on; not while you're typing, or reading a card)
   const again = () => { if (!flush) draw(); };
   addEventListener('fluence:plan', again);
   addEventListener('storage', (e) => { if (e.key === p.KEY || e.key === p.DOCS) again(); });
@@ -658,7 +654,7 @@ if (f && p && D && box) {
     const dx = end.clientX - t.x, dy = end.clientY - t.y;
     if (Math.abs(dx) >= 60 && Math.abs(dx) > 1.6 * Math.abs(dy) && Date.now() - t.t < 800) { closePop(); go(dx < 0 ? 1 : -1); }
   }, { passive: true });
-  addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && !e.target.closest?.('.cal-b, .cal-chip, .cal-dh, .ag-name')) closePop(); }, true);
+  addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && !e.target.closest?.('.cal-dh, .sc-alerts')) closePop(); }, true);
   // (the week fits again when the window changes, when the player comes or goes, and when a look or the fonts load)
   let sized = 0;
   addEventListener('resize', () => { closePop(); cancelAnimationFrame(sized); sized = requestAnimationFrame(fitWeek); });

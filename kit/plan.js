@@ -1,10 +1,10 @@
 // Your plan, from the pages in Schedule (schedule/). They're yours: none of a plan is in the site's code.
 // Week has your days: a section for each day or set of days ("## Monday", "## Sunday to Thursday nights"), a line for
-// each thing with its time, and minutes on what you check off ("- 4:30 Homework · 90 min"). A section like "## On game
+// each thing with its time, and minutes on a block of yours ("- 4:30 Homework · 90 min"). A section like "## On game
 // days" is a switch that changes those days. Classes has your school's days (Day 1, Day 2, …) and which Day a date is,
 // Deadlines a line for each date, Sleep when it's lights out from when, and How to study a section for each kind of
 // block, which Home and Schedule quote.
-// The pages are in 'fluentio.schedule', and what you've checked off in 'fluentio.plan'. Both go with the rest of your
+// The pages are in 'fluentio.schedule', and the switches you turn on in 'fluentio.plan'. Both go with the rest of your
 // progress (kit/progress.js), so every browser has the same plan and carries on from the same day. Schedule shows it
 // all, Home says what's now and lists the day, and the bar shows what's now on every page.
 // A plain script: Schedule, Home and the bar use window.fluentioPlan, and the tests require() it.
@@ -141,7 +141,7 @@
     return x.name || start ? x : null;
   }
   // a section: days ("## Monday"), a switch ("## On game days", "## In exam weeks", "## On trip days, only":
-  // only means the switch's lines are all there is to check off), the steps before lights out ("## Before lights out",
+  // only means the switch's lines take the place of the day's own blocks), the steps before lights out ("## Before lights out",
   // "## Bedtime"), or anything else, which is left alone
   function section(title) {
     const t = title.replace(/[*_`]/g, '').trim(), evening = /\b(nights?|evenings?|tonight)\b/i.test(t);
@@ -381,7 +381,7 @@
   const dropDoc = (state, id) => { delete state.docs[id]; return state; };
   // the pages a new schedule starts with: what each one is for, and how to write it
   const STARTER = [
-    ['week', 'Week', '# Week\n\nA section for each day or set of days, and a line for each thing with its time. Minutes after a · mean it’s something to check off.\n\n## Weekdays\n- 7:30 Wake up, get ready\n- 8:00 School\n\n## Monday to Thursday\n- 4:00 Homework · 60 min\n- 6:00 Dinner\n- 7:00 Reading · 20 min\n- 7:30 Free\n\n## Friday\n- 4:00 Free afternoon\n\n## Weekends\n- 10:00 Practice · 45 min\n- 12:00 Lunch\n\n## Every night\n- 9:30 Phone away\n- 9:45 Read\n\n## On game days\n- 4:00 Game\n'],
+    ['week', 'Week', '# Week\n\nA section for each day or set of days, and a line for each thing with its time. Minutes after a · say how long it takes, and each thing crosses itself off once its time is over.\n\n## Weekdays\n- 7:30 Wake up, get ready\n- 8:00 School\n\n## Monday to Thursday\n- 4:00 Homework · 60 min\n- 6:00 Dinner\n- 7:00 Reading · 20 min\n- 7:30 Free\n\n## Friday\n- 4:00 Free afternoon\n\n## Weekends\n- 10:00 Practice · 45 min\n- 12:00 Lunch\n\n## Every night\n- 9:30 Phone away\n- 9:45 Read\n\n## On game days\n- 4:00 Game\n'],
     ['deadlines', 'Deadlines', '# Deadlines\n\nA line for each date. Check one off here when it’s done.\n\n- [ ] Dec 12 Project due\n'],
     ['sleep', 'Sleep', '# Sleep\n\nWhen it’s lights out, from when. Add a row to move it.\n\n| From | Lights out |\n| --- | --- |\n| {today} | 10:30 PM |\n\nFriday and Saturday nights: up to 30 min later.\n'],
     ['how-to-study', 'How to study', '# How to study\n\nA section for each kind of block, named the way it is in your week. Schedule and Home show it beside that block.\n\n## Reading\nTwenty pages, then three lines on what happened.\n'],
@@ -465,7 +465,7 @@
     let items = [];
     for (const s of plan.sections) if (s.kind === 'days' && s.days.has(wd)) for (const p of placed(s, wd)) if (fits(p.x, date, plan.ref)) items.push(itemOf(p));
     // the steps before lights out, in order, each as long as its minutes, the last ending at that night's lights out (so
-    // they move when it does). A step of the night, not something to check off
+    // they move when it does). A step of the night
     const l = lightsOut(plan, date);
     for (const s of l ? plan.sections : []) {
       if (s.kind !== 'bed') continue;
@@ -528,7 +528,7 @@
     return { at: row.at, later };
   }
 
-  // ---------- what you've checked off ----------
+  // ---------- what's kept: the switches you turn on ----------
   function load(read) {
     let s = null;
     try { s = read ? read(KEY) : JSON.parse(root.localStorage.getItem(KEY)); } catch {}
@@ -562,20 +562,6 @@
     if (m < ROLL) { d = addDays(d, -1); m += 1440; }
     return { d, m };
   }
-  const dayRec = (state, key) => (state.days[key] = plainObj(state.days[key]) ? state.days[key] : {});
-  function check(state, key, id, on) {
-    const rec = dayRec(state, key);
-    rec.done = plainObj(rec.done) ? rec.done : {};
-    if (on) rec.done[id] = Date.now(); else delete rec.done[id];
-    return state;
-  }
-  // how many things today has to check off, kept with the day so its streak still adds up after the plan changes
-  // (false when that's already there)
-  function remember(state, st) {
-    if (!st || state.days[st.key]?.of === st.of) return false;
-    dayRec(state, st.key).of = st.of;
-    return true;
-  }
   function flip(plan, state, date, id, on) {
     const sw = plan.switches.find((s) => s.id === id);
     if (!sw) return state;
@@ -586,20 +572,6 @@
     if (on) rec.on[id] = true; else if (classSwitch(plan, sw, date)) rec.on[id] = false; else delete rec.on[id];
     return state;
   }
-  // days in a row at 70% or more (today counts once it's there; a day with nothing to check off doesn't count either way)
-  const GOAL = 0.7;
-  function streak(plan, state, date, today) {
-    let n = today.of && today.done / today.of >= GOAL ? 1 : 0;
-    for (let i = 1; i <= 400; i++) {
-      const d = addDays(date, -i), rec = state.days[dayKey(d)];
-      const of = Number.isFinite(rec?.of) ? rec.of : day(plan, d, switchesOn(plan, state, d)).filter((x) => x.check).length;
-      if (!of) continue;
-      const done = Math.min(of, Object.keys(rec?.done || {}).length);
-      if (done / of >= GOAL) n++; else break;
-    }
-    return n;
-  }
-
   // ---------- now ----------
   const PLACES = [
     [/\bamc ?12\b.*\b(timed|test|set)\b/i, 'math/#amc12/test'], [/\bamc ?12\b/i, 'math/#amc12/learn'], [/\bamc\b.*\b(timed|test|set)\b/i, 'math/#amc10/test'], [/\bamc\b/i, 'math/#amc10/learn'],
@@ -638,23 +610,21 @@
     if (text.length > 150) text = `${text.slice(0, 150).replace(/\s+\S*$/, '')}…`;
     return { name: h.name, text, href: `schedule/#${plan.ids.how}` };
   }
+  // where today is: what's on now and next, each thing crossed off (over) once its time is over, lights out, what's due
   function status(plan, state, now = Date.now()) {
     if (!plan) return null;
-    const { d, m } = dayAt(now), key = dayKey(d), rec = state.days[key] || {}, on = switchesOn(plan, state, d);
-    const items = day(plan, d, on), checks = items.filter((i) => i.check), done = (i) => !!rec.done?.[i.id];
+    const { d, m } = dayAt(now), key = dayKey(d), on = switchesOn(plan, state, d);
+    const items = day(plan, d, on);
     // (a class has nowhere to start, unless something of yours goes with it)
-    for (const it of items) { it.done = it.check && done(it); it.place = it.kind === 'class' && !it.check ? null : placeOf(plan, it); it.how = it.check ? howFor(plan, it, d) : null; }
+    for (const it of items) { it.over = it.at != null && it.end != null && it.end <= m; it.place = it.kind === 'class' && !it.check ? null : placeOf(plan, it); it.how = it.check ? howFor(plan, it, d) : null; }
     const timed = items.filter((i) => i.at != null);
     const now_ = [...timed].reverse().find((i) => i.at <= m && m < i.end) || null;
     const next = timed.find((i) => i.at > m && (!now_ || i.at >= now_.at)) || null;
     const lights = lightsOut(plan, d), firstNight = timed.find((i) => i.night);
-    const today = { done: checks.filter(done).length, of: checks.length };
     const t0 = d.getTime();
     return {
-      key, date: d, m, items, done: today.done, of: today.of, pct: today.of ? today.done / today.of : 0,
-      now: now_, next, missed: checks.filter((i) => i.at != null && i.end <= m && !i.done), left: checks.filter((i) => !i.done),
+      key, date: d, m, items, now: now_, next,
       lights, night: !!firstNight && m >= firstNight.at, late: !!lights && m >= lights.at + lights.later,
-      streak: streak(plan, state, d, today),
       deadlines: plan.deadlines.filter((x) => !x.done && x.end >= t0).slice(0, 3).map((x) => ({ ...x, days: Math.round((x.t - t0) / DAY) })),
       switches: plan.switches.map((s) => ({ ...s, on: !!on[s.id] })),
     };
@@ -668,10 +638,10 @@
   const lightsWords = (l) => (l ? `${clockAmPm(l.at)}${l.later ? `, or ${clockAmPm(l.at + l.later)} at the latest` : ''}` : '');
 
   root.fluentioPlan = {
-    KEY, DOCS, GOAL,
-    readWeek, readLine, readDated, readDeadlines, markDeadline, readSleep, readHow, fromDocs, current, day, status, lightsOut, streak, dayAt,
+    KEY, DOCS,
+    readWeek, readLine, readDated, readDeadlines, markDeadline, readSleep, readHow, fromDocs, current, day, status, lightsOut, dayAt,
     COLORS, readClasses, rotationOf, classItems, setDayOf, likeClass,
-    load, save, check, remember, flip, switchesOn, placeOf, howFor, linked,
+    load, save, flip, switchesOn, placeOf, howFor, linked,
     loadDocs, saveDocs, listDocs, putDoc, newDoc, dropDoc, starter, titleOf, idOf,
     dayKey, dateOf, weekKey, isoWeek, daysIn, dateParts, clockAt, place, clock, clockAmPm, plural, left, leftWords, dayWords, lightsWords,
   };

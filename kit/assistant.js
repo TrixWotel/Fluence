@@ -1,7 +1,9 @@
 // The home page as an assistant: it looks at what you've been doing in this browser (the topic you left off on, a test half
-// done, what you missed on your last test, what keeps tripping you up, what's playing, where you've been, how long you've
-// been at it, the time of day), says what it notices, offers what would help most right now, and answers when you tell it what
-// you want. It works by the rules here, with nothing sent anywhere: it isn't a chatbot, and it says so when it's stuck.
+// done, what you missed on your last test, what keeps tripping you up, what's playing, your notes and journal, where you've
+// been, how long you've been at it, the time of day), says what it notices, offers what would help most right now, and
+// answers when you tell it what you want. It works by the rules here, with nothing sent anywhere: it isn't a chatbot, and it
+// says so when it's stuck. It's laid out wide, to fit one screen: what it says across the top, what it offers beside today's
+// plan, and under them what it sees of your music, your studying and your notes.
 (() => {
   const f = window.fluentio;
   if (!f) return;
@@ -29,6 +31,16 @@
   const cap = (s) => s[0].toUpperCase() + s.slice(1);
 
   // ---------- what it can see ----------
+  // your notes in Station (not the journal's days), newest first, and how much today's entry has
+  const wordsIn = (s) => (String(s || '').trim().match(/\S+/g) || []).length;
+  const noteHref = (path) => link(`station/#${path.replace(/\.md$/i, '').split('/').map(encodeURIComponent).join('/')}`);
+  function notesOf(now) {
+    const v = read('fluentio.station'), all = Array.isArray(v?.notes) ? v.notes.filter((n) => n && typeof n.path === 'string' && /\.md$/i.test(n.path)) : [];
+    const d = new Date(now), day = `journal/${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.md`;
+    const recent = all.filter((n) => !/^journal\//.test(n.path) && String(n.text || '').trim()).sort((a, b) => (+b.edited || 0) - (+a.edited || 0)).slice(0, 4)
+      .map((n) => ({ path: n.path, name: n.path.split('/').pop().replace(/\.md$/i, ''), edited: +n.edited || 0, words: wordsIn(n.text) }));
+    return { count: all.length, recent, today: wordsIn(all.find((n) => n.path === day)?.text) };
+  }
   function see(now = Date.now()) {
     const banks = BANKS.map((b) => {
       const bests = ['best', 'best-mixed', 'best-hard'].map((k) => read(`fluentio.${b.id}.${k}`)).filter((x) => x?.when).sort((p, q) => q.when - p.when);
@@ -51,6 +63,7 @@
       wrote: (() => { const d = new Date(now), k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; return (read('fluentio.station')?.notes || []).some((n) => n?.path === `journal/${k}.md` && String(n.text || '').trim()) || !!String((read('fluentio.journal') || {})[k]?.text || '').trim(); })(),
       answered: (read('fluentio.today') || {}).day === new Date(now).toDateString(), chapters: (read('fluentio.chapters') || {}).done || {}, essays: Object.values(read('fluentio.essays.list') || {}),
       music: { count: all.length, liked: all.filter((x) => x && x.liked).length, current, playing: !!current && (audio ? !audio.paused : !!saved.playing) },
+      notes: notesOf(now),
       plan: planNow(now),
     };
   }
@@ -63,17 +76,12 @@
   const short = (it) => D().short(it);
   const planWords = (pl) => D().words(pl);
   const hrefOf = (it) => D().hrefOf(it);
-  const markDone = (it, on) => D()?.markDone(it, on) || null;
   const flipSwitch = (sw, on) => D()?.flipSwitch(sw, on);
-  const tick = (it) => (reply) => { const st = markDone(it, true); reply(`Checked off ${short(it)}.${st ? ` ${st.done} of ${st.of} today.` : ''}`); };
-  // what the plan offers: what's on now (where it's done, or a check), what hasn't been checked off, and what's next
+  // what the plan offers: what's on now (where it's done) and what's next (each crosses itself off once its time is over)
   function planOptions(pl) {
     const p = P(), st = pl.st, out = [];
-    if (st.now?.check && !st.now.done) out.push(st.now.place
-      ? { icon: 'clock', title: `Start ${short(st.now)}`, why: st.now.how?.text || `Until ${p.clock(st.now.end)}.`, href: hrefOf(st.now), away: !!st.now.place.away, score: 99, plan: true }
-      : { icon: 'check', title: `Check off ${short(st.now)}`, why: `When it’s done. It goes until ${p.clock(st.now.end)}.`, run: tick(st.now), score: 99, plan: true });
-    st.missed.slice(0, 2).forEach((it, i) => out.push({ icon: 'check', title: `Check off ${short(it)}`, why: `${p.clock(it.at)}, ${it.min} min.`, run: tick(it), score: 95 - i, plan: true }));
-    const nextUp = st.next && st.next.check && st.next.place && !(st.now?.check && !st.now.done);
+    if (st.now?.check && st.now.place) out.push({ icon: 'clock', title: `Start ${short(st.now)}`, why: st.now.how?.text || `Until ${p.clock(st.now.end)}.`, href: hrefOf(st.now), away: !!st.now.place.away, score: 99, plan: true });
+    const nextUp = st.next && st.next.check && st.next.place && !st.now?.check;
     if (nextUp) out.push({ icon: 'clock', title: `${short(st.next)} at ${p.clock(st.next.at)}`, why: st.next.how?.text || `${st.next.min} min.`, href: hrefOf(st.next), away: !!st.next.place.away, score: 82, plan: true });
     return out;
   }
@@ -132,6 +140,8 @@
     else if (music.current) out.push({ icon: 'music', title: 'Skip this song', why: `${music.current.title} is playing.`, run: async (reply) => { const { player } = await tunes(); player.next(); reply(`Next up: ${player.current()?.title || 'the next song'}.`); }, score: 20 });
     else if (music.count) out.push({ icon: 'music', title: 'Put on some music', why: `${plural(music.count, 'song')}. I’ll shuffle them.`, run: shuffleAll, score: 34 + (evening ? 20 : 0) + (seen.session >= 25 ? 10 : 0) });
     else out.push({ icon: 'music', title: 'Set up Music', why: 'Your own songs, playing on every page.', href: link('music/'), score: 6 });
+    const note = seen.notes.recent[0];
+    if (note && now - note.edited < 3 * DAY) out.push({ icon: 'note', title: `Back to ${note.name}`, why: `In Station. ${plural(note.words, 'word')}, from ${agoWords(note.edited, now)}.`, href: noteHref(note.path), score: now - note.edited < DAY ? 48 : 38, notice: now - note.edited < DAY ? `you were writing “${note.name}” ${agoWords(note.edited, now)}` : null, ask: 'Want to go back to it?' });
     if (!seen.wrote) out.push({ emoji: '📓', title: 'Write in your journal', why: evening ? 'A few lines about today, before it’s over.' : 'A few lines about today.', href: link('station/#today'), score: 22 + (evening ? 28 : 0) + (late ? 6 : 0) });
     const drew = seen.seen.board;
     out.push(drew && now - drew < 7 * DAY ? { icon: 'station', title: 'Back to your board', why: `You were on it ${agoWords(drew, now)}.`, href: link('board/'), score: now - drew < DAY ? 50 : 36 } : { icon: 'station', title: 'Sketch something on your board', why: 'An idea, a flowchart, anything.', href: link('board/'), score: 16 });
@@ -183,8 +193,8 @@
     const test = /\b(test|quiz|exam)\b/.test(t), teach = /\b(learn|study|teach|explain|lesson|notes?)\b/.test(t), openIt = /^(open|go to|go|take me to|show me|show)\b/.test(t);
     if (/^(hi|hello|hey|yo|sup|good (morning|afternoon|evening))\b/.test(t)) return reply('Hi. Here’s what I’d do next.', { options: suggestions(seen).slice(0, 3) });
     if (/^(thanks|thank you|thx|ty)\b/.test(t)) return reply('Anytime.');
-    // your plan: a switch ("it's a game day", "not an exam week"), something done ("did java", "check off spanish"),
-    // and what's on now
+    // your plan: a switch ("it's a game day", "not an exam week"), something done ("did java", which it crosses off
+    // by itself once its time is over), and what's on now
     const pl = seen.plan;
     if (pl) {
       const st = pl.st, sw = st.switches.find((s) => t.includes(s.name.toLowerCase()));
@@ -196,9 +206,8 @@
       const did = /^(?:i\s+)?(?:did|done|finished|have done|ive done)\s+(?:with\s+)?(.+)$|^(?:check|tick|mark)\s+(?:off\s+)?(.+?)(?:\s+(?:off|as done|done))?$/.exec(t);
       if (did) {
         const what = (did[1] || did[2]).replace(/^(my|the)\s+/, '').trim(), name = (x) => short(x).toLowerCase();
-        const it = st.items.find((x) => x.check && (name(x).includes(what) || what.includes(name(x))));
-        if (it) { if (it.done) return reply(`${short(it)} is checked off already.`); return tick(it)(reply); }
-        if (/^(it|that|this)$/.test(what) && st.now?.check) return st.now.done ? reply(`${short(st.now)} is checked off already.`) : tick(st.now)(reply);
+        const it = st.items.find((x) => x.check && (name(x).includes(what) || what.includes(name(x)))) || (/^(it|that|this)$/.test(what) ? st.now : null);
+        if (it) return reply(`Nice. ${cap(short(it))} ${it.over ? 'is crossed off on your plan' : it.at == null ? 'crosses itself off when the day is over' : `crosses itself off at ${P().clock(it.end)}, when its time is over`}.`, { options: planOptions(pl).slice(0, 3) });
         return reply(`I can’t find “${what}” on today’s plan.`, { options: planOptions(pl).slice(0, 3) });
       }
       if (/\bplan\b|\bschedule\b|\bwhat now\b|\bwhats now\b|\bright now\b|\bbedtime\b|\blights out\b/.test(t)) {
@@ -275,8 +284,76 @@
     return `${cap(bits.join(', and '))}.${best ? ` Your latest best is ${best.best.text} on ${best.name}.` : ''}`;
   }
 
-  // today's plan, under what it offers (kit/plan-day.js, with a way on to Schedule)
+  // today's plan, beside what it offers (kit/plan-day.js, with a way on to Schedule)
   const planDay = (pl) => D().panel(pl, { home: true });
+
+  // ---------- what it sees, at a glance: your music, your studying, your notes ----------
+  const cardHead = (icon, title, href, ...more) => el('a', { className: 'aide-card-head', href }, el('span', { className: 'aide-ic', 'aria-hidden': 'true' }, svg(icon)), el('b', {}, title), ...more, svg('arrow'));
+  const line2 = (href, label, side) => el('a', { className: 'aide-row', href }, el('span', {}, label), side ? el('small', {}, side) : null);
+  // Music: what's playing, with play and next (the player at the foot has the rest), or a way to start
+  function musicCard() {
+    const card = el('section', { className: 'aide-card music', 'aria-label': f.settings.musicTitle });
+    const head = (playing) => cardHead('music', f.settings.musicTitle, link('music/'), playing ? el('span', { className: 'm-bars', 'aria-hidden': 'true' }, el('i'), el('i'), el('i'), el('i')) : null);
+    card.append(head(false), el('p', { className: 'muted small' }, 'Loading your music…'));
+    Promise.all([import(link('kit/music/player.js')), import(link('kit/music/library.js'))]).then(([player, lib]) => {
+      player.mount();
+      const fill = () => {
+        const cur = player.current(), all = lib.state.lib.songs, paused = player.audio.paused;
+        if (!all.length) return card.replaceChildren(head(false), el('p', { className: 'muted small' }, lib.state.loading ? 'Loading your music…' : lib.state.conn ? 'No songs yet. Drop some on Music’s page.' : 'Your own songs, playing on every page.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('music/') }, svg('plus'), lib.state.conn ? 'Add songs' : 'Set up Music')));
+        if (cur) {
+          const next = player.upNext()[0];
+          return card.replaceChildren(head(!paused),
+            el('div', { className: 'aide-song' }, lib.art(cur, { size: 46 }), el('span', { className: 't' }, el('b', {}, cur.title), el('small', {}, cur.artist || '')),
+              el('button', { type: 'button', className: 'aide-play', 'aria-label': paused ? 'Play' : 'Pause', title: paused ? 'Play' : 'Pause', onclick: () => player.toggle() }, lib.svg(paused ? 'play' : 'pause', true)),
+              el('button', { type: 'button', className: 'aide-skip', 'aria-label': 'Next', title: 'Next', onclick: () => player.next() }, lib.svg('next', true))),
+            el('p', { className: 'muted small aide-next' }, next ? `Up next: ${next.title}${next.artist ? ` · ${next.artist}` : ''}` : `${lib.plural(all.length, 'song')} · ${lib.total(all)}`));
+        }
+        const liked = all.filter((x) => x.liked), newest = [...all].sort((a, b) => (b.added || 0) - (a.added || 0));
+        card.replaceChildren(head(false), el('p', { className: 'muted small' }, `${lib.plural(all.length, 'song')} · ${lib.total(all)}`),
+          el('div', { className: 'row' }, el('button', { type: 'button', className: 'btn', onclick: () => player.playList(newest, Math.floor(Math.random() * newest.length), true) }, lib.svg('shuffle'), 'Shuffle'),
+            liked.length ? el('button', { type: 'button', className: 'btn', onclick: () => player.playList(liked, 0) }, lib.svg('heart'), `Liked · ${liked.length}`) : null));
+      };
+      fill();
+      for (const w of ['song', 'state', 'queue']) player.events.addEventListener(w, fill);
+      lib.events.addEventListener('library', fill);
+    }).catch(() => card.replaceChildren(head(false), el('p', { className: 'muted small' }, 'Music didn’t load here. Open it from the bar.')));
+    return card;
+  }
+  // Studying: where you left off and how far along that is, and a test half done, what's tricky or your latest best
+  function studyCard(seen) {
+    const { banks } = seen, l = seen.last, body = [], rows = [];
+    const learned = banks.reduce((n, b) => n + Object.values(b.learn).filter((x) => x?.learned).length, 0);
+    if (l) {
+      const done = Math.max(0, l.learned || 0), of = Math.max(1, l.total || 1);
+      body.push(el('a', { className: 'aide-continue', href: l.href }, el('small', {}, 'Continue'), el('b', {}, l.topic || l.test || 'Learning')),
+        el('div', { className: 'meter', role: 'img', 'aria-label': `${done} of ${of} topics learned` }, el('div', { style: `width:${Math.round((100 * done) / of)}%` })),
+        el('p', { className: 'muted small' }, `${l.test ? `${l.test} · ` : ''}${done} of ${plural(of, 'topic')} learned`));
+    }
+    for (const b of banks) {
+      const d = b.draft;
+      if (rows.length || !d || d.final || !(d.done || Object.values(d.answers || {}).some((a) => a != null && a !== ''))) continue;
+      rows.push(line2(place(b, `/exam/${d.n}`), `${d.done ? 'Finish marking' : 'Finish'} Test ${d.n}`, b.name));
+    }
+    let worst = null;
+    for (const b of banks) for (const [topic, st] of Object.entries(b.learn)) {
+      if (!st || st.learned || (st.tried || 0) < 3) continue;
+      const rate = (st.right || 0) / st.tried;
+      if (rate < 0.67 && (!worst || rate < worst.rate)) worst = { b, topic, st, rate };
+    }
+    if (worst) rows.push(line2(topicLink(worst.b, worst.topic), `Tricky: ${worst.topic}`, `${worst.st.right || 0} of ${worst.st.tried} right`));
+    const best = banks.filter((b) => b.best?.when && b.best.text).sort((a, b) => b.best.when - a.best.when)[0];
+    if (best && rows.length < 2) rows.push(line2(place(best, '/test'), `Best in ${best.name}`, best.best.text));
+    if (!l && !rows.length) body.push(el('p', { className: 'muted small' }, 'Nothing started yet: math, science, physics, Spanish, history, English and geography.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('study/') }, svg('study'), 'Pick a subject')));
+    return el('section', { className: 'aide-card study', 'aria-label': f.settings.studyTitle }, cardHead('study', f.settings.studyTitle, link('study/'), learned ? el('small', {}, `${plural(learned, 'topic')} learned`) : null), ...body, rows.length ? el('div', { className: 'aide-rows' }, rows.slice(0, 2)) : null);
+  }
+  // Notes: today's journal entry, the notes you wrote in last, and your board
+  function notesCard(seen) {
+    const n = seen.notes, rows = [line2(link('station/#today'), n.today ? 'Today’s entry' : 'Write today’s entry', n.today ? plural(n.today, 'word') : 'A few lines')];
+    for (const x of n.recent.slice(0, 2)) rows.push(line2(noteHref(x.path), x.name, agoWords(x.edited, seen.now)));
+    const drew = seen.seen.board;
+    if (drew) rows.push(line2(link('board/'), 'Your board', agoWords(drew, seen.now)));
+    return el('section', { className: 'aide-card notes', 'aria-label': 'Notes' }, cardHead('note', 'Notes', link('station/'), n.count ? el('small', {}, plural(n.count, 'note')) : null), el('div', { className: 'aide-rows' }, rows.slice(0, 4)));
+  }
 
   // ---------- on the page ----------
   const SHOW = 3;
@@ -294,15 +371,18 @@
       say.split(' ').forEach((word, n, all) => { const w = el('span', { className: rise ? 'w' : 'w still', 'aria-hidden': 'true' }, word); w.style.setProperty('--n', n); line.append(w, n < all.length - 1 ? ' ' : ''); });
     };
     setLine(opening(list, seen), true);
-    const options = el('div', { className: 'aide-options aide-first' }), other = el('button', { type: 'button', className: 'aide-other', hidden: list.length <= SHOW, onclick: () => { from = (from + SHOW) % list.length; options.classList.remove('aide-first'); paint(); } }, 'Something else');
+    const options = el('div', { className: 'aide-options aide-offer aide-first' }), other = el('button', { type: 'button', className: 'aide-other', hidden: list.length <= SHOW, onclick: () => { from = (from + SHOW) % list.length; options.classList.remove('aide-first'); paint(); } }, 'Something else');
     const thread = el('div', { className: 'aide-thread' });
+    // beside what it offers: today's plan, or with no plan here, the date and what's coming
     const plan = el('section', { className: 'plan-day', 'aria-label': 'Today’s plan', hidden: true });
+    const dateCard = tiles?.today ? tiles.today() : null;
     const drawPlan = () => {
       const pl = seen.plan;
       plan.hidden = !pl;
+      if (dateCard) dateCard.hidden = !!pl;
       if (!pl) return plan.replaceChildren();
-      if (P().remember(pl.state, pl.st)) P().save(pl.state, f.write);
       plan.replaceChildren(...planDay(pl));
+      fit();
     };
     const row = (opt, i) => {
       const inner = [el('span', { className: 'aide-ic', 'aria-hidden': 'true' }, opt.emoji || svg(opt.icon || 'arrow')), el('span', { className: 'aide-text' }, el('b', {}, opt.title), opt.why ? el('small', {}, opt.why) : null), i != null ? el('kbd', { className: 'aide-key' }, String(i + 1)) : svg('arrow')];
@@ -327,19 +407,61 @@
     const tell = (text) => { you = text; Promise.resolve().then(() => answer(text, see(), reply, go)).catch(() => reply('That didn’t work. Try again in a moment.')); };
     const input = el('input', { type: 'text', className: 'aide-input', placeholder: 'Tell me what you want to do…', autocomplete: 'off', spellcheck: false, 'aria-label': 'Tell the assistant what you want to do' });
     const form = el('form', { className: 'aide-ask', onsubmit: (e) => { e.preventDefault(); const text = input.value.trim(); if (text) { input.value = ''; tell(text); } } }, input, el('button', { type: 'submit', className: 'aide-send', title: 'Send', 'aria-label': 'Send' }, svg('arrow')));
-    const chips = el('div', { className: 'aide-chips' }, ['What should I do?', 'Quiz me', 'How am I doing?', 'What’s today?', 'Play something'].map((text) => el('button', { type: 'button', className: 'chip', onclick: () => tell(text) }, text)));
-    box.replaceChildren(el('div', { className: 'aide-orb', 'aria-hidden': 'true' }), hello, line, options, other, plan, form, chips, thread);
+    const chips = el('div', { className: 'aide-chips' }, ['What should I do?', 'Quiz me', 'How am I doing?', 'Play something'].map((text) => el('button', { type: 'button', className: 'chip', onclick: () => tell(text) }, text)));
+    // (wide: what it says across the top, what it offers beside today, and what it sees under them)
+    const offer = el('div', { className: 'aide-main' }, options, other, form, chips, thread), side = el('div', { className: 'aide-side' }, plan, dateCard);
+    const glance = el('div', { className: 'aide-glance' }, musicCard(), studyCard(seen), notesCard(seen));
+    let glanced = JSON.stringify([seen.last, seen.notes, seen.seen.board, seen.banks.map((b) => [b.learn, b.draft, b.best])]);
+    box.replaceChildren(el('div', { className: 'aide-top' }, hello, line), el('div', { className: 'aide-cols' }, offer, side), glance);
     paint();
+
+    // ---------- the whole of it in one screen ----------
+    // on a window wide and tall enough, the page doesn't scroll: the plan shows the rows there's room for (what's crossed
+    // off goes first, oldest first, then the switches, then what's latest, keeping what's on now and the two after it) and
+    // says how many more, and on a smaller window, the chips go and the cards show a little less (tight)
+    const wide = matchMedia('(min-width: 900px) and (min-height: 600px)'), main = box.closest('main');
+    function fit() {
+      document.documentElement.classList.toggle('aide-fit', wide.matches);
+      box.classList.remove('tight');
+      const list = plan.hidden ? null : plan.querySelector('.pd-list'), sw = list ? plan.querySelector('.pd-switches') : null;
+      list?.querySelectorAll('.pd-more').forEach((x) => x.remove());
+      const rows = list ? [...list.children] : [];
+      for (const r of [...rows, sw]) if (r) r.hidden = false;
+      if (!wide.matches || !main) return;
+      const cs = getComputedStyle(main), room = main.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom), tall = () => box.offsetHeight > room + 1;
+      const crossed = rows.filter((r) => r.classList.contains('done')), left = rows.filter((r) => !r.classList.contains('done'));
+      const timed = left.filter((r) => r.querySelector('time')?.textContent), untimed = left.filter((r) => !timed.includes(r));
+      const order = [...crossed.slice(0, -1), sw, ...timed.slice(3).reverse(), ...untimed.reverse(), ...crossed.slice(-1), ...timed.slice(1, 3).reverse()].filter(Boolean);
+      const more = (n, top) => el('li', { className: `pd-row pd-more${top ? ' top' : ''}` }, el('span', { className: 'pd-dot', 'aria-hidden': 'true' }), el('time'), el('a', { className: 'pd-name', href: link('schedule/#today') }, top ? `${n} crossed off before these` : `${n} more today`));
+      const mark = () => {
+        list.querySelectorAll('.pd-more').forEach((x) => x.remove());
+        const before = crossed.filter((r) => r.hidden).length, after = left.filter((r) => r.hidden).length;
+        if (before) list.prepend(more(before, true));
+        if (after) list.append(more(after, false));
+      };
+      let i = 0;
+      const trim = () => { for (; i < order.length && tall() && plan.offsetHeight > offer.offsetHeight; i++) { order[i].hidden = true; mark(); } };
+      trim();
+      if (tall()) { box.classList.add('tight'); trim(); }
+    }
+    let sized = 0;
+    const refit = () => { cancelAnimationFrame(sized); sized = requestAnimationFrame(fit); };
+    wide.addEventListener('change', refit);
+    if (main && 'ResizeObserver' in window) new ResizeObserver(refit).observe(main);
+    addEventListener('fluence:shown', refit);
+    document.fonts?.ready.then(refit);
     drawPlan();
+    fit();
     // the greeting, for the time of day or a holiday, and a day off coming up
     if (f.settings.greeting) welcomed?.then(({ welcome, upcoming }) => {
       const w = welcome({ now: new Date(seen.now), visits: read('fluentio.visits') || { count: 1, streak: 1, away: null }, last: seen.last, learned: 0, best: null, name: f.settings.name, music: null });
       const off = f.settings.showDaysOff ? upcoming(new Date(seen.now), 3, f.settings.daysOff).find((h) => h.off && h.days <= 1) : null;
       hello.textContent = `${w.hello}${off ? ` ${off.emoji} ${off.days === 0 ? 'You’re off today' : 'You’re off tomorrow'} for ${off.name}.` : ''}`;
       hello.hidden = false;
+      refit();
     }).catch(() => {});
-    // what's playing changes what it offers, and so do songs another device added; the plan moves on with the clock and
-    // with what you check off, and then what it says changes too
+    // what's playing changes what it offers, and so do songs another device added; the plan moves on with the clock, and
+    // then what it says changes too, and what it sees of your studying and notes
     let soon = 0;
     const again = () => {
       const had = !!seen.plan;
@@ -348,13 +470,15 @@
       other.hidden = list.length <= SHOW;
       if (had || seen.plan) setLine(opening(list, seen), false);
       if (words(pick()) !== words(showing)) paint(false);
+      const now = JSON.stringify([seen.last, seen.notes, seen.seen.board, seen.banks.map((b) => [b.learn, b.draft, b.best])]);
+      if (now !== glanced) { glanced = now; glance.children[1].replaceWith(studyCard(seen)); glance.children[2].replaceWith(notesCard(seen)); }
       drawPlan();
     };
     const refresh = () => { clearTimeout(soon); soon = setTimeout(again, 200); };
     addEventListener('fluence:plan', again);
-    // (another page of the site checking something off)
-    addEventListener('storage', (e) => { if (e.key === P()?.KEY || e.key === P()?.DOCS || e.key === 'fluentio.station') refresh(); });
-    setInterval(() => { if (!document.hidden && seen.plan) again(); }, 30000);
+    // (another page of the site changing the plan, a switch, or your notes)
+    addEventListener('storage', (e) => { if (e.key === P()?.KEY || e.key === P()?.DOCS || e.key === 'fluentio.station' || e.key === 'fluentio.last') refresh(); });
+    setInterval(() => { if (!document.hidden) again(); }, 30000);
     Promise.all([import(link('kit/music/player.js')), import(link('kit/music/library.js'))]).then(([player, lib]) => {
       for (const w of ['song', 'state']) player.events.addEventListener(w, refresh);
       lib.events.addEventListener('library', refresh);

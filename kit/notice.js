@@ -1,5 +1,5 @@
 // What's new since your last visit to Home, and how far Home's cards have turned, so Home is a little different each time
-// you come back: topics learned, a new best, what you checked off on your plan, songs added or liked, notes written.
+// you come back: topics learned, a new best, songs added or liked, notes written.
 // A visit starts after half an hour away from Home (a reload in between is the same visit, and shows the same). Home keeps
 // a small note of what it saw in 'fluentio.home', which goes with your progress so another browser knows too, and
 // compares the next visit with it; when you were last on Home stays in this browser ('fluentio:home').
@@ -29,7 +29,7 @@
   }
 
   // what happened between a visit and this one: a line each ({ kind, text, list, href }), what you did most first
-  function since(prev, cur, read, at, { nameOf } = {}) {
+  function since(prev, cur, read, at) {
     const out = [];
     for (const b of BANKS) {
       const was = new Set(prev?.learned?.[b.id] || []), got = (cur.learned[b.id] || []).filter((t) => !was.has(t));
@@ -38,13 +38,6 @@
     for (const b of BANKS) {
       const bests = ['best', 'best-mixed', 'best-hard'].map((k) => read(`fluentio.${b.id}.${k}`)).filter((x) => x?.text && x.when > at).sort((p, q) => q.when - p.when);
       if (bests.length) out.push({ kind: 'best', n: 1, text: `New best in ${b.name}: ${bests[0].text}`, list: [], href: `${b.folder}/#${b.id}` });
-    }
-    // (on your plan: what you checked off, newest first, by name when the plan can say it)
-    const ticks = [];
-    for (const [key, rec] of Object.entries(read('fluentio.plan')?.days || {})) for (const [id, t] of Object.entries(plain(rec?.done) ? rec.done : {})) if (+t > at) ticks.push({ key, id, t: +t });
-    if (ticks.length) {
-      const names = [...new Set(ticks.sort((p, q) => q.t - p.t).map((x) => (nameOf ? nameOf(x) : '')).filter(Boolean))];
-      out.push({ kind: 'checked', n: ticks.length, text: `Checked off ${ticks.length} ${ticks.length === 1 ? 'thing' : 'things'} on your plan`, list: names.slice(0, 3), href: 'schedule/#today' });
     }
     const songs = (read('fluentio.music.library') || {}).songs, all = Array.isArray(songs) ? songs.filter(Boolean) : [];
     const added = all.filter((x) => (x.added || 0) > at).sort((p, q) => (q.added || 0) - (p.added || 0));
@@ -58,11 +51,11 @@
 
   // a visit to Home: what's new since the last one, and the turn (one more each visit, so the cards each show something
   // else). A visit after half an hour away is a new one; a reload before that shows what the visit started with
-  function visit({ read, write, now = Date.now(), nameOf } = {}) {
+  function visit({ read, write, now = Date.now() } = {}) {
     const was = read(KEY) || {}, seen = read(SEEN) || {}, fresh = !was.at || !seen.at || now - seen.at > GAP;
     write(SEEN, { at: now });
     if (!fresh) return { news: Array.isArray(was.news) ? was.news : [], turn: was.turn || 1, last: was.last || null, fresh: false };
-    const cur = snap(read), news = was.snap && was.at ? since(was.snap, cur, read, was.at, { nameOf }) : [];
+    const cur = snap(read), news = was.snap && was.at ? since(was.snap, cur, read, was.at) : [];
     const out = { at: now, snap: cur, news, turn: (was.turn || 0) + 1, last: was.at || null };
     write(KEY, out);
     return { news, turn: out.turn, last: out.last, fresh: true };
