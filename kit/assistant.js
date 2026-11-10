@@ -1,9 +1,10 @@
 // The home page as an assistant: it looks at what you've been doing in this browser (the topic you left off on, a test half
 // done, what you missed on your last test, what keeps tripping you up, what's playing, your notes and journal, where you've
-// been, how long you've been at it, the time of day), says what it notices, offers what would help most right now, and
-// answers when you tell it what you want. It works by the rules here, with nothing sent anywhere: it isn't a chatbot, and it
-// says so when it's stuck. It's laid out wide, to fit one screen: what it says across the top, what it offers beside today's
-// plan, and under them what it sees of your music, your studying and your notes.
+// been, how long you've been at it, the time of day), says what it notices, and offers what would help most right now. It
+// works by the rules here, with nothing sent anywhere: it isn't a chatbot. It takes the room the tile layouts do: what it
+// says at the top, then what it offers at the side and one to three cards beside it, which it picks from what you've
+// been doing (your plan, your studying, your music, your notes, today's question, your progress, what's new), and
+// sometimes makes one card of two.
 (() => {
   const f = window.fluentio;
   if (!f) return;
@@ -15,7 +16,6 @@
     ['kinematics', 'physics', 'Kinematics'], ['motion', 'physics', 'Motion in a Straight Line'], ['vectors', 'physics', 'Vectors'], ['projectiles', 'physics', 'Projectile Motion'],
     ['vocab', 'spanish', 'Spanish Vocabulary'], ['preterite', 'spanish', 'The Preterite'], ['imperfect', 'spanish', 'The Imperfect'], ['middleages', 'history', 'The Middle Ages'], ['wars', 'history', 'The Wars of Religion'], ['essays', 'english', 'Essay Writing'],
   ].map(([id, folder, name]) => ({ id, folder, name }));
-  const WITH_CLASS_TESTS = new Set(['science', 'physics', 'history']);
   const midnight = (t) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
   const agoWords = (t, now) => {
     const m = (now - t) / MINUTE;
@@ -76,7 +76,6 @@
   const short = (it) => D().short(it);
   const planWords = (pl) => D().words(pl);
   const hrefOf = (it) => D().hrefOf(it);
-  const flipSwitch = (sw, on) => D()?.flipSwitch(sw, on);
   // what the plan offers: what's on now (where it's done) and what's next (each crosses itself off once its time is over)
   function planOptions(pl) {
     const p = P(), st = pl.st, out = [];
@@ -172,167 +171,31 @@
     return notes.length ? `${cap(notes.join(', and '))}. ${ask}` : `I don’t have much to go on yet, so here’s a place to start. ${ask}`;
   }
 
-  // ---------- when you tell it something ----------
-  const COURSE_WORDS = [
-    [/\bamc ?12\b/, 'amc12'], [/\bamc\b|\bamc ?10\b|\bcontest/, 'amc10'], [/\btriangle/, 'triangles'], [/\bheat\b/, 'heat'], [/\bkinematic/, 'kinematics'], [/\bmotion\b/, 'motion'], [/\bvector/, 'vectors'], [/\bprojectile/, 'projectiles'],
-    [/\bvocab/, 'vocab'], [/\bpreterite/, 'preterite'], [/\bimperfect/, 'imperfect'], [/\bmiddle ages\b|\bmedieval\b|\bvikings?\b|\bcrusades?\b|\bblack death\b/, 'middleages'], [/\bwars? of religion\b|\bthirty years\b|\bdefenestration\b|\bbartholomew\b|\bwestphalia\b/, 'wars'], [/\bessays?\b|\bthesis\b|\bbody paragraphs?\b|\bconclusions?\b|\bintroductions?\b/, 'essays'],
-  ];
-  const FOLDER_WORDS = [[/\bmath(s|ematics)?\b/, 'math'], [/\bscience\b/, 'science'], [/\bphysics\b/, 'physics'], [/\bspanish\b/, 'spanish'], [/\bhistory\b/, 'history'], [/\benglish\b/, 'english'], [/\bgeograph|\bcountries\b|\bcapitals\b|\bmaps?\b/, 'geography']];
-  const courseOptions = (b) => (b.id === 'essays' ? [
-    { icon: 'study', title: 'Learn how essays work', why: 'One idea at a time, with things to try.', href: link('english/learn.html') },
-    { emoji: '✍️', title: 'Write an essay', why: 'Plan it, write it, check it, and compare it with a model.', href: link('english/write.html') },
-    { icon: 'doc', title: 'Bring your own question', why: 'Got an essay for class? Paste the question in.', href: link('english/write.html#own') },
-  ] : [
-    ...(b.folder === 'history' ? [{ icon: 'study', title: `Read ${b.name} as a story`, why: 'A chapter at a time, where you make the choices.', href: link(`history/chapters.html#${b.id}`) }] : []),
-    { icon: 'study', title: `Learn ${b.name}`, why: 'A topic at a time, with lessons.', href: place(b, '/learn') },
-    { icon: 'spark', title: `Test yourself on ${b.name}`, why: b.best?.text ? `Your best is ${b.best.text}.` : 'Mixed questions, then a score.', href: place(b, '/test') },
-    ...(WITH_CLASS_TESTS.has(b.folder) ? [{ icon: 'doc', title: 'A test like the ones in class', why: 'Longer questions, marked against a mark scheme.', href: place(b, '/exam') }] : []),
-  ]);
-  function answer(text, seen, reply, go) {
-    const t = text.toLowerCase().replace(/[’']/g, '').replace(/[?!.,]+$/, '').trim(), courses = COURSE_WORDS.filter(([re]) => re.test(t)).map(([, id]) => seen.banks.find((b) => b.id === id));
-    const test = /\b(test|quiz|exam)\b/.test(t), teach = /\b(learn|study|teach|explain|lesson|notes?)\b/.test(t), openIt = /^(open|go to|go|take me to|show me|show)\b/.test(t);
-    if (/^(hi|hello|hey|yo|sup|good (morning|afternoon|evening))\b/.test(t)) return reply('Hi. Here’s what I’d do next.', { options: suggestions(seen).slice(0, 3) });
-    if (/^(thanks|thank you|thx|ty)\b/.test(t)) return reply('Anytime.');
-    // your plan: a switch ("it's a game day", "not an exam week"), something done ("did java", which it crosses off
-    // by itself once its time is over), and what's on now
-    const pl = seen.plan;
-    if (pl) {
-      const st = pl.st, sw = st.switches.find((s) => t.includes(s.name.toLowerCase()));
-      if (sw) {
-        const off = /\b(not|off|isnt|no|cancel|undo)\b/.test(t);
-        flipSwitch(sw, !off);
-        return reply(off ? `${sw.name} is off. Your list is back to usual.` : `${sw.name} is on${sw.scope === 'week' ? ' for the rest of this week' : ' for today'}. Your list has changed to fit.`);
-      }
-      const did = /^(?:i\s+)?(?:did|done|finished|have done|ive done)\s+(?:with\s+)?(.+)$|^(?:check|tick|mark)\s+(?:off\s+)?(.+?)(?:\s+(?:off|as done|done))?$/.exec(t);
-      if (did) {
-        const what = (did[1] || did[2]).replace(/^(my|the)\s+/, '').trim(), name = (x) => short(x).toLowerCase();
-        const it = st.items.find((x) => x.check && (name(x).includes(what) || what.includes(name(x)))) || (/^(it|that|this)$/.test(what) ? st.now : null);
-        if (it) return reply(`Nice. ${cap(short(it))} ${it.over ? 'is crossed off on your plan' : it.at == null ? 'crosses itself off when the day is over' : `crosses itself off at ${P().clock(it.end)}, when its time is over`}.`, { options: planOptions(pl).slice(0, 3) });
-        return reply(`I can’t find “${what}” on today’s plan.`, { options: planOptions(pl).slice(0, 3) });
-      }
-      if (/\bplan\b|\bschedule\b|\bwhat now\b|\bwhats now\b|\bright now\b|\bbedtime\b|\blights out\b/.test(t)) {
-        const w = planWords(pl);
-        return reply(w ? `${w.say}${w.ask ? ` ${w.ask}` : ''}` : 'There’s nothing more on your plan today.', { options: planOptions(pl).slice(0, 3) });
-      }
-    }
-    // the music
-    const wantsPlay = /^(play|put on|listen to)\b/.exec(t);
-    if (/^(pause|stop)\b/.test(t) && /(music|song|^pause$|^stop$|it$)/.test(t)) return tunes().then(({ player }) => { if (player.audio.paused) return reply('Nothing’s playing right now.'); player.toggle(); reply('Paused.'); });
-    if (/^(resume|unpause)\b/.test(t)) return tunes().then(({ player }) => { if (!player.current()) return shuffleAll(reply); if (player.audio.paused) player.toggle(); reply(`${player.current().title} is on.`); });
-    if (/^(next|skip)\b/.test(t)) return tunes().then(({ player }) => { if (!player.current()) return reply('Nothing’s playing right now.'); player.next(); reply(`Next up: ${player.current()?.title || 'the next song'}.`); });
-    if (wantsPlay) {
-      const q = t.slice(wantsPlay[0].length).replace(/^(\s*(me|some|a|the)\b)+/, '').trim();
-      if (/^(music|songs?|anything|something|whatever)?$/.test(q)) return shuffleAll(reply);
-      return tunes().then(({ player, songs }) => {
-        const liked = songs.filter((x) => x.liked);
-        if (/^(my )?(liked|favou?rites?)( songs)?$/.test(q) && liked.length) { player.playList(liked, 0); return reply(`Playing your ${plural(liked.length, 'liked song')}.`); }
-        const match = songs.filter((x) => `${x.title} ${x.artist}`.toLowerCase().replace(/[’']/g, '').includes(q));
-        if (!match.length) return reply(`I can’t find “${q}” in your songs.`, { options: songs.length ? [{ icon: 'music', title: 'Shuffle everything instead', why: plural(songs.length, 'song'), run: shuffleAll }] : [] });
-        player.playList(match, 0);
-        reply(`Playing ${player.current()?.title}${match.length > 1 ? `, and ${plural(match.length - 1, 'more')} that match` : ''}.`);
-      });
-    }
-    if (/\bmusic\b|\bsongs?\b/.test(t)) return openIt ? go('Opening Music.', link('music/')) : reply('Here’s your music.', { tile: 'music' });
-    // what's on, what to do, and how it's going
-    if (/\btoday\b|\btomorrow\b|\bdate\b|\bday off\b|\bdays off\b|\bholiday|\bcalendar\b|\bschool\b/.test(t) && !test && !/\b(should|can|could) i\b/.test(t)) return reply('Here’s today, and what’s coming up.', { tile: 'today' });
-    if (!courses.length && /\bwhat (should|can|could) i\b|\bwhat (to do|now|next)\b|\bwhats next\b|^what do i do\b|\banything to do\b|\bsuggest|\bhelp\b|\bbored\b|\bidk\b|\bdunno\b|\bnot sure\b/.test(t)) return reply('Here’s what I’d do, in order.', { options: suggestions(seen).slice(0, 4) });
-    if (/\bhow am i\b|\bprogress\b|\bstats?\b|\bstreak\b|\bscores?\b|\bdoing\b/.test(t)) return reply(progressWords(seen), { tile: 'progress' });
-    if (/\bbreak\b|\btired\b|\bsleep\b|\bbed\b/.test(t)) return reply(seen.hour >= 22 || seen.hour < 5 ? 'Go to bed. It’ll all be here tomorrow.' : 'Go for it. Everything stays where you left it.');
-    // somewhere to go
-    if (/\b(draw|sketch|board|flowchart|diagram|whiteboard)\b/.test(t)) return go('Opening your board.', link('board/'));
-    if (/\b(journal|diary)\b/.test(t)) return go('Opening today’s entry in your journal.', link('station/#today'));
-    if (/\bstation\b|\bmy notes\b|\bresearch\b/.test(t)) return go('Opening Station.', link('station/'));
-    if (/\b(settings?|theme|font|colou?rs?)\b/.test(t)) return go('Opening Settings.', link('settings/'));
-    // a course: straight there, when you've said what for
-    if (courses.length) {
-      const b = courses[0];
-      if (b.id === 'essays') {
-        if (/\b(write|writing|draft|practi[cs]e)\b/.test(t)) return go('Opening the writing room.', link('english/write.html'));
-        if (test || teach) return go('Opening How essays work.', link('english/learn.html'));
-        if (openIt) return go('Opening English.', link('english/'));
-        return reply('What would help most with essays?', { options: courseOptions(b) });
-      }
-      if (test) return go(`Starting a ${b.name} test.`, place(b, '/test'));
-      if (teach) return go(`Opening ${b.name}.`, place(b, '/learn'));
-      if (openIt) return go(`Opening ${b.name}.`, place(b));
-      return reply(`What do you want to do with ${b.name}?`, { options: courseOptions(b) });
-    }
-    // anything to test you on, with no subject named: what you're shakiest on, or today's question
-    if (/\b(quiz|test)( me)?\b|\bquestion\b|\bpractice\b|\bpractise\b/.test(t) && !FOLDER_WORDS.some(([re]) => re.test(t))) {
-      const shaky = suggestions(seen).find((x) => /^(Work on|Go over)/.test(x.title));
-      return reply(seen.answered ? 'You’ve done today’s question. Here’s where practice would do the most.' : 'Here’s today’s question.', seen.answered ? { options: [shaky, { icon: 'study', title: `Choose in ${f.settings.studyTitle}`, why: 'Every subject and test.', href: link('study/') }].filter(Boolean) } : { tile: 'question' });
-    }
-    for (const [re, folder] of FOLDER_WORDS) {
-      if (!re.test(t)) continue;
-      const here = seen.banks.filter((b) => b.folder === folder), title = f.settings.study.find((x) => String(x.link || '').replace(/^\.?\//, '').split('/')[0] === folder)?.title || cap(folder);
-      if (!here.length || openIt) return go(`Opening ${title}.`, link(`${folder}/`));
-      if (here.length === 1) return reply(`What do you want to do in ${title}?`, { options: courseOptions(here[0]) });
-      return reply(`Which part of ${title}?`, { options: here.map((b) => ({ icon: 'study', title: b.name, why: Object.keys(b.learn).length ? `${plural(Object.values(b.learn).filter((x) => x?.learned).length, 'topic')} learned.` : 'Not started yet.', href: place(b) })) });
-    }
-    if (/\b(modules?|subjects?|courses?)\b/.test(t)) return go(`Opening ${f.settings.studyTitle}.`, link('study/'));
-    // a topic you've worked on
-    if (t.length > 3) for (const b of seen.banks) for (const topic of Object.keys(b.learn)) if (topic.toLowerCase().includes(t)) return reply(`${topic} is in ${b.name}.`, { options: [{ icon: 'study', title: `Work on ${topic}`, why: b.learn[topic].learned ? 'You’ve learned this one. It’s still there to practice.' : `${b.learn[topic].right || 0} of ${b.learn[topic].tried || 0} right so far.`, href: topicLink(b, topic) }] });
-    // anything on the site
-    const found = f.findIn ? f.findIn(t.replace(/^(open|go to|go|take me to|show me|show|find)\s+/, ''), 4) : [];
-    if (found.length) return reply('Is it one of these?', { options: found.map((e) => ({ icon: e.icon, emoji: e.emoji, title: e.title, why: e.kind || '', href: e.href })) });
-    reply('I can’t help with that one. I go by what’s on this site. I can quiz you, start a test, play a song, open your board, or tell you how it’s going.');
-  }
-  function progressWords(seen) {
-    const learned = seen.banks.reduce((n, b) => n + Object.values(b.learn).filter((x) => x?.learned).length, 0), visits = read('fluentio.visits') || {};
-    const best = seen.banks.filter((b) => b.best?.when).sort((a, b) => b.best.when - a.best.when)[0];
-    const bits = [learned ? `${plural(learned, 'topic')} learned` : 'no topics learned yet', visits.streak > 1 ? `${visits.streak} days in a row` : ''].filter(Boolean);
-    return `${cap(bits.join(', and '))}.${best ? ` Your latest best is ${best.best.text} on ${best.name}.` : ''}`;
-  }
-
-  // today's plan, beside what it offers (kit/plan-day.js, with a way on to Schedule)
-  const planDay = (pl) => D().panel(pl, { home: true });
-
-  // ---------- what it sees, at a glance: your music, your studying, your notes ----------
-  const cardHead = (icon, title, href, ...more) => el('a', { className: 'aide-card-head', href }, el('span', { className: 'aide-ic', 'aria-hidden': 'true' }, svg(icon)), el('b', {}, title), ...more, svg('arrow'));
+  // ---------- its cards: Today, your studying and your notes (Music, Progress, the question of the day, what's new since
+  // you were here and the date are Home's own tiles, index.html) ----------
+  const card = (cls, color, ...kids) => { const t = el('article', { className: `card tile ${cls}`.trim() }, ...kids); t.style.setProperty('--c', color); return t; };
+  const cardHead = (icon, title, href, sub) => el('a', { className: 'tile-head', href }, el('span', { className: 'tile-ic' }, svg(icon)), el('span', {}, title), sub ? el('small', { className: 'tile-sub' }, sub) : null, el('span', { className: 'tile-go' }, svg('arrow')));
   const line2 = (href, label, side) => el('a', { className: 'aide-row', href }, el('span', {}, label), side ? el('small', {}, side) : null);
-  // Music: what's playing, with play and next (the player at the foot has the rest), or a way to start
-  function musicCard() {
-    const card = el('section', { className: 'aide-card music', 'aria-label': f.settings.musicTitle });
-    const head = (playing) => cardHead('music', f.settings.musicTitle, link('music/'), playing ? el('span', { className: 'm-bars', 'aria-hidden': 'true' }, el('i'), el('i'), el('i'), el('i')) : null);
-    card.append(head(false), el('p', { className: 'muted small' }, 'Loading your music…'));
-    Promise.all([import(link('kit/music/player.js')), import(link('kit/music/library.js'))]).then(([player, lib]) => {
-      player.mount();
-      const fill = () => {
-        const cur = player.current(), all = lib.state.lib.songs, paused = player.audio.paused;
-        if (!all.length) return card.replaceChildren(head(false), el('p', { className: 'muted small' }, lib.state.loading ? 'Loading your music…' : lib.state.conn ? 'No songs yet. Drop some on Music’s page.' : 'Your own songs, playing on every page.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('music/') }, svg('plus'), lib.state.conn ? 'Add songs' : 'Set up Music')));
-        if (cur) {
-          const next = player.upNext()[0];
-          return card.replaceChildren(head(!paused),
-            el('div', { className: 'aide-song' }, lib.art(cur, { size: 46 }), el('span', { className: 't' }, el('b', {}, cur.title), el('small', {}, cur.artist || '')),
-              el('button', { type: 'button', className: 'aide-play', 'aria-label': paused ? 'Play' : 'Pause', title: paused ? 'Play' : 'Pause', onclick: () => player.toggle() }, lib.svg(paused ? 'play' : 'pause', true)),
-              el('button', { type: 'button', className: 'aide-skip', 'aria-label': 'Next', title: 'Next', onclick: () => player.next() }, lib.svg('next', true))),
-            el('p', { className: 'muted small aide-next' }, next ? `Up next: ${next.title}${next.artist ? ` · ${next.artist}` : ''}` : `${lib.plural(all.length, 'song')} · ${lib.total(all)}`));
-        }
-        const liked = all.filter((x) => x.liked), newest = [...all].sort((a, b) => (b.added || 0) - (a.added || 0));
-        card.replaceChildren(head(false), el('p', { className: 'muted small' }, `${lib.plural(all.length, 'song')} · ${lib.total(all)}`),
-          el('div', { className: 'row' }, el('button', { type: 'button', className: 'btn', onclick: () => player.playList(newest, Math.floor(Math.random() * newest.length), true) }, lib.svg('shuffle'), 'Shuffle'),
-            liked.length ? el('button', { type: 'button', className: 'btn', onclick: () => player.playList(liked, 0) }, lib.svg('heart'), `Liked · ${liked.length}`) : null));
-      };
-      fill();
-      for (const w of ['song', 'state', 'queue']) player.events.addEventListener(w, fill);
-      lib.events.addEventListener('library', fill);
-    }).catch(() => card.replaceChildren(head(false), el('p', { className: 'muted small' }, 'Music didn’t load here. Open it from the bar.')));
-    return card;
+  // Today: your plan, each thing crossed off once its time is over (kit/plan-day.js), with a way on to Schedule
+  function planCard(pl) {
+    const [, ...rest] = D().panel(pl, { home: true });
+    return card('aide-plan', 'var(--accent-2)', cardHead('calendar', 'Today', link('schedule/#today'), pl.st.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })), el('div', { className: 'plan-day bare', 'aria-label': 'Today’s plan' }, ...rest.filter(Boolean)));
   }
-  // Studying: where you left off and how far along that is, and a test half done, what's tricky or your latest best
+  // Studying: what's most worth it now, from your progress: a test half done, where you left off and how far along it is,
+  // what's been tricky, your latest best
   function studyCard(seen) {
     const { banks } = seen, l = seen.last, body = [], rows = [];
     const learned = banks.reduce((n, b) => n + Object.values(b.learn).filter((x) => x?.learned).length, 0);
+    for (const b of banks) {
+      const d = b.draft;
+      if (rows.length || !d || d.final || !(d.done || Object.values(d.answers || {}).some((a) => a != null && a !== ''))) continue;
+      rows.push(line2(place(b, `/exam/${d.n}`), `${d.done ? 'Finish marking' : 'Finish'} Test ${d.n}`, b.name));
+    }
     if (l) {
       const done = Math.max(0, l.learned || 0), of = Math.max(1, l.total || 1);
       body.push(el('a', { className: 'aide-continue', href: l.href }, el('small', {}, 'Continue'), el('b', {}, l.topic || l.test || 'Learning')),
         el('div', { className: 'meter', role: 'img', 'aria-label': `${done} of ${of} topics learned` }, el('div', { style: `width:${Math.round((100 * done) / of)}%` })),
         el('p', { className: 'muted small' }, `${l.test ? `${l.test} · ` : ''}${done} of ${plural(of, 'topic')} learned`));
-    }
-    for (const b of banks) {
-      const d = b.draft;
-      if (rows.length || !d || d.final || !(d.done || Object.values(d.answers || {}).some((a) => a != null && a !== ''))) continue;
-      rows.push(line2(place(b, `/exam/${d.n}`), `${d.done ? 'Finish marking' : 'Finish'} Test ${d.n}`, b.name));
     }
     let worst = null;
     for (const b of banks) for (const [topic, st] of Object.entries(b.learn)) {
@@ -343,24 +206,50 @@
     if (worst) rows.push(line2(topicLink(worst.b, worst.topic), `Tricky: ${worst.topic}`, `${worst.st.right || 0} of ${worst.st.tried} right`));
     const best = banks.filter((b) => b.best?.when && b.best.text).sort((a, b) => b.best.when - a.best.when)[0];
     if (best && rows.length < 2) rows.push(line2(place(best, '/test'), `Best in ${best.name}`, best.best.text));
-    if (!l && !rows.length) body.push(el('p', { className: 'muted small' }, 'Nothing started yet: math, science, physics, Spanish, history, English and geography.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('study/') }, svg('study'), 'Pick a subject')));
-    return el('section', { className: 'aide-card study', 'aria-label': f.settings.studyTitle }, cardHead('study', f.settings.studyTitle, link('study/'), learned ? el('small', {}, `${plural(learned, 'topic')} learned`) : null), ...body, rows.length ? el('div', { className: 'aide-rows' }, rows.slice(0, 2)) : null);
+    if (!l && !rows.length) body.push(el('p', { className: 'muted' }, 'Nothing started yet: math, science, physics, Spanish, history, English and geography.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('study/') }, svg('study'), 'Pick a subject')));
+    return card('aide-study', 'var(--accent)', cardHead('study', f.settings.studyTitle, link('study/'), learned ? `${plural(learned, 'topic')} learned` : ''), ...body, rows.length ? el('div', { className: 'aide-rows' }, rows.slice(0, 2)) : null);
   }
   // Notes: today's journal entry, the notes you wrote in last, and your board
   function notesCard(seen) {
     const n = seen.notes, rows = [line2(link('station/#today'), n.today ? 'Today’s entry' : 'Write today’s entry', n.today ? plural(n.today, 'word') : 'A few lines')];
     for (const x of n.recent.slice(0, 2)) rows.push(line2(noteHref(x.path), x.name, agoWords(x.edited, seen.now)));
-    const drew = seen.seen.board;
-    if (drew) rows.push(line2(link('board/'), 'Your board', agoWords(drew, seen.now)));
-    return el('section', { className: 'aide-card notes', 'aria-label': 'Notes' }, cardHead('note', 'Notes', link('station/'), n.count ? el('small', {}, plural(n.count, 'note')) : null), el('div', { className: 'aide-rows' }, rows.slice(0, 4)));
+    if (seen.seen.board) rows.push(line2(link('board/'), 'Your board', agoWords(seen.seen.board, seen.now)));
+    return card('aide-notes', 'var(--accent-2)', cardHead('note', 'Notes', link('station/'), n.count ? plural(n.count, 'note') : ''), el('div', { className: 'aide-rows' }, rows.slice(0, 4)));
+  }
+
+  // ---------- which cards, and how wide ----------
+  // what it offers goes at the side, and beside it what counts most now: your plan when there is one, then whichever of
+  // your studying, your music, your notes, today's question and your progress your days say matters most (what it
+  // offers already isn't shown twice). When a lot is new since your last visit, that's one wide card; when nothing else
+  // counts for much, the plan (or the song that's playing) spreads across two. A narrower window has the room for one
+  function arrange(seen, { news = [], cols = 3, offered = [] } = {}) {
+    const evening = seen.hour >= 18 || seen.hour < 5, morning = seen.hour >= 5 && seen.hour < 12;
+    const lastDays = seen.last ? (seen.now - (seen.last.at || 0)) / DAY : Infinity;
+    const draft = seen.banks.some((b) => b.draft && !b.draft.final && (b.draft.done || Object.values(b.draft.answers || {}).some((a) => a != null && a !== '')));
+    const tricky = seen.banks.some((b) => Object.values(b.learn).some((s) => s && !s.learned && (s.tried || 0) >= 3 && (s.right || 0) / s.tried < 0.67));
+    const learned = seen.banks.reduce((n, b) => n + Object.values(b.learn).filter((x) => x?.learned).length, 0), bests = seen.banks.filter((b) => b.best).length;
+    const recent = seen.notes.recent[0], said = (re) => offered.some((x) => re.test(x.title));
+    const score = {
+      study: (draft ? 90 : lastDays < 1 ? 84 : lastDays < 3 ? 74 : tricky ? 66 : learned || bests ? 52 : 28) - (said(/^(Finish|Pick up|Go over|Work on)\b/) ? 24 : 0),
+      music: seen.music.playing ? 78 + (evening ? 10 : 0) : seen.music.current ? 50 + (evening ? 8 : 0) : seen.music.count ? 32 : 4,
+      notes: recent && seen.now - recent.edited < DAY ? 60 : evening && !seen.wrote ? 54 : seen.notes.count ? 26 : 10,
+      question: seen.answered ? 4 : 48 + (morning ? 14 : 0) - (said(/today’s question/) ? 40 : 0),
+      progress: learned || bests ? 38 + Math.min((read('fluentio.visits') || {}).streak || 0, 10) : 4,
+    };
+    const ranked = Object.keys(score).sort((a, b) => score[b] - score[a]), st = seen.plan?.st, busy = !!st && !!(st.now || st.next || st.night);
+    if (cols < 3) return [{ key: 'options' }, { key: st ? 'plan' : ranked[0] }];
+    if (news.length >= 3 && !busy) return [{ key: 'options' }, { key: 'since', span: 2 }];
+    if (st) return score[ranked[0]] < 45 ? [{ key: 'options' }, { key: 'plan', span: 2 }] : [{ key: 'options' }, { key: 'plan' }, { key: ranked[0] }];
+    if (ranked[0] === 'music' && seen.music.playing && evening && score[ranked[1]] < 50) return [{ key: 'options' }, { key: 'music', span: 2 }];
+    return [{ key: 'options' }, { key: ranked[0] }, { key: score[ranked[1]] >= 30 ? ranked[1] : 'today' }];
   }
 
   // ---------- on the page ----------
   const SHOW = 3;
-  function draw(box, { tiles, welcomed }) {
+  function draw(box, { tiles = {}, welcomed, news = [] } = {}) {
     let seen = see(), said = '';
     const moving = f.moving();
-    let list = suggestions(seen), from = 0, showing = [], you = '';
+    let list = suggestions(seen), from = 0, showing = [];
     const hello = el('p', { className: 'aide-hello', hidden: true }), line = el('h1', { className: 'aide-line' });
     // (the words rise in the first time; when the plan moves on, the new ones are just there)
     const setLine = (say, rise) => {
@@ -371,19 +260,9 @@
       say.split(' ').forEach((word, n, all) => { const w = el('span', { className: rise ? 'w' : 'w still', 'aria-hidden': 'true' }, word); w.style.setProperty('--n', n); line.append(w, n < all.length - 1 ? ' ' : ''); });
     };
     setLine(opening(list, seen), true);
+    // what it offers, at the side: three things, each saying why, and Something else for more
     const options = el('div', { className: 'aide-options aide-offer aide-first' }), other = el('button', { type: 'button', className: 'aide-other', hidden: list.length <= SHOW, onclick: () => { from = (from + SHOW) % list.length; options.classList.remove('aide-first'); paint(); } }, 'Something else');
-    const thread = el('div', { className: 'aide-thread' });
-    // beside what it offers: today's plan, or with no plan here, the date and what's coming
-    const plan = el('section', { className: 'plan-day', 'aria-label': 'Today’s plan', hidden: true });
-    const dateCard = tiles?.today ? tiles.today() : null;
-    const drawPlan = () => {
-      const pl = seen.plan;
-      plan.hidden = !pl;
-      if (dateCard) dateCard.hidden = !!pl;
-      if (!pl) return plan.replaceChildren();
-      plan.replaceChildren(...planDay(pl));
-      fit();
-    };
+    const side = el('div', { className: 'aide-side', role: 'group', 'aria-label': 'What I’d do' }, options, other);
     const row = (opt, i) => {
       const inner = [el('span', { className: 'aide-ic', 'aria-hidden': 'true' }, opt.emoji || svg(opt.icon || 'arrow')), el('span', { className: 'aide-text' }, el('b', {}, opt.title), opt.why ? el('small', {}, opt.why) : null), i != null ? el('kbd', { className: 'aide-key' }, String(i + 1)) : svg('arrow')];
       return opt.href ? el('a', { className: 'aide-option', href: opt.href, target: opt.away ? '_blank' : null, rel: opt.away ? 'noopener' : null }, inner) : el('button', { type: 'button', className: 'aide-option', onclick: () => opt.run(reply) }, inner);
@@ -395,40 +274,52 @@
       if (animate) { options.classList.remove('stagger'); void options.offsetWidth; options.classList.add('stagger'); }
       options.replaceChildren(...showing.map((x, i) => row(x, i)));
     }
-    function reply(text, { options: opts, tile } = {}) {
-      const turn = el('div', { className: 'aide-turn' }, you ? el('p', { className: 'aide-you' }, you) : null, el('p', { className: 'aide-say' }, text),
-        opts?.length ? el('div', { className: 'aide-options' }, opts.map((o) => row(o))) : null, tile && tiles[tile] ? tiles[tile]() : null);
-      you = '';
-      thread.prepend(turn);
-      while (thread.children.length > 3) thread.lastChild.remove();
-      requestAnimationFrame(() => turn.scrollIntoView({ block: 'nearest', behavior: moving ? 'smooth' : 'auto' }));
+    // (what something it offers does, said at the top, with a card when it brings one: today's question, say)
+    function reply(text, { options: opts, tile: t } = {}) {
+      setLine(text, false);
+      if (opts?.length) { showing = opts.slice(0, SHOW); options.replaceChildren(...showing.map((x, i) => row(x, i))); }
+      if (t && tiles[t]) { const c = tiles[t](), last = grid.lastElementChild; if (last && last !== side) last.replaceWith(c); else grid.append(c); refit(); }
     }
-    const go = (text, href) => { reply(text); setTimeout(() => { location.href = href; }, moving ? 320 : 0); };
-    const tell = (text) => { you = text; Promise.resolve().then(() => answer(text, see(), reply, go)).catch(() => reply('That didn’t work. Try again in a moment.')); };
-    const input = el('input', { type: 'text', className: 'aide-input', placeholder: 'Tell me what you want to do…', autocomplete: 'off', spellcheck: false, 'aria-label': 'Tell the assistant what you want to do' });
-    const form = el('form', { className: 'aide-ask', onsubmit: (e) => { e.preventDefault(); const text = input.value.trim(); if (text) { input.value = ''; tell(text); } } }, input, el('button', { type: 'submit', className: 'aide-send', title: 'Send', 'aria-label': 'Send' }, svg('arrow')));
-    const chips = el('div', { className: 'aide-chips' }, ['What should I do?', 'Quiz me', 'How am I doing?', 'Play something'].map((text) => el('button', { type: 'button', className: 'chip', onclick: () => tell(text) }, text)));
-    // (wide: what it says across the top, what it offers beside today, and what it sees under them)
-    const offer = el('div', { className: 'aide-main' }, options, other, form, chips, thread), side = el('div', { className: 'aide-side' }, plan, dateCard);
-    const glance = el('div', { className: 'aide-glance' }, musicCard(), studyCard(seen), notesCard(seen));
-    let glanced = JSON.stringify([seen.last, seen.notes, seen.seen.board, seen.banks.map((b) => [b.learn, b.draft, b.best])]);
-    box.replaceChildren(el('div', { className: 'aide-top' }, hello, line), el('div', { className: 'aide-cols' }, offer, side), glance);
+
+    // the cards, as many columns as the window has room for (three; two on a smaller one; one on a phone)
+    const grid = el('div', { className: 'bento aide-cards stagger' });
+    const colsNow = () => (matchMedia('(min-width: 900px)').matches ? 3 : matchMedia('(min-width: 561px)').matches ? 2 : 1);
+    const render = ({ key, span }) => {
+      if (key === 'options') return side;
+      if (key === 'plan') { const c = planCard(seen.plan); if (span) c.classList.add('span2'); return c; }
+      if (key === 'study') return studyCard(seen);
+      if (key === 'notes') return notesCard(seen);
+      const t = tiles[key]?.();
+      if (t && key === 'music' && span) t.classList.add('feature');
+      return t;
+    };
+    let laid = '';
+    function lay(force = false) {
+      const cols = colsNow(), pickd = arrange(seen, { news, cols, offered: showing }), sig = JSON.stringify([cols, pickd]);
+      if (!force && sig === laid) return false;
+      laid = sig;
+      const cards = pickd.map(render).filter(Boolean);
+      cards.forEach((c, i) => c.style.setProperty('--n', i));
+      grid.style.setProperty('--cols', cols === 1 ? 1 : Math.min(cols, pickd.reduce((n, x) => n + (x.span || 1), 0)));
+      grid.replaceChildren(...cards);
+      return true;
+    }
+    box.replaceChildren(el('div', { className: 'aide-top' }, hello, line), grid);
     paint();
+    lay(true);
 
     // ---------- the whole of it in one screen ----------
-    // on a window wide and tall enough, the page doesn't scroll: the plan shows the rows there's room for (what's crossed
-    // off goes first, oldest first, then the switches, then what's latest, keeping what's on now and the two after it) and
-    // says how many more, and on a smaller window, the chips go and the cards show a little less (tight)
-    const wide = matchMedia('(min-width: 900px) and (min-height: 600px)'), main = box.closest('main');
+    // like the tile layouts (home-fit), with the plan showing the rows there's room for: what's crossed off goes first,
+    // oldest first, then the switches, then what's latest, keeping what's on now and the two after it, and it says how
+    // many more (on a phone the page scrolls instead)
     function fit() {
-      document.documentElement.classList.toggle('aide-fit', wide.matches);
-      box.classList.remove('tight');
-      const list = plan.hidden ? null : plan.querySelector('.pd-list'), sw = list ? plan.querySelector('.pd-switches') : null;
-      list?.querySelectorAll('.pd-more').forEach((x) => x.remove());
-      const rows = list ? [...list.children] : [];
+      document.documentElement.classList.toggle('home-fit', colsNow() > 1);
+      const pc = grid.querySelector('.aide-plan'), list = pc?.querySelector('.pd-list'), sw = pc?.querySelector('.pd-switches');
+      if (!list) return;
+      list.querySelectorAll('.pd-more').forEach((x) => x.remove());
+      const rows = [...list.children];
       for (const r of [...rows, sw]) if (r) r.hidden = false;
-      if (!wide.matches || !main) return;
-      const cs = getComputedStyle(main), room = main.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom), tall = () => box.offsetHeight > room + 1;
+      if (colsNow() === 1) return;
       const crossed = rows.filter((r) => r.classList.contains('done')), left = rows.filter((r) => !r.classList.contains('done'));
       const timed = left.filter((r) => r.querySelector('time')?.textContent), untimed = left.filter((r) => !timed.includes(r));
       const order = [...crossed.slice(0, -1), sw, ...timed.slice(3).reverse(), ...untimed.reverse(), ...crossed.slice(-1), ...timed.slice(1, 3).reverse()].filter(Boolean);
@@ -439,18 +330,15 @@
         if (before) list.prepend(more(before, true));
         if (after) list.append(more(after, false));
       };
-      let i = 0;
-      const trim = () => { for (; i < order.length && tall() && plan.offsetHeight > offer.offsetHeight; i++) { order[i].hidden = true; mark(); } };
-      trim();
-      if (tall()) { box.classList.add('tight'); trim(); }
+      for (let i = 0; i < order.length && pc.scrollHeight > pc.clientHeight + 1; i++) { order[i].hidden = true; mark(); }
     }
     let sized = 0;
     const refit = () => { cancelAnimationFrame(sized); sized = requestAnimationFrame(fit); };
-    wide.addEventListener('change', refit);
+    for (const q of ['(min-width: 900px)', '(min-width: 561px)']) matchMedia(q).addEventListener('change', () => { lay(); refit(); });
+    const main = box.closest('main');
     if (main && 'ResizeObserver' in window) new ResizeObserver(refit).observe(main);
     addEventListener('fluence:shown', refit);
     document.fonts?.ready.then(refit);
-    drawPlan();
     fit();
     // the greeting, for the time of day or a holiday, and a day off coming up
     if (f.settings.greeting) welcomed?.then(({ welcome, upcoming }) => {
@@ -461,7 +349,7 @@
       refit();
     }).catch(() => {});
     // what's playing changes what it offers, and so do songs another device added; the plan moves on with the clock, and
-    // then what it says changes too, and what it sees of your studying and notes
+    // then what it says changes too, and the cards it picks (the plan's own card is drawn again for the clock)
     let soon = 0;
     const again = () => {
       const had = !!seen.plan;
@@ -470,13 +358,12 @@
       other.hidden = list.length <= SHOW;
       if (had || seen.plan) setLine(opening(list, seen), false);
       if (words(pick()) !== words(showing)) paint(false);
-      const now = JSON.stringify([seen.last, seen.notes, seen.seen.board, seen.banks.map((b) => [b.learn, b.draft, b.best])]);
-      if (now !== glanced) { glanced = now; glance.children[1].replaceWith(studyCard(seen)); glance.children[2].replaceWith(notesCard(seen)); }
-      drawPlan();
+      if (!lay()) { const pc = grid.querySelector('.aide-plan'); if (pc && seen.plan) pc.replaceWith(Object.assign(planCard(seen.plan), { className: pc.className })); }
+      refit();
     };
     const refresh = () => { clearTimeout(soon); soon = setTimeout(again, 200); };
     addEventListener('fluence:plan', again);
-    // (another page of the site changing the plan, a switch, or your notes)
+    // (another page of the site changing the plan, a switch, your notes, or where you left off)
     addEventListener('storage', (e) => { if (e.key === P()?.KEY || e.key === P()?.DOCS || e.key === 'fluentio.station' || e.key === 'fluentio.last') refresh(); });
     setInterval(() => { if (!document.hidden) again(); }, 30000);
     Promise.all([import(link('kit/music/player.js')), import(link('kit/music/library.js'))]).then(([player, lib]) => {
@@ -484,18 +371,12 @@
       lib.events.addEventListener('library', refresh);
       lib.refresh();
     }).catch(() => {});
-    // 1, 2 and 3 take what's offered, unless you're typing
+    // 1, 2 and 3 take what's offered, unless you're typing somewhere
     addEventListener('keydown', (e) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
-      const typing = e.target.closest?.('input, textarea, select, [contenteditable]');
-      if (typing && (typing !== input || input.value)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing || e.target.closest?.('input, textarea, select, [contenteditable]')) return;
       const k = +e.key;
-      if (k >= 1 && k <= showing.length) { e.preventDefault(); options.children[k - 1].click(); }
+      if (k >= 1 && k <= showing.length && options.isConnected) { e.preventDefault(); options.children[k - 1].click(); }
     });
-    if (matchMedia('(pointer: fine)').matches) {
-      if (window.frameElement) addEventListener('fluence:shown', () => input.focus({ preventScroll: true }), { once: true });
-      else input.focus({ preventScroll: true });
-    }
   }
   f.assistant = { draw, see, suggestions, opening };
 })();
