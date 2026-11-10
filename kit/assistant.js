@@ -175,7 +175,7 @@
   // ---------- its cards: Today, your studying and your notes (Music, Progress, the question of the day, what's new since
   // you were here and the date are Home's own tiles, index.html) ----------
   const card = (cls, color, ...kids) => { const t = el('article', { className: `card tile ${cls}`.trim() }, ...kids); t.style.setProperty('--c', color); return t; };
-  const cardHead = (icon, title, href, sub) => el('a', { className: 'tile-head', href }, el('span', { className: 'tile-ic' }, svg(icon)), el('span', {}, title), sub ? el('small', { className: 'tile-sub' }, sub) : null, el('span', { className: 'tile-go' }, svg('arrow')));
+  const cardHead = (icon, title, href, sub) => el(href ? 'a' : 'div', { className: 'tile-head', href }, el('span', { className: 'tile-ic' }, svg(icon)), el('span', {}, title), sub ? el('small', { className: 'tile-sub' }, sub) : null, href ? el('span', { className: 'tile-go' }, svg('arrow')) : null);
   const line2 = (href, label, side) => el('a', { className: 'aide-row', href }, el('span', {}, label), side ? el('small', {}, side) : null);
   // Today: your plan, each thing crossed off once its time is over (kit/plan-day.js), with a way on to Schedule
   // (wide: the day beside lights out, what's due and the switches)
@@ -224,6 +224,40 @@
     return card('aide-notes', 'var(--accent-2)', cardHead('note', 'Notes', link('station/'), n.count ? plural(n.count, 'note') : ''), el('div', { className: 'aide-rows' }, rows.slice(0, 4)));
   }
 
+  // ---------- smaller cards, for the room under a shorter one ----------
+  // Music, small: what's on, with play and next, and what comes after it (Home's Music tile is the big one)
+  function musicMini(changed) {
+    const box = card('aide-music', 'var(--accent)', cardHead('music', f.settings.musicTitle, link('music/')), el('p', { className: 'muted small' }, 'Loading your music…'));
+    Promise.all([import(link('kit/music/player.js')), import(link('kit/music/library.js'))]).then(([player, lib]) => {
+      player.mount();
+      const fill = () => {
+        const cur = player.current(), all = lib.state.lib.songs, paused = player.audio.paused, head = cardHead('music', f.settings.musicTitle, link('music/'), all.length ? lib.plural(all.length, 'song') : '');
+        if (!all.length) box.replaceChildren(head, el('p', { className: 'muted small' }, 'Your own songs, playing on every page.'));
+        else if (cur) {
+          const next = player.upNext()[0];
+          box.replaceChildren(head, el('div', { className: 'aide-song' }, lib.art(cur, { size: 44 }), el('span', { className: 't' }, el('b', {}, cur.title), el('small', {}, cur.artist || '')),
+            el('button', { type: 'button', className: 'aide-play', 'aria-label': paused ? 'Play' : 'Pause', title: paused ? 'Play' : 'Pause', onclick: () => player.toggle() }, lib.svg(paused ? 'play' : 'pause', true)),
+            el('button', { type: 'button', className: 'aide-skip', 'aria-label': 'Next', title: 'Next', onclick: () => player.next() }, lib.svg('next', true))),
+          next ? el('p', { className: 'muted small aide-next' }, `Up next: ${next.title}${next.artist ? ` · ${next.artist}` : ''}`) : null);
+        } else {
+          const newest = [...all].sort((a, b) => (b.added || 0) - (a.added || 0));
+          box.replaceChildren(head, el('div', { className: 'row' }, el('button', { type: 'button', className: 'btn', onclick: () => player.playList(newest, Math.floor(Math.random() * newest.length), true) }, lib.svg('shuffle'), 'Shuffle')));
+        }
+        changed?.();
+      };
+      fill();
+      for (const w of ['song', 'state', 'queue']) player.events.addEventListener(w, fill);
+      lib.events.addEventListener('library', fill);
+    }).catch(() => {});
+    return box;
+  }
+  // Your progress, small: the three numbers
+  function progressMini(seen) {
+    const learned = seen.banks.reduce((n, b) => n + Object.values(b.learn).filter((x) => x?.learned).length, 0), bests = seen.banks.filter((b) => b.best).length, streak = (read('fluentio.visits') || {}).streak || 1;
+    const stat = (n, one, many) => el('div', { className: 'stat' }, el('b', {}, n.toLocaleString('en-US')), el('span', {}, n === 1 ? one : many));
+    return card('aide-progress', 'var(--good)', cardHead('chart', 'Your progress', link('study/')), el('div', { className: 'stats' }, stat(learned, 'topic learned', 'topics learned'), stat(streak, 'day in a row', 'days in a row'), stat(bests, 'best score', 'best scores')));
+  }
+
   // ---------- how many cards, which, and how ----------
   // one to three, from how much counts right now: what counts most, and whatever else comes close to it (within 22 of
   // 100, and 52 at least). At night your plan counts most and studying less; a song that's on counts in the evening;
@@ -265,7 +299,10 @@
     const have = new Set(cards.map((c) => c.key).concat(cards.some((c) => c.key === 'since') ? ['study'] : []));
     // (not at night: then it's the plan, and bed)
     const side = cards.length === 1 && used < cols && !late && offered.filter((x) => !have.has(kindOf(x))).length >= 2;
-    return { cards, side, cols: used + (side ? 1 : 0), score };
+    // (and for the room under a shorter card, what's left, most first: what it'd do, then the rest by how much they count)
+    const out = new Set([...cards.map((c) => c.key), ...(have.has('study') ? ['study'] : []), ...(merged ? ['progress'] : []), 'plan', 'since']);
+    const rest = [...(side ? [] : ['options']), ...ranked.filter((k) => !out.has(k)), ...(st ? [] : ['today'])];
+    return { cards, side, cols: used + (side ? 1 : 0), score, rest };
   }
 
   // ---------- on the page ----------
@@ -278,7 +315,8 @@
     const line = hero.line || el('p'), hello = hero.hello || el('p');
     const go = (x) => (x.href ? el('a', { href: x.href, target: x.away ? '_blank' : null, rel: x.away ? 'noopener' : null }, `${x.title} →`) : el('button', { type: 'button', className: 'welcome-go', onclick: () => x.run(reply) }, `${x.title} →`));
     const setLine = () => {
-      const st = seen.plan?.st, first = !note && !shown.side && !(st && (st.night || st.late)) ? list[0] : null;
+      // (when the plan's what it talks about, only something on the plan; at night, nothing)
+      const st = seen.plan?.st, fromPlan = !!(seen.plan && planWords(seen.plan)), first = !note && !shown.side && !(st && (st.night || st.late)) && (!fromPlan || list[0]?.plan) ? list[0] : null;
       const say = note || opening(list, seen), key = `${say}|${first?.title || ''}`;
       if (key === said) return;
       said = key;
@@ -304,7 +342,7 @@
       note = text;
       setLine();
       if (opts?.length) { showing = opts.slice(0, SHOW); options.replaceChildren(...showing.map((x, i) => row(x, i))); }
-      if (t && tiles[t]) { const c = tiles[t](), last = grid.lastElementChild; if (last && last !== side) last.replaceWith(c); else grid.append(c); refit(); }
+      if (t && tiles[t]) { const c = tiles[t](), last = grid.lastElementChild; if (last && !last.contains(side)) last.replaceChildren(c); else grid.append(el('div', { className: 'aide-stack' }, c)); watch(c); refit(); }
     }
 
     // the cards, in as many columns as they take (three on a wide window; two on a smaller one; one on a phone)
@@ -318,20 +356,37 @@
       if (t && key === 'music' && wide) t.classList.add('feature');
       return t;
     };
-    let shown = { cards: [], side: false }, laid = '';
+    // (each card in a column of its own; under a shorter one, more cards fill the room down to the tallest: see fill)
+    let shown = { cards: [], side: false, rest: [] }, laid = '', made = new Map();
+    const sizes = 'ResizeObserver' in window ? new ResizeObserver(() => refit()) : null, watch = (x) => { if (x) sizes?.observe(x); };
     function lay(force = false) {
-      const cols = colsNow(), c = compose(seen, { news, cols, offered: showing }), sig = JSON.stringify([cols, c.cards, c.side]);
+      const cols = colsNow(), c = compose(seen, { news, cols, offered: showing }), sig = JSON.stringify([cols, c.cards, c.side, c.rest]);
       if (!force && sig === laid) return false;
-      laid = sig; shown = c;
-      const cards = c.cards.map(render).filter(Boolean);
-      if (c.side) cards.unshift(side);
-      cards.forEach((x, i) => x.style.setProperty('--n', i));
+      laid = sig; shown = c; made = new Map();
+      const items = c.cards.map((x) => ({ card: render(x), wide: x.wide })).filter((x) => x.card);
+      if (c.side) items.unshift({ card: side, wide: false });
+      const stacks = items.map((x, i) => { const s = el('div', { className: `aide-stack${x.wide ? ' span2' : ''}` }, x.card); s.style.setProperty('--n', i); watch(x.card); return s; });
       grid.style.setProperty('--cols', cols === 1 ? 1 : c.cols);
       grid.classList.toggle('solo', cols > 1 && c.cols === 1);
       grid.dataset.cards = c.cards.map((x) => x.key + (x.wide ? '+' : '')).join(' ');
-      grid.replaceChildren(...cards);
+      grid.replaceChildren(...stacks);
       setLine();
       return true;
+    }
+    // a smaller card for the room under a shorter one (made once a layout, so one that loads, like Music, keeps its size)
+    function filler(key) {
+      if (!made.has(key)) {
+        const c = key === 'options' ? card('aide-offers', 'var(--accent)', cardHead('spark', 'What I’d do'), el('div', { className: 'aide-rows' }, list.slice(0, SHOW).map((x) => (x.href ? el('a', { className: 'aide-row', href: x.href, target: x.away ? '_blank' : null, rel: x.away ? 'noopener' : null }, el('span', {}, x.title)) : el('button', { type: 'button', className: 'aide-row', onclick: () => x.run(reply) }, el('span', {}, x.title))))))
+          : key === 'music' ? musicMini(() => refit())
+            : key === 'progress' ? progressMini(seen)
+              : key === 'study' ? studyCard(seen)
+                : key === 'notes' ? notesCard(seen)
+                  : tiles[key]?.() || null;
+        c?.classList.add('aide-filler');
+        made.set(key, c);
+        watch(c);
+      }
+      return made.get(key);
     }
     box.replaceChildren(grid);
     paint();
@@ -343,6 +398,12 @@
     // many more (on a phone the page scrolls instead)
     function fit() {
       document.documentElement.classList.toggle('home-fit', colsNow() > 1);
+      grid.querySelectorAll('.aide-filler').forEach((x) => x.remove());
+      grid.querySelectorAll('.aide-stack > *').forEach((x) => { x.style.flexGrow = ''; });
+      trim();
+      fill();
+    }
+    function trim() {
       const pc = grid.querySelector('.aide-plan'), list = pc?.querySelector('.pd-list'), sw = pc?.querySelector('.pd-switches');
       if (!list) return;
       list.querySelectorAll('.pd-more').forEach((x) => x.remove());
@@ -360,6 +421,25 @@
         if (after) list.append(more(after, false));
       };
       for (let i = 0; i < order.length && pc.scrollHeight > pc.clientHeight + 1; i++) { order[i].hidden = true; mark(); }
+    }
+    // under a shorter column, what else counts, a smaller card at a time, as long as it fits above the tallest column's
+    // foot (the cards needn't be one height; the room shouldn't be empty)
+    function fill() {
+      if (colsNow() === 1) return;
+      const stacks = [...grid.children], foot = Math.max(0, ...stacks.map((s) => s.clientHeight)), done = new Set();
+      const tall = (s) => { const a = s.firstElementChild, z = s.lastElementChild; return a ? z.offsetTop + z.offsetHeight - a.offsetTop : 0; };
+      for (const s of stacks) {
+        for (const key of shown.rest) {
+          if (done.has(key) || foot - tall(s) < 90) continue;
+          const c = filler(key);
+          if (!c) continue;
+          s.append(c);
+          if (tall(s) > foot + 1) c.remove(); else done.add(key);
+        }
+        // (a gap too small for another card: the last one in the column takes it)
+        const gap = foot - tall(s);
+        if (gap > 0 && gap <= 160 && s.lastElementChild) s.lastElementChild.style.flexGrow = '1';
+      }
     }
     let sized = 0;
     const refit = () => { cancelAnimationFrame(sized); sized = requestAnimationFrame(fit); };

@@ -1,9 +1,10 @@
 // Alerts for your plan: as each thing on it starts (or a few minutes before: Settings → Home, or Alerts in Schedule), a
-// note at the top of whatever page of the site is open. School and your classes, your blocks, a lesson, the meals and
-// the walks, each of the night's steps, and lights out. Where the browser lets the site show notifications (asked for
-// in the same places), it's a notification as well, while you're in another tab or app. Each comes once, whatever's
-// open: this browser keeps which went ('fluentio:alerts', not part of your progress). A page of the site has to be open
-// somewhere for them; one opened a little late still has the alert, for the first minutes of the thing it's for.
+// real notification, the kind any app sends, outside the browser: School and your classes, your blocks, a lesson, the
+// meals and the walks, each of the night's steps, and lights out. The browser has to let the site send them: it's asked
+// once, the first time you click on a page of the site, and Alerts and Settings can ask again. Until it does, the alert
+// is a note at the top of the page that's open, with a way to let it. Each comes once, whatever's open: this browser
+// keeps which went ('fluentio:alerts', not part of your progress). A page of the site has to be open somewhere for them;
+// one opened a little late still has the alert, for the first minutes of the thing it's for.
 // A plain script: kit/bar.js brings it in with kit/plan.js (window.fluentioAlerts), and the tests require() it.
 (function (root) {
   'use strict';
@@ -60,9 +61,9 @@
   const ask = () => (canAsk() ? Promise.resolve(root.Notification.requestPermission()).then(can, can) : Promise.resolve(can()));
   // (the words beside the choices, in Settings and in Schedule's card)
   const allowWords = () => ({
-    granted: 'This browser shows them as notifications too, while you’re in another tab or app.',
-    denied: 'They show on the site’s pages: this browser doesn’t let the site show notifications yet. Ask it, or allow them for the site in its settings, to have them in other apps too.',
-    default: 'They show on the site’s pages. To have them while you’re in another tab or app too, let this browser show notifications.',
+    granted: 'They come as notifications, the kind any app sends, while a page of the site is open somewhere.',
+    denied: 'This browser doesn’t let the site show notifications yet, so they show on its pages. Ask it, or allow notifications for the site in the browser’s settings for it.',
+    default: 'To have them as notifications, the kind any app sends, let this browser show them.',
     none: 'They show on the site’s pages.',
   })[can()];
 
@@ -97,9 +98,11 @@
       if (!document.body) return;
       if (!box || !box.isConnected) document.body.append((box = el('div', { className: 'alerts', role: 'region', 'aria-label': 'Alerts' })));
       const place = a.it && !(a.it.kind === 'class' && !a.it.check) ? P.placeOf(P.current(), a.it) : null;
+      // (with a way to let the browser send them as notifications, from then on, this one too)
+      const allow = canAsk() ? el('button', { type: 'button', className: 'alert-ask', onclick: () => ask().then((now) => { if (now === 'granted') { drop(n); show(a, Date.now()); } else allow.textContent = 'Allow notifications for the site in the browser’s settings'; }) }, 'Get these as notifications') : null;
       const n = el('div', { className: 'alert', role: 'alert' },
         el('span', { className: 'alert-ic', 'aria-hidden': 'true' }, svg('bell')),
-        el('div', { className: 'alert-words' }, el('b', {}, w.title), el('span', {}, w.body)),
+        el('div', { className: 'alert-words' }, el('b', {}, w.title), el('span', {}, w.body), allow),
         place ? el('a', { className: 'btn alert-go', href: place.away ? place.href : f.link(place.href), target: place.away ? '_blank' : null, rel: place.away ? 'noopener' : null, onclick: () => drop(n) }, 'Start') : null,
         el('button', { type: 'button', className: 'alert-x', 'aria-label': 'Close', title: 'Close', onclick: () => drop(n) }, svg('x')));
       n.dataset.id = a.id;
@@ -111,14 +114,23 @@
         if (seen >= 300) drop(n);
       }, 5000);
     }
+    // a real notification when the browser lets the site send one (a click on it brings the page up); a note on the
+    // page when it doesn't
     function show(a, now) {
       const w = words(P, a, now);
-      note(a, w);
-      // (and a notification, when this isn't the page you're looking at)
-      if (can() === 'granted' && (document.hidden || !document.hasFocus())) {
-        try { const n = new root.Notification(w.title, { body: w.body, tag: a.id }); n.onclick = () => { try { root.top.focus(); } catch {} root.focus(); n.close(); }; } catch {}
+      if (can() === 'granted') {
+        try { const n = new root.Notification(w.title, { body: w.body, tag: a.id }); n.onclick = () => { try { root.top.focus(); } catch {} root.focus(); n.close(); }; return; } catch {}
       }
+      note(a, w);
     }
+    // (asked once, the first time you click or press a key on a page of the site, which is when browsers will ask)
+    const askOnce = () => {
+      const s = f.read(SENT) || {};
+      if (s.asked || !canAsk() || leadOf(f.settings.planAlerts) == null || !f.scheduleOn() || !inCharge()) return;
+      f.write(SENT, { ...s, asked: Date.now() });
+      ask();
+    };
+    for (const type of ['pointerdown', 'keydown']) addEventListener(type, askOnce, { capture: true });
     async function tick() {
       const lead = leadOf(f.settings.planAlerts);
       if (busy || lead == null || !inCharge() || !f.scheduleOn()) return;

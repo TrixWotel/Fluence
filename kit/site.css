@@ -191,6 +191,8 @@ html.has-bar body { padding-top: var(--bar-h); }
 .alert-words b { overflow: hidden; font-weight: 650; white-space: nowrap; text-overflow: ellipsis; }
 .alert-words span { color: var(--muted); font-size: .88rem; line-height: 1.35; overflow-wrap: anywhere; }
 .alert-go { padding: 5px 13px; font-size: .88rem; }
+.alert-ask { justify-self: start; margin-top: 4px; padding: 0; font: inherit; font-size: .86rem; font-weight: 600; color: var(--accent); cursor: pointer; background: none; border: 0; }
+.alert-ask:hover { text-decoration: underline; }
 .alert-x { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; color: var(--muted); cursor: pointer; background: none; border: 0; border-radius: 50%; transition: color var(--t1), background var(--t1); }
 .alert-x:hover { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
 .alert-x .i { width: 16px; height: 16px; }
