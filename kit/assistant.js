@@ -1,10 +1,11 @@
 // The home page as an assistant: it looks at what you've been doing in this browser (the topic you left off on, a test half
 // done, what you missed on your last test, what keeps tripping you up, what's playing, your notes and journal, where you've
 // been, how long you've been at it, the time of day), says what it notices, and offers what would help most right now. It
-// works by the rules here, with nothing sent anywhere: it isn't a chatbot. It takes the room the tile layouts do: what it
-// says at the top, then what it offers at the side and one to three cards beside it, which it picks from what you've
-// been doing (your plan, your studying, your music, your notes, today's question, your progress, what's new), and
-// sometimes makes one card of two.
+// works by the rules here, with nothing sent anywhere: it isn't a chatbot. It takes the room the tile layouts do: the
+// site's name at the top with what it says under it (the welcome's line, and a link to what it'd do first), then one
+// to three cards it picks from what counts right now (your plan, your studying, your music, your notes, today's
+// question, your progress, what's new): one spread wide when it's the only one, two made one, or what it offers at the
+// side when the cards don't have it.
 (() => {
   const f = window.fluentio;
   if (!f) return;
@@ -177,13 +178,16 @@
   const cardHead = (icon, title, href, sub) => el('a', { className: 'tile-head', href }, el('span', { className: 'tile-ic' }, svg(icon)), el('span', {}, title), sub ? el('small', { className: 'tile-sub' }, sub) : null, el('span', { className: 'tile-go' }, svg('arrow')));
   const line2 = (href, label, side) => el('a', { className: 'aide-row', href }, el('span', {}, label), side ? el('small', {}, side) : null);
   // Today: your plan, each thing crossed off once its time is over (kit/plan-day.js), with a way on to Schedule
-  function planCard(pl) {
-    const [, ...rest] = D().panel(pl, { home: true });
-    return card('aide-plan', 'var(--accent-2)', cardHead('calendar', 'Today', link('schedule/#today'), pl.st.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })), el('div', { className: 'plan-day bare', 'aria-label': 'Today’s plan' }, ...rest.filter(Boolean)));
+  // (wide: the day beside lights out, what's due and the switches)
+  function planCard(pl, wide = false) {
+    const [, list, ...rest] = D().panel(pl, { home: true }), more = rest.filter(Boolean);
+    const body = wide ? el('div', { className: 'plan-day bare two', 'aria-label': 'Today’s plan' }, list, more.length ? el('div', { className: 'pd-aside' }, ...more) : null) : el('div', { className: 'plan-day bare', 'aria-label': 'Today’s plan' }, list, ...more);
+    return card(`aide-plan${wide ? ' span2' : ''}`, 'var(--accent-2)', cardHead('calendar', 'Today', link('schedule/#today'), pl.st.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })), body);
   }
   // Studying: what's most worth it now, from your progress: a test half done, where you left off and how far along it is,
   // what's been tricky, your latest best
-  function studyCard(seen) {
+  // (wide: your progress beside it, the topics learned, days in a row, best scores and each subject: Progress's tile)
+  function studyCard(seen, { wide = false, tiles = {} } = {}) {
     const { banks } = seen, l = seen.last, body = [], rows = [];
     const learned = banks.reduce((n, b) => n + Object.values(b.learn).filter((x) => x?.learned).length, 0);
     for (const b of banks) {
@@ -207,7 +211,10 @@
     const best = banks.filter((b) => b.best?.when && b.best.text).sort((a, b) => b.best.when - a.best.when)[0];
     if (best && rows.length < 2) rows.push(line2(place(best, '/test'), `Best in ${best.name}`, best.best.text));
     if (!l && !rows.length) body.push(el('p', { className: 'muted' }, 'Nothing started yet: math, science, physics, Spanish, history, English and geography.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('study/') }, svg('study'), 'Pick a subject')));
-    return card('aide-study', 'var(--accent)', cardHead('study', f.settings.studyTitle, link('study/'), learned ? `${plural(learned, 'topic')} learned` : ''), ...body, rows.length ? el('div', { className: 'aide-rows' }, rows.slice(0, 2)) : null);
+    const head = cardHead('study', f.settings.studyTitle, link('study/'), learned ? `${plural(learned, 'topic')} learned` : ''), main = [...body, rows.length ? el('div', { className: 'aide-rows' }, rows.slice(0, 2)) : null];
+    const beside = wide && tiles.progress ? [...tiles.progress().children].slice(1) : [];
+    if (!beside.length) return card('aide-study', 'var(--accent)', head, ...main);
+    return card('aide-study span2', 'var(--accent)', head, el('div', { className: 'aide-two' }, el('div', { className: 'aide-col' }, ...main), el('div', { className: 'aide-col' }, ...beside)));
   }
   // Notes: today's journal entry, the notes you wrote in last, and your board
   function notesCard(seen) {
@@ -217,49 +224,67 @@
     return card('aide-notes', 'var(--accent-2)', cardHead('note', 'Notes', link('station/'), n.count ? plural(n.count, 'note') : ''), el('div', { className: 'aide-rows' }, rows.slice(0, 4)));
   }
 
-  // ---------- which cards, and how wide ----------
-  // what it offers goes at the side, and beside it what counts most now: your plan when there is one, then whichever of
-  // your studying, your music, your notes, today's question and your progress your days say matters most (what it
-  // offers already isn't shown twice). When a lot is new since your last visit, that's one wide card; when nothing else
-  // counts for much, the plan (or the song that's playing) spreads across two. A narrower window has the room for one
-  function arrange(seen, { news = [], cols = 3, offered = [] } = {}) {
-    const evening = seen.hour >= 18 || seen.hour < 5, morning = seen.hour >= 5 && seen.hour < 12;
-    const lastDays = seen.last ? (seen.now - (seen.last.at || 0)) / DAY : Infinity;
+  // ---------- how many cards, which, and how ----------
+  // one to three, from how much counts right now: what counts most, and whatever else comes close to it (within 22 of
+  // 100, and 52 at least). At night your plan counts most and studying less; a song that's on counts in the evening;
+  // a test half done, where you left off and what's tricky count by how recent. Your studying and your progress,
+  // both counting, are one card; what's new since your last visit (when a lot is) has where you left off in it. A card
+  // on its own spreads wide where it can (Today beside what's due, studying beside progress, the song with what's
+  // next). What it offers goes at the side with a single card, when that card doesn't have most of it (not at night)
+  const KINDS = [[/^(Finish|Pick up|Go over|Work on|Beat your best|Try AMC|Pick a subject|Start The Wars|Try essay|Write an essay)\b/, 'study'], [/^(Keep listening|Skip this song|Put on some music|Set up Music)\b/, 'music'], [/^(Write in your journal|Back to )/, 'notes'], [/^Try today’s question/, 'question']];
+  const kindOf = (x) => (x.plan ? 'plan' : KINDS.find(([re]) => re.test(x.title))?.[1] || '');
+  const WIDE = new Set(['plan', 'study', 'music', 'since']);
+  function compose(seen, { news = [], cols = 3, offered = [] } = {}) {
+    const late = seen.hour >= 22 || seen.hour < 5, evening = seen.hour >= 18 || seen.hour < 5, morning = seen.hour >= 5 && seen.hour < 12;
+    const lastDays = seen.last ? (seen.now - (seen.last.at || 0)) / DAY : Infinity, st = seen.plan?.st;
     const draft = seen.banks.some((b) => b.draft && !b.draft.final && (b.draft.done || Object.values(b.draft.answers || {}).some((a) => a != null && a !== '')));
-    const tricky = seen.banks.some((b) => Object.values(b.learn).some((s) => s && !s.learned && (s.tried || 0) >= 3 && (s.right || 0) / s.tried < 0.67));
+    const tricky = seen.banks.some((b) => Object.values(b.learn).some((x) => x && !x.learned && (x.tried || 0) >= 3 && (x.right || 0) / x.tried < 0.67));
     const learned = seen.banks.reduce((n, b) => n + Object.values(b.learn).filter((x) => x?.learned).length, 0), bests = seen.banks.filter((b) => b.best).length;
-    const recent = seen.notes.recent[0], said = (re) => offered.some((x) => re.test(x.title));
+    const recent = seen.notes.recent[0], soon = st?.next && st.next.at - st.m <= 60, recentBest = seen.banks.some((b) => b.best?.when && seen.now - b.best.when < 2 * DAY);
+    const streak = Math.min((read('fluentio.visits') || {}).streak || 0, 10);
     const score = {
-      study: (draft ? 90 : lastDays < 1 ? 84 : lastDays < 3 ? 74 : tricky ? 66 : learned || bests ? 52 : 28) - (said(/^(Finish|Pick up|Go over|Work on)\b/) ? 24 : 0),
-      music: seen.music.playing ? 78 + (evening ? 10 : 0) : seen.music.current ? 50 + (evening ? 8 : 0) : seen.music.count ? 32 : 4,
-      notes: recent && seen.now - recent.edited < DAY ? 60 : evening && !seen.wrote ? 54 : seen.notes.count ? 26 : 10,
-      question: seen.answered ? 4 : 48 + (morning ? 14 : 0) - (said(/today’s question/) ? 40 : 0),
-      progress: learned || bests ? 38 + Math.min((read('fluentio.visits') || {}).streak || 0, 10) : 4,
+      plan: !st ? 0 : st.late || st.night ? 98 : st.now ? 90 : soon ? 80 : 58,
+      study: (draft ? 92 : lastDays < 1 ? 84 : lastDays < 3 ? 74 : tricky ? 66 : learned || bests ? 50 : 30) - (late ? 24 : 0),
+      music: seen.music.playing ? 82 + (evening ? 6 : 0) : seen.music.current ? 50 + (evening ? 8 : 0) : seen.music.count ? 30 : 4,
+      notes: recent && seen.now - recent.edited < DAY ? 62 : evening && !seen.wrote ? 58 : seen.notes.count ? 26 : 10,
+      question: seen.answered || late ? 3 : 46 + (morning ? 16 : 0),
+      progress: recentBest ? 68 + streak : learned || bests ? 36 + streak : 3,
+      since: news.length >= 3 ? 88 : 0,
     };
-    const ranked = Object.keys(score).sort((a, b) => score[b] - score[a]), st = seen.plan?.st, busy = !!st && !!(st.now || st.next || st.night);
-    if (cols < 3) return [{ key: 'options' }, { key: st ? 'plan' : ranked[0] }];
-    if (news.length >= 3 && !busy) return [{ key: 'options' }, { key: 'since', span: 2 }];
-    if (st) return score[ranked[0]] < 45 ? [{ key: 'options' }, { key: 'plan', span: 2 }] : [{ key: 'options' }, { key: 'plan' }, { key: ranked[0] }];
-    if (ranked[0] === 'music' && seen.music.playing && evening && score[ranked[1]] < 50) return [{ key: 'options' }, { key: 'music', span: 2 }];
-    return [{ key: 'options' }, { key: ranked[0] }, { key: score[ranked[1]] >= 30 ? ranked[1] : 'today' }];
+    const ranked = Object.keys(score).filter((k) => score[k] > 0).sort((a, b) => score[b] - score[a]);
+    let keep = ranked.filter((k) => score[k] >= Math.max(52, score[ranked[0]] - 22)).slice(0, 3);
+    if (!keep.length) keep = ranked.slice(0, 1);
+    if (keep.includes('since')) keep = keep.filter((k) => k !== 'study');
+    const merged = keep.includes('study') && keep.includes('progress');
+    if (merged) keep = keep.filter((k) => k !== 'progress');
+    let cards = keep.map((key) => ({ key, wide: key === 'since' || (key === 'study' && merged) }));
+    if (cols < 3) cards = cards.slice(0, 2).map((c) => ({ ...c, wide: false }));
+    else if (cards.length === 1 && WIDE.has(cards[0].key)) cards[0].wide = true;
+    let used = cards.reduce((n, c) => n + (c.wide ? 2 : 1), 0);
+    while (cols > 1 && used > cols && cards.length > 1) { const c = cards.pop(); used -= c.wide ? 2 : 1; }
+    const have = new Set(cards.map((c) => c.key).concat(cards.some((c) => c.key === 'since') ? ['study'] : []));
+    // (not at night: then it's the plan, and bed)
+    const side = cards.length === 1 && used < cols && !late && offered.filter((x) => !have.has(kindOf(x))).length >= 2;
+    return { cards, side, cols: used + (side ? 1 : 0), score };
   }
 
   // ---------- on the page ----------
   const SHOW = 3;
-  function draw(box, { tiles = {}, welcomed, news = [] } = {}) {
-    let seen = see(), said = '';
-    const moving = f.moving();
-    let list = suggestions(seen), from = 0, showing = [];
-    const hello = el('p', { className: 'aide-hello', hidden: true }), line = el('h1', { className: 'aide-line' });
-    // (the words rise in the first time; when the plan moves on, the new ones are just there)
-    const setLine = (say, rise) => {
-      if (say === said) return;
-      said = say;
-      line.setAttribute('aria-label', say);
-      line.replaceChildren();
-      say.split(' ').forEach((word, n, all) => { const w = el('span', { className: rise ? 'w' : 'w still', 'aria-hidden': 'true' }, word); w.style.setProperty('--n', n); line.append(w, n < all.length - 1 ? ' ' : ''); });
+  function draw(box, { tiles = {}, welcomed, news = [], hero = {} } = {}) {
+    let seen = see();
+    let list = suggestions(seen), from = 0, showing = [], said = '', note = null;
+    // what it says: under the site's name, as the welcome's line, with a link to what it'd do first (unless what it
+    // offers is at the side), or what something it offers did
+    const line = hero.line || el('p'), hello = hero.hello || el('p');
+    const go = (x) => (x.href ? el('a', { href: x.href, target: x.away ? '_blank' : null, rel: x.away ? 'noopener' : null }, `${x.title} →`) : el('button', { type: 'button', className: 'welcome-go', onclick: () => x.run(reply) }, `${x.title} →`));
+    const setLine = () => {
+      const st = seen.plan?.st, first = !note && !shown.side && !(st && (st.night || st.late)) ? list[0] : null;
+      const say = note || opening(list, seen), key = `${say}|${first?.title || ''}`;
+      if (key === said) return;
+      said = key;
+      line.replaceChildren(say, ...(first ? [' ', go(first)] : []));
+      line.hidden = false;
     };
-    setLine(opening(list, seen), true);
     // what it offers, at the side: three things, each saying why, and Something else for more
     const options = el('div', { className: 'aide-options aide-offer aide-first' }), other = el('button', { type: 'button', className: 'aide-other', hidden: list.length <= SHOW, onclick: () => { from = (from + SHOW) % list.length; options.classList.remove('aide-first'); paint(); } }, 'Something else');
     const side = el('div', { className: 'aide-side', role: 'group', 'aria-label': 'What I’d do' }, options, other);
@@ -274,37 +299,41 @@
       if (animate) { options.classList.remove('stagger'); void options.offsetWidth; options.classList.add('stagger'); }
       options.replaceChildren(...showing.map((x, i) => row(x, i)));
     }
-    // (what something it offers does, said at the top, with a card when it brings one: today's question, say)
+    // (what something it offers says, in the line; a card it brings, today's question say, in place of the last one)
     function reply(text, { options: opts, tile: t } = {}) {
-      setLine(text, false);
+      note = text;
+      setLine();
       if (opts?.length) { showing = opts.slice(0, SHOW); options.replaceChildren(...showing.map((x, i) => row(x, i))); }
       if (t && tiles[t]) { const c = tiles[t](), last = grid.lastElementChild; if (last && last !== side) last.replaceWith(c); else grid.append(c); refit(); }
     }
 
-    // the cards, as many columns as the window has room for (three; two on a smaller one; one on a phone)
+    // the cards, in as many columns as they take (three on a wide window; two on a smaller one; one on a phone)
     const grid = el('div', { className: 'bento aide-cards stagger' });
     const colsNow = () => (matchMedia('(min-width: 900px)').matches ? 3 : matchMedia('(min-width: 561px)').matches ? 2 : 1);
-    const render = ({ key, span }) => {
-      if (key === 'options') return side;
-      if (key === 'plan') { const c = planCard(seen.plan); if (span) c.classList.add('span2'); return c; }
-      if (key === 'study') return studyCard(seen);
+    const render = ({ key, wide }) => {
+      if (key === 'plan') return planCard(seen.plan, wide);
+      if (key === 'study') return studyCard(seen, { wide, tiles });
       if (key === 'notes') return notesCard(seen);
       const t = tiles[key]?.();
-      if (t && key === 'music' && span) t.classList.add('feature');
+      if (t && key === 'music' && wide) t.classList.add('feature');
       return t;
     };
-    let laid = '';
+    let shown = { cards: [], side: false }, laid = '';
     function lay(force = false) {
-      const cols = colsNow(), pickd = arrange(seen, { news, cols, offered: showing }), sig = JSON.stringify([cols, pickd]);
+      const cols = colsNow(), c = compose(seen, { news, cols, offered: showing }), sig = JSON.stringify([cols, c.cards, c.side]);
       if (!force && sig === laid) return false;
-      laid = sig;
-      const cards = pickd.map(render).filter(Boolean);
-      cards.forEach((c, i) => c.style.setProperty('--n', i));
-      grid.style.setProperty('--cols', cols === 1 ? 1 : Math.min(cols, pickd.reduce((n, x) => n + (x.span || 1), 0)));
+      laid = sig; shown = c;
+      const cards = c.cards.map(render).filter(Boolean);
+      if (c.side) cards.unshift(side);
+      cards.forEach((x, i) => x.style.setProperty('--n', i));
+      grid.style.setProperty('--cols', cols === 1 ? 1 : c.cols);
+      grid.classList.toggle('solo', cols > 1 && c.cols === 1);
+      grid.dataset.cards = c.cards.map((x) => x.key + (x.wide ? '+' : '')).join(' ');
       grid.replaceChildren(...cards);
+      setLine();
       return true;
     }
-    box.replaceChildren(el('div', { className: 'aide-top' }, hello, line), grid);
+    box.replaceChildren(grid);
     paint();
     lay(true);
 
@@ -349,16 +378,15 @@
       refit();
     }).catch(() => {});
     // what's playing changes what it offers, and so do songs another device added; the plan moves on with the clock, and
-    // then what it says changes too, and the cards it picks (the plan's own card is drawn again for the clock)
+    // then what it says changes too, and the cards (the plan's own card is drawn again for the clock)
     let soon = 0;
     const again = () => {
-      const had = !!seen.plan;
       seen = see(); list = suggestions(seen);
       if (from >= list.length) from = 0;
       other.hidden = list.length <= SHOW;
-      if (had || seen.plan) setLine(opening(list, seen), false);
       if (words(pick()) !== words(showing)) paint(false);
-      if (!lay()) { const pc = grid.querySelector('.aide-plan'); if (pc && seen.plan) pc.replaceWith(Object.assign(planCard(seen.plan), { className: pc.className })); }
+      if (!lay()) { const pc = grid.querySelector('.aide-plan'); if (pc && seen.plan) pc.replaceWith(Object.assign(planCard(seen.plan, pc.classList.contains('span2')), { className: pc.className })); }
+      setLine();
       refit();
     };
     const refresh = () => { clearTimeout(soon); soon = setTimeout(again, 200); };
@@ -371,11 +399,13 @@
       lib.events.addEventListener('library', refresh);
       lib.refresh();
     }).catch(() => {});
-    // 1, 2 and 3 take what's offered, unless you're typing somewhere
+    // 1, 2 and 3 take what's offered at the side, and 1 what's linked in the line when nothing is at the side (not while
+    // you're typing somewhere)
     addEventListener('keydown', (e) => {
       if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing || e.target.closest?.('input, textarea, select, [contenteditable]')) return;
       const k = +e.key;
-      if (k >= 1 && k <= showing.length && options.isConnected) { e.preventDefault(); options.children[k - 1].click(); }
+      if (shown.side && k >= 1 && k <= showing.length) { e.preventDefault(); options.children[k - 1].click(); }
+      else if (!shown.side && k === 1 && line.querySelector('a, .welcome-go')) { e.preventDefault(); line.querySelector('a, .welcome-go').click(); }
     });
   }
   f.assistant = { draw, see, suggestions, opening };
