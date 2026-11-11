@@ -525,8 +525,19 @@
       document.documentElement.classList.toggle('home-fit', colsNow() > 1);
       grid.querySelectorAll('.aide-filler').forEach((x) => x.remove());
       grid.querySelectorAll('.aide-stack > *').forEach((x) => { x.style.flexGrow = ''; });
+      cap();
       trim();
       fill();
+    }
+    // Today no taller than the cards beside it (and not under 380px): the rest of the day goes in "N more today", so the
+    // columns beside it don't need a pile of smaller cards to come down as far (seven cards was too much)
+    function cap() {
+      const pc = grid.querySelector('.aide-plan');
+      if (!pc) return;
+      pc.style.maxHeight = '';
+      const stack = pc.parentElement, others = [...grid.children].filter((s) => s !== stack && s.firstElementChild);
+      if (colsNow() === 1 || !others.length || stack.firstElementChild !== pc) return;
+      pc.style.maxHeight = `${Math.max(380, ...others.map((s) => s.firstElementChild.offsetHeight))}px`;
     }
     function trim() {
       const pc = grid.querySelector('.aide-plan'), list = pc?.querySelector('.pd-list'), sw = pc?.querySelector('.pd-switches');
@@ -547,23 +558,26 @@
       };
       for (let i = 0; i < order.length && pc.scrollHeight > pc.clientHeight + 1; i++) { order[i].hidden = true; mark(); }
     }
-    // under a shorter column, what else counts, a smaller card at a time, as long as it fits above the tallest column's
-    // foot (the cards needn't be one height; the room shouldn't be empty)
+    // under a shorter column, what else counts, a smaller card, as long as it fits above the tallest column's foot (the
+    // cards needn't be one height; the room shouldn't be empty). One a column, two in all: more was too much. A second
+    // in a column only for a hole still that big
     function fill() {
       if (colsNow() === 1) return;
       const stacks = [...grid.children], foot = Math.max(0, ...stacks.map((s) => s.clientHeight)), done = new Set();
       const tall = (s) => { const a = s.firstElementChild, z = s.lastElementChild; return a ? z.offsetTop + z.offsetHeight - a.offsetTop : 0; };
       for (const s of stacks) {
+        let here = 0;
         for (const key of shown.rest) {
+          if (done.size >= 2 || (here && foot - tall(s) < 260)) break;
           if (done.has(key) || foot - tall(s) < 90) continue;
           const c = filler(key);
           if (!c) continue;
           s.append(c);
-          if (tall(s) > foot + 1) c.remove(); else done.add(key);
+          if (tall(s) > foot + 1) c.remove(); else { done.add(key); here++; }
         }
-        // (a gap too small for another card: the last one in the column takes it)
+        // (the room that's left: the last card in the column takes it)
         const gap = foot - tall(s);
-        if (gap > 0 && gap <= 160 && s.lastElementChild) s.lastElementChild.style.flexGrow = '1';
+        if (gap > 0 && gap <= 260 && s.lastElementChild) s.lastElementChild.style.flexGrow = '1';
       }
     }
     let sized = 0;
