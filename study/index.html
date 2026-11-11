@@ -57,7 +57,7 @@
     <nav class="subjects stagger" id="subjects" aria-label="Subjects">
       <a class="card subject" href="../geography/"><span class="tile">🌍</span><span class="info"><b>Geography</b><span class="text">Countries and capitals on the world map.</span></span><span class="go">→</span></a>
       <a class="card subject" href="../math/"><span class="tile">📐</span><span class="info"><b>Math</b><span class="text">Triangle angles, and AMC 10 and AMC 12 practice.</span></span><span class="go">→</span></a>
-      <a class="card subject" href="../science/"><span class="tile">🧪</span><span class="info"><b>Science</b><span class="text">Heat and energy: tests like the ones in class, and Q = mcΔT practice.</span></span><span class="go">→</span></a>
+      <a class="card subject" href="../science/"><span class="tile">🧪</span><span class="info"><b>Science</b><span class="text">Systems and matter, heat and energy, the atmosphere and winds, and lab skills.</span></span><span class="go">→</span></a>
       <a class="card subject" href="../physics/"><span class="tile">🚀</span><span class="info"><b>Physics</b><span class="text">Kinematics, motion in a straight line, vectors and projectiles: tests like the ones in class, and practice.</span></span><span class="go">→</span></a>
       <a class="card subject" href="../spanish/"><span class="tile">🇪🇸</span><span class="info"><b>Spanish</b><span class="text">Vocabulary, the preterite and the imperfect.</span></span><span class="go">→</span></a>
       <a class="card subject" href="../history/"><span class="tile">🏰</span><span class="info"><b>History</b><span class="text">The Middle Ages and the Wars of Religion, as stories where you make the choices.</span></span><span class="go">→</span></a>
@@ -69,7 +69,7 @@
   <script>
     // what this browser remembers of each subject: best scores and topics learned (the test pages keep them)
     const read = (key) => { try { return JSON.parse(localStorage.getItem('fluentio.' + key)); } catch { return null; } };
-    const BANKS = { math: ['triangles', 'amc10', 'amc12'], science: ['heat'], physics: ['kinematics', 'motion', 'vectors', 'projectiles'], spanish: ['vocab', 'preterite', 'imperfect'], history: ['middleages', 'wars'], english: ['essays'] };
+    const BANKS = { math: ['triangles', 'amc10', 'amc12'], science: ['heat', 'systems', 'energy', 'earth', 'scireview', 'labs'], physics: ['kinematics', 'motion', 'vectors', 'projectiles'], spanish: ['vocab', 'preterite', 'imperfect'], history: ['middleages', 'wars'], english: ['essays'] };
     const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
     function lastOn() {
       let t = 0;

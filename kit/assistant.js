@@ -13,7 +13,7 @@
   const MINUTE = 60000, DAY = 86400000;
   // every course that keeps your progress, and the folder it's in
   const BANKS = [
-    ['triangles', 'math', 'Triangle Angles'], ['amc10', 'math', 'AMC 10 Practice'], ['amc12', 'math', 'AMC 12 Practice'], ['heat', 'science', 'Heat Capacity'],
+    ['triangles', 'math', 'Triangle Angles'], ['amc10', 'math', 'AMC 10 Practice'], ['amc12', 'math', 'AMC 12 Practice'], ['heat', 'science', 'Heat Capacity'], ['systems', 'science', 'Systems and Matter'], ['energy', 'science', 'Energy and Matter'], ['earth', 'science', 'Earth and Energy Systems'], ['scireview', 'science', 'Science Mixed Review'], ['labs', 'science', 'Investigations and Data'],
     ['kinematics', 'physics', 'Kinematics'], ['motion', 'physics', 'Motion in a Straight Line'], ['vectors', 'physics', 'Vectors'], ['projectiles', 'physics', 'Projectile Motion'],
     ['vocab', 'spanish', 'Spanish Vocabulary'], ['preterite', 'spanish', 'The Preterite'], ['imperfect', 'spanish', 'The Imperfect'], ['middleages', 'history', 'The Middle Ages'], ['wars', 'history', 'The Wars of Religion'], ['essays', 'english', 'Essay Writing'],
   ].map(([id, folder, name]) => ({ id, folder, name }));
@@ -387,7 +387,9 @@
       line.hidden = false;
     };
     // what it offers, at the side: three things, each saying why, and Something else for more
-    const options = el('div', { className: 'aide-options aide-offer aide-first' }), other = el('button', { type: 'button', className: 'aide-other', hidden: list.length <= SHOW, onclick: () => { from = (from + SHOW) % list.length; options.classList.remove('aide-first'); paint(); } }, 'Something else');
+    // (Something else is one more row like the others, with 4 for its key)
+    const options = el('div', { className: 'aide-options aide-offer aide-first' }), other = el('button', { type: 'button', className: 'aide-option aide-other', hidden: list.length <= SHOW, onclick: () => { from = (from + SHOW) % list.length; options.classList.remove('aide-first'); paint(); } },
+      el('span', { className: 'aide-ic', 'aria-hidden': 'true' }, svg('chevron')), el('span', { className: 'aide-text' }, el('b', {}, 'Something else'), el('small', {}, 'Other things I’d do')), el('kbd', { className: 'aide-key' }, String(SHOW + 1)));
     const side = el('div', { className: 'aide-side', role: 'group', 'aria-label': 'What I’d do' }, options, other);
     const row = (opt, i) => {
       const inner = [el('span', { className: 'aide-ic', 'aria-hidden': 'true' }, opt.emoji || svg(opt.icon || 'arrow')), el('span', { className: 'aide-text' }, el('b', {}, opt.title), opt.why ? el('small', {}, opt.why) : null), i != null ? el('kbd', { className: 'aide-key' }, String(i + 1)) : svg('arrow')];
@@ -635,6 +637,7 @@
       if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing || e.target.closest?.('input, textarea, select, [contenteditable]')) return;
       const k = +e.key;
       if (shown.side && k >= 1 && k <= showing.length) { e.preventDefault(); options.children[k - 1].click(); }
+      else if (shown.side && k === SHOW + 1 && !other.hidden) { e.preventDefault(); other.click(); }
       else if (!shown.side && k === 1 && line.querySelector('a, .welcome-go')) { e.preventDefault(); line.querySelector('a, .welcome-go').click(); }
     });
   }

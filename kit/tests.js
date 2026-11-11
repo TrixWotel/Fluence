@@ -33,8 +33,9 @@ const shapeOf = (t, asked) => (!t.amc || !t.order ? 'mixed' : SHAPES[asked] ? as
 const testLink = (t, length, shape) => `#${t.bank.id}/${t.exam ? 'practice' : 'test'}${length === standard(t) ? '' : '/' + length}${t.amc && t.order ? '/' + shape : ''}`;
 const bestKey = (t, shape) => t.bank.id + (shape === 'hard' || (shape === 'mixed' && t.amc && t.order) ? `.best-${shape}` : '.best');
 
-// typed words: capitals, spaces and a final full stop don't matter; accents do (nearly() spots a slip in only those)
-const words = (s) => String(s ?? '').normalize('NFC').trim().toLowerCase().replace(/\s+/g, ' ').replace(/[.!?]+$/, '');
+// typed words: capitals, spaces, a final full stop and curly or straight apostrophes don't matter; accents do (nearly()
+// spots a slip in only those)
+const words = (s) => String(s ?? '').normalize('NFC').trim().toLowerCase().replace(/[’‘ʼ]/g, "'").replace(/\s+/g, ' ').replace(/[.!?]+$/, '');
 const bare = (s) => words(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
 export const nearly = (answer, given) => answer.kind === 'text' && given != null && !isRight(answer, given) && answer.accept.some((a) => bare(a) === bare(given));
 // right if within the question's tolerance: { abs } is plus or minus that much, a plain number is a share of the answer;

@@ -224,7 +224,8 @@
     .aide-cards .tile.music .row .btn:hover:not(:disabled) { color: var(--text); border-color: var(--line); transform: none; box-shadow: none; }
     .aide-cards .tile.music .row .btn svg { width: 13px; height: 13px; }
     /* what it offers, at the side: a row each, with why, and the number key that takes it */
-    .aide-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; overflow: hidden; }
+    /* (a few pixels of room each side, so an option sliding over as the pointer comes on isn't cut off at the edge) */
+    .aide-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; overflow: hidden; padding-inline: 5px; margin-inline: -5px; }
     .aide-options { display: grid; gap: 8px; }
     .aide-option { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 14px 11px 11px; color: inherit; font: inherit; text-align: left; text-decoration: none; cursor: pointer; background: color-mix(in srgb, var(--card) 86%, transparent); border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); transition: border-color var(--t1), transform var(--t2) var(--spring), background var(--t1); }
     .aide-option:hover { border-color: var(--accent); transform: translateX(3px); }
@@ -236,8 +237,7 @@
     .aide-text b { font-weight: 620; overflow-wrap: anywhere; }
     .aide-text small { color: var(--muted); font-size: .88rem; }
     .aide-key { flex: none; display: grid; place-items: center; width: 22px; height: 22px; font: inherit; font-size: .76rem; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; }
-    .aide-other { align-self: flex-start; padding: 0 4px; font: inherit; font-size: .88rem; color: var(--muted); cursor: pointer; background: none; border: 0; }
-    .aide-other:hover { color: var(--text); text-decoration: underline; }
+    .aide-other .aide-ic { color: var(--muted); }
     .aide-other[hidden] { display: none; }
     .aide-first.stagger > * { animation: rise var(--t3) var(--ease) backwards; animation-delay: calc((var(--n, 0) * 45ms + 240ms) / var(--speed)); }
     /* the cards it picks: Home's tiles, and its own (Today, studying, notes) made the same way */
@@ -433,7 +433,8 @@
         question: () => {
           const box = tile('wide2', 'var(--plot2)', head('spark', 'Question of the day'), el('p', { className: 'muted' }, 'Finding today’s question…'));
           const POOL = [['amc10', 'math/amc.js', 'amc'], ['heat', 'science/heat.js', 'heat'], ['vocab', 'spanish/vocab.js', 'vocab'], ['motion', 'physics/motion.js', 'motionBank'],
-            ['amc10', 'math/amc.js', 'amc'], ['preterite', 'spanish/tenses.js', 'preteriteTest'], ['vectors', 'physics/vectors.js', 'vectorBank'], ['imperfect', 'spanish/tenses.js', 'imperfectTest'], ['middleages', 'history/middle-ages.js', 'middleAges']];
+            ['amc10', 'math/amc.js', 'amc'], ['preterite', 'spanish/tenses.js', 'preteriteTest'], ['vectors', 'physics/vectors.js', 'vectorBank'], ['imperfect', 'spanish/tenses.js', 'imperfectTest'], ['middleages', 'history/middle-ages.js', 'middleAges'],
+            ['earth', 'science/earth.js', 'earth'], ['energy', 'science/energy.js', 'energy'], ['systems', 'science/systems.js', 'systems']];
           const today = Math.round((midnight(now) - new Date(2026, 0, 1)) / 86400000), [id, file, name] = POOL[((today % POOL.length) + POOL.length) % POOL.length];
           const folder = file.split('/')[0], subject = s.study.find((x) => folderOf(x) === folder) || { title: folder, emoji: '' };
           f.wait(Promise.all([import(link(file)), import(link('kit/tests.js'))]).then(([mod, { isRight }]) => {

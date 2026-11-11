@@ -8,7 +8,7 @@
   const KEY = 'fluentio.home', SEEN = 'fluentio:home', GAP = 30 * 60000;
   // every course that keeps your progress, the folder it's in, and its name
   const BANKS = [
-    ['triangles', 'math', 'Triangle Angles'], ['amc10', 'math', 'AMC 10 Practice'], ['amc12', 'math', 'AMC 12 Practice'], ['heat', 'science', 'Heat Capacity'],
+    ['triangles', 'math', 'Triangle Angles'], ['amc10', 'math', 'AMC 10 Practice'], ['amc12', 'math', 'AMC 12 Practice'], ['heat', 'science', 'Heat Capacity'], ['systems', 'science', 'Systems and Matter'], ['energy', 'science', 'Energy and Matter'], ['earth', 'science', 'Earth and Energy Systems'], ['scireview', 'science', 'Science Mixed Review'], ['labs', 'science', 'Investigations and Data'],
     ['kinematics', 'physics', 'Kinematics'], ['motion', 'physics', 'Motion in a Straight Line'], ['vectors', 'physics', 'Vectors'], ['projectiles', 'physics', 'Projectile Motion'],
     ['vocab', 'spanish', 'Spanish Vocabulary'], ['preterite', 'spanish', 'The Preterite'], ['imperfect', 'spanish', 'The Imperfect'], ['middleages', 'history', 'The Middle Ages'], ['wars', 'history', 'The Wars of Religion'], ['essays', 'english', 'Essay Writing'],
   ].map(([id, folder, name]) => ({ id, folder, name }));
