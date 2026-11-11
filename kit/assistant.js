@@ -251,6 +251,15 @@
     }).catch(() => {});
     return box;
   }
+  // Today, small: what's on, what's next, lights out and the next date (the plan in full is its own card)
+  function planSmall(pl) {
+    const st = pl.st, p = P(), rows = [];
+    if (st.now) rows.push(line2(link('schedule/#today'), `Now: ${short(st.now)}`, `until ${p.clock(st.now.end)}`));
+    if (st.next) rows.push(line2(link('schedule/#today'), `Next: ${short(st.next)}`, p.clock(st.next.at)));
+    if (st.lights) rows.push(line2(link('schedule/#week'), 'Lights out', p.lightsWords({ at: st.lights.at, later: 0 })));
+    if (st.deadlines[0]) rows.push(line2(link('schedule/#deadlines'), st.deadlines[0].what.replace(/,? due 9 AM$/, ''), p.dayWords(st.deadlines[0])));
+    return card('aide-plan-small', 'var(--accent-2)', cardHead('calendar', 'Today', link('schedule/#today'), st.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })), el('div', { className: 'aide-rows' }, rows));
+  }
   // Your progress, small: the three numbers
   function progressMini(seen) {
     const learned = seen.banks.reduce((n, b) => n + Object.values(b.learn).filter((x) => x?.learned).length, 0), bests = seen.banks.filter((b) => b.best).length, streak = (read('fluentio.visits') || {}).streak || 1;
@@ -258,56 +267,79 @@
     return card('aide-progress', 'var(--good)', cardHead('chart', 'Your progress', link('study/')), el('div', { className: 'stats' }, stat(learned, 'topic learned', 'topics learned'), stat(streak, 'day in a row', 'days in a row'), stat(bests, 'best score', 'best scores')));
   }
 
-  // ---------- how many cards, which, and how ----------
-  // one to three, from how much counts right now: what counts most, and whatever else comes close to it (within 22 of
-  // 100, and 52 at least). At night your plan counts most and studying less; a song that's on counts in the evening;
-  // a test half done, where you left off and what's tricky count by how recent. Your studying and your progress,
-  // both counting, are one card; what's new since your last visit (when a lot is) has where you left off in it. A card
-  // on its own spreads wide where it can (Today beside what's due, studying beside progress, the song with what's
-  // next). What it offers goes at the side with a single card, when that card doesn't have most of it (not at night)
+  // ---------- which cards, and how: a new arrangement each hour ----------
+  // What counts right now decides what can be a card: your plan (most at night, or when something of yours is on or
+  // about to be), a test half done, where you left off and what's tricky by how recent, a song that's on in the
+  // evening, a note from today, today's question in the morning, a new best (then your studying and progress are one
+  // card), a lot that's new since your last visit (one wide card). From the arrangements of those (two cards, three, one
+  // spread wide beside another or on its own, what it offers at the side), the ones that fit best, and a different one
+  // each hour and each visit, so Home changes through the day. What's on now always stays: the plan, at night, when
+  // something's on or something's next within the hour. A narrower window has the room for two; a phone has them one
+  // under the other
   const KINDS = [[/^(Finish|Pick up|Go over|Work on|Beat your best|Try AMC|Pick a subject|Start The Wars|Try essay|Write an essay)\b/, 'study'], [/^(Keep listening|Skip this song|Put on some music|Set up Music)\b/, 'music'], [/^(Write in your journal|Back to )/, 'notes'], [/^Try today’s question/, 'question']];
   const kindOf = (x) => (x.plan ? 'plan' : KINDS.find(([re]) => re.test(x.title))?.[1] || '');
   const WIDE = new Set(['plan', 'study', 'music', 'since']);
-  function compose(seen, { news = [], cols = 3, offered = [] } = {}) {
+  function compose(seen, { news = [], cols = 3, offered = [], turn = 0 } = {}) {
     const late = seen.hour >= 22 || seen.hour < 5, evening = seen.hour >= 18 || seen.hour < 5, morning = seen.hour >= 5 && seen.hour < 12;
     const lastDays = seen.last ? (seen.now - (seen.last.at || 0)) / DAY : Infinity, st = seen.plan?.st;
     const draft = seen.banks.some((b) => b.draft && !b.draft.final && (b.draft.done || Object.values(b.draft.answers || {}).some((a) => a != null && a !== '')));
     const tricky = seen.banks.some((b) => Object.values(b.learn).some((x) => x && !x.learned && (x.tried || 0) >= 3 && (x.right || 0) / x.tried < 0.67));
     const learned = seen.banks.reduce((n, b) => n + Object.values(b.learn).filter((x) => x?.learned).length, 0), bests = seen.banks.filter((b) => b.best).length;
     const recent = seen.notes.recent[0], soon = st?.next && st.next.at - st.m <= 60, recentBest = seen.banks.some((b) => b.best?.when && seen.now - b.best.when < 2 * DAY);
-    const streak = Math.min((read('fluentio.visits') || {}).streak || 0, 10);
+    const streak = Math.min((read('fluentio.visits') || {}).streak || 0, 10), night = !!st && (st.night || st.late);
     const score = {
-      plan: !st ? 0 : st.late || st.night ? 98 : st.now ? 90 : soon ? 80 : 58,
-      study: (draft ? 92 : lastDays < 1 ? 84 : lastDays < 3 ? 74 : tricky ? 66 : learned || bests ? 50 : 30) - (late ? 24 : 0),
+      plan: !st ? 0 : night ? 98 : st.now ? 90 : soon ? 80 : 58,
+      study: late ? 0 : draft ? 92 : lastDays < 1 ? 84 : lastDays < 3 ? 74 : tricky ? 66 : learned || bests ? 50 : 30,
       music: seen.music.playing ? 82 + (evening ? 6 : 0) : seen.music.current ? 50 + (evening ? 8 : 0) : seen.music.count ? 30 : 4,
       notes: recent && seen.now - recent.edited < DAY ? 62 : evening && !seen.wrote ? 58 : seen.notes.count ? 26 : 10,
-      question: seen.answered || late ? 3 : 46 + (morning ? 16 : 0),
+      question: seen.answered || late ? 0 : 46 + (morning ? 16 : 0),
       progress: recentBest ? 68 + streak : learned || bests ? 36 + streak : 3,
       since: news.length >= 3 ? 88 : 0,
     };
-    const ranked = Object.keys(score).filter((k) => score[k] > 0).sort((a, b) => score[b] - score[a]);
-    let keep = ranked.filter((k) => score[k] >= Math.max(52, score[ranked[0]] - 22)).slice(0, 3);
-    if (!keep.length) keep = ranked.slice(0, 1);
-    if (keep.includes('since')) keep = keep.filter((k) => k !== 'study');
-    const merged = keep.includes('study') && keep.includes('progress');
-    if (merged) keep = keep.filter((k) => k !== 'progress');
-    let cards = keep.map((key) => ({ key, wide: key === 'since' || (key === 'study' && merged) }));
-    if (cols < 3) cards = cards.slice(0, 2).map((c) => ({ ...c, wide: false }));
-    else if (cards.length === 1 && WIDE.has(cards[0].key)) cards[0].wide = true;
-    let used = cards.reduce((n, c) => n + (c.wide ? 2 : 1), 0);
-    while (cols > 1 && used > cols && cards.length > 1) { const c = cards.pop(); used -= c.wide ? 2 : 1; }
-    const have = new Set(cards.map((c) => c.key).concat(cards.some((c) => c.key === 'since') ? ['study'] : []));
-    // (not at night: then it's the plan, and bed)
-    const side = cards.length === 1 && used < cols && !late && offered.filter((x) => !have.has(kindOf(x))).length >= 2;
-    // (and for the room under a shorter card, what's left, most first: what it'd do, then the rest by how much they count)
-    const out = new Set([...cards.map((c) => c.key), ...(have.has('study') ? ['study'] : []), ...(merged ? ['progress'] : []), 'plan', 'since']);
-    const rest = [...(side ? [] : ['options']), ...ranked.filter((k) => !out.has(k)), ...(st ? [] : ['today'])];
-    return { cards, side, cols: used + (side ? 1 : 0), score, rest };
+    const must = st && (night || st.now || soon) ? 'plan' : '';
+    const merge = score.study >= 40 && score.progress >= 60;
+    const items = Object.keys(score).filter((k) => score[k] >= 40 && !(merge && k === 'progress')).sort((a, b) => (b === 'plan') - (a === 'plan') || score[b] - score[a]).slice(0, 4);
+    if (!items.length) items.push(Object.keys(score).sort((a, b) => score[b] - score[a])[0]);
+    const one = (key, wide = false) => ({ key, wide: wide || key === 'since' || (key === 'study' && merge) });
+    // (every way of showing them that fits: alone and wide, two, three, wide beside one, what it offers at the side)
+    const ways = new Map();
+    const way = (side, ...cards) => {
+      if (must && !cards.some((c) => c.key === must)) return;
+      if (side && (late || cards.length > 2)) return;
+      const used = cards.reduce((n, c) => n + (c.wide ? 2 : 1), 0) + (side ? 1 : 0);
+      if (cols > 1 ? used > cols : cards.length + (side ? 1 : 0) > 2) return;
+      const shape = JSON.stringify([side, [...cards].sort((x, y) => (x.key < y.key ? -1 : 1))]);
+      const fit = cards.reduce((n, c) => n + score[c.key] * (c.wide ? 1.15 : 1), 0) - (cards.length - 1) * 25 + (side ? 12 : 0);
+      if (!ways.has(shape)) ways.set(shape, { side, cards, fit, orders: [] });
+      ways.get(shape).orders.push(cards);
+    };
+    for (const p of items) {
+      way(false, one(p, WIDE.has(p)));
+      way(true, one(p, WIDE.has(p)));
+      for (const q of items) {
+        if (q === p) continue;
+        way(false, one(p), one(q));
+        way(true, one(p), one(q));
+        if (WIDE.has(p)) way(false, one(p, true), one(q));
+        for (const r of items) if (r !== p && r !== q) way(false, one(p), one(q), one(r));
+      }
+    }
+    // (the ones that fit best, a different one each hour, and in the other order every other time round)
+    const pool = [...ways.values()].sort((x, y) => y.fit - x.fit || (JSON.stringify(x.cards) < JSON.stringify(y.cards) ? -1 : 1)).slice(0, 5);
+    const pick = pool[((turn % pool.length) + pool.length) % pool.length] || { side: false, cards: [one(items[0])], orders: [[one(items[0])]] };
+    const cards = pick.orders[Math.floor(turn / Math.max(1, pool.length)) % pick.orders.length] || pick.cards;
+    const side = !!pick.side, used = cards.reduce((n, c) => n + (c.wide ? 2 : 1), 0) + (side ? 1 : 0);
+    // (and for the room under a shorter card, the rest, most first: what it'd do, your plan small, then the others)
+    const out = new Set([...cards.map((c) => c.key), ...(merge && cards.some((c) => c.key === 'study') ? ['progress'] : []), ...(cards.some((c) => c.key === 'since') ? ['study'] : []), 'since', 'plan']);
+    const rest = [...(side ? [] : ['options']), ...(st && !cards.some((c) => c.key === 'plan') ? ['planSmall'] : []), ...Object.keys(score).filter((k) => !out.has(k) && score[k] > 0).sort((a, b) => score[b] - score[a]), ...(st ? [] : ['today'])];
+    return { cards, side, cols: Math.max(1, used), score, rest, must, shapes: pool.length };
   }
 
   // ---------- on the page ----------
   const SHOW = 3;
-  function draw(box, { tiles = {}, welcomed, news = [], hero = {} } = {}) {
+  function draw(box, { tiles = {}, welcomed, news = [], hero = {}, turn: visit = 0 } = {}) {
+    // (which arrangement: one more each hour, and each visit, kit/notice.js)
+    const turnNow = () => (visit || 0) + Math.floor(Date.now() / 3600000);
     let seen = see();
     let list = suggestions(seen), from = 0, showing = [], said = '', note = null;
     // what it says: under the site's name, as the welcome's line, with a link to what it'd do first (unless what it
@@ -357,32 +389,58 @@
       return t;
     };
     // (each card in a column of its own; under a shorter one, more cards fill the room down to the tallest: see fill)
-    let shown = { cards: [], side: false, rest: [] }, laid = '', made = new Map();
+    // (an arrangement stays the hour, unless what has to be there changes, or the window: then it's laid out anew, and
+    // if you're looking, the cards move to where they go, the ones going fading and the ones coming rising in)
+    let shown = { cards: [], side: false, rest: [] }, laid = '', made = new Map(), changes = 0;
     const sizes = 'ResizeObserver' in window ? new ResizeObserver(() => refit()) : null, watch = (x) => { if (x) sizes?.observe(x); };
+    const named = (x, key) => { if (x) x.style.viewTransitionName = `aide-${key}`; return x; };
     function lay(force = false) {
-      const cols = colsNow(), c = compose(seen, { news, cols, offered: showing }), sig = JSON.stringify([cols, c.cards, c.side, c.rest]);
-      if (!force && sig === laid) return false;
-      laid = sig; shown = c; made = new Map();
-      const items = c.cards.map((x) => ({ card: render(x), wide: x.wide })).filter((x) => x.card);
-      if (c.side) items.unshift({ card: side, wide: false });
-      const stacks = items.map((x, i) => { const s = el('div', { className: `aide-stack${x.wide ? ' span2' : ''}` }, x.card); s.style.setProperty('--n', i); watch(x.card); return s; });
-      grid.style.setProperty('--cols', cols === 1 ? 1 : c.cols);
-      grid.classList.toggle('solo', cols > 1 && c.cols === 1);
-      grid.dataset.cards = c.cards.map((x) => x.key + (x.wide ? '+' : '')).join(' ');
-      grid.replaceChildren(...stacks);
-      setLine();
+      const cols = colsNow(), turn = turnNow(), c = compose(seen, { news, cols, offered: showing, turn }), sig = JSON.stringify([cols, c.cards, c.side]);
+      if (!force && sig === laid) { shown.rest = c.rest; return false; }
+      const first = !laid;
+      laid = sig;
+      let put = false;
+      const lay2 = () => {
+        if (put) return;
+        put = true;
+        shown = c; made = new Map();
+        const items = c.cards.map((x) => ({ card: named(render(x), x.key), wide: x.wide })).filter((x) => x.card);
+        if (c.side) items.unshift({ card: named(side, 'side'), wide: false });
+        const stacks = items.map((x, i) => { const s = el('div', { className: `aide-stack${x.wide ? ' span2' : ''}` }, x.card); s.style.setProperty('--n', i); watch(x.card); return s; });
+        grid.style.setProperty('--cols', cols === 1 ? 1 : c.cols);
+        grid.classList.toggle('solo', cols > 1 && c.cols === 1);
+        grid.dataset.cards = c.cards.map((x) => x.key + (x.wide ? '+' : '')).join(' ');
+        grid.dataset.turn = String(turn);
+        grid.replaceChildren(...stacks);
+        setLine();
+        fit();
+      };
+      if (first || document.hidden || !f.moving()) { lay2(); return true; }
+      // (the change, while you're looking; one the browser can't draw in time is just made)
+      changes++;
+      grid.dataset.changes = String(changes);
+      if (document.startViewTransition) {
+        document.documentElement.classList.add('aide-changing');
+        const t = document.startViewTransition(lay2);
+        setTimeout(() => { if (!put) { try { t.skipTransition(); } catch {} lay2(); } }, 1500);
+        t.finished.finally(() => document.documentElement.classList.remove('aide-changing'));
+      } else {
+        grid.animate({ opacity: [1, 0], transform: ['none', 'translateY(6px) scale(.99)'] }, { duration: 220, easing: 'ease-in' }).finished.then(lay2, lay2);
+        setTimeout(lay2, 600);
+      }
       return true;
     }
     // a smaller card for the room under a shorter one (made once a layout, so one that loads, like Music, keeps its size)
     function filler(key) {
       if (!made.has(key)) {
-        const c = key === 'options' ? card('aide-offers', 'var(--accent)', cardHead('spark', 'What I’d do'), el('div', { className: 'aide-rows' }, list.slice(0, SHOW).map((x) => (x.href ? el('a', { className: 'aide-row', href: x.href, target: x.away ? '_blank' : null, rel: x.away ? 'noopener' : null }, el('span', {}, x.title)) : el('button', { type: 'button', className: 'aide-row', onclick: () => x.run(reply) }, el('span', {}, x.title))))))
+        const c = key === 'planSmall' ? (seen.plan ? planSmall(seen.plan) : null) : key === 'options' ? card('aide-offers', 'var(--accent)', cardHead('spark', 'What I’d do'), el('div', { className: 'aide-rows' }, list.slice(0, SHOW).map((x) => (x.href ? el('a', { className: 'aide-row', href: x.href, target: x.away ? '_blank' : null, rel: x.away ? 'noopener' : null }, el('span', {}, x.title)) : el('button', { type: 'button', className: 'aide-row', onclick: () => x.run(reply) }, el('span', {}, x.title))))))
           : key === 'music' ? musicMini(() => refit())
             : key === 'progress' ? progressMini(seen)
               : key === 'study' ? studyCard(seen)
                 : key === 'notes' ? notesCard(seen)
                   : tiles[key]?.() || null;
         c?.classList.add('aide-filler');
+        named(c, key === 'planSmall' ? 'plan' : key);
         made.set(key, c);
         watch(c);
       }
@@ -465,7 +523,7 @@
       if (from >= list.length) from = 0;
       other.hidden = list.length <= SHOW;
       if (words(pick()) !== words(showing)) paint(false);
-      if (!lay()) { const pc = grid.querySelector('.aide-plan'); if (pc && seen.plan) pc.replaceWith(Object.assign(planCard(seen.plan, pc.classList.contains('span2')), { className: pc.className })); }
+      if (!lay()) { const pc = grid.querySelector('.aide-plan'); if (pc && seen.plan) { const n = Object.assign(planCard(seen.plan, pc.classList.contains('span2')), { className: pc.className }); named(n, 'plan'); watch(n); pc.replaceWith(n); } }
       setLine();
       refit();
     };
@@ -488,5 +546,5 @@
       else if (!shown.side && k === 1 && line.querySelector('a, .welcome-go')) { e.preventDefault(); line.querySelector('a, .welcome-go').click(); }
     });
   }
-  f.assistant = { draw, see, suggestions, opening };
+  f.assistant = { draw, see, suggestions, opening, compose };
 })();

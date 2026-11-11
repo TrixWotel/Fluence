@@ -183,6 +183,14 @@
     .welcome .welcome-go { margin-left: 0; padding: 0; font: inherit; font-weight: 600; color: var(--accent); white-space: nowrap; cursor: pointer; background: none; border: 0; }
     .welcome .welcome-go:hover { text-decoration: underline; }
     .aide-cards.solo { width: 100%; max-width: 560px; margin-inline: auto; }
+    /* (a new arrangement while you're looking: each card moves and resizes to where it goes, the ones going fade out and
+       the ones coming in rise, the browser's view transition) */
+    html.aide-changing::view-transition-group(*) { animation-duration: calc(.6s / var(--speed)); animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+    html.aide-changing::view-transition-old(*) { animation-duration: calc(.3s / var(--speed)); }
+    html.aide-changing::view-transition-new(*) { animation: calc(.45s / var(--speed)) cubic-bezier(.2, .8, .2, 1) calc(.12s / var(--speed)) both aide-come; }
+    @keyframes aide-come { from { opacity: 0; transform: translateY(10px) scale(.985); } }
+    html.aide-changing::view-transition-new(root) { animation: calc(.3s / var(--speed)) ease both aide-fade; }
+    @keyframes aide-fade { from { opacity: 0; } }
     /* (a column each: the card it picked, and under a shorter one, smaller cards in the room down to the tallest) */
     .aide-stack { position: relative; display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0; }
     .aide-stack.span2 { grid-column: span 2; }
@@ -573,7 +581,7 @@
         // (the site's name stays at the top, with what it says as the line under it; its cards take the tiles' place)
         for (const part of [$('tiles'), $('layouts')]) part.style.display = 'none';
         $('aide').hidden = false;
-        f.assistant.draw($('aide'), { tiles: TILES, welcomed, news: noticed.news, hero: { hello: $('hello'), line: $('welcome') } });
+        f.assistant.draw($('aide'), { tiles: TILES, welcomed, news: noticed.news, turn: noticed.turn, hero: { hello: $('hello'), line: $('welcome') } });
       } else {
         draw(order);
         for (const q of ['(min-width: 900px)', '(min-width: 561px)']) matchMedia(q).addEventListener('change', () => draw(shown.length ? [...shown, ...order.filter((k) => !shown.includes(k))] : order));
