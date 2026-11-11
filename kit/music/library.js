@@ -142,11 +142,22 @@ export const shade = (seed) => { const h = hash(seed) % 360; return `linear-grad
 export function art(s, { key = s?.album || s?.title || '', label = s?.album || s?.title || '', size = 44 } = {}) {
   const known = s?.coverSha && covers.get(s.coverSha);
   const box = el('div', { className: 'm-art', style: `--gen:${known ? 'transparent' : shade(key)};--s:${size}px` });
-  const picture = (url, fresh) => box.append(el('img', { src: url, alt: '', loading: 'lazy', decoding: 'sync', className: fresh ? 'fresh' : '' }));
-  if (known) { picture(known, false); return box; }
+  const picture = (url) => el('img', { src: url, alt: '', loading: 'lazy', decoding: 'sync' });
+  if (known) { box.append(picture(known)); return box; }
   const letters = el('span', { className: 'letters' }, label.replace(/[^\p{L}\p{N} ]/gu, '').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '♪');
   box.append(letters);
   // (a page that's still out of sight waits for it: kit/look.js)
-  if (s?.coverSha) window.fluentio?.wait(coverUrl(s).then((url) => { if (url) { letters.remove(); picture(url, true); } }));
+  // (the cover goes in under the colors and letters, which fade away over it once it's ready: no colors are left under
+  // a cover, where its rounded edge showed them as a thin ring while it came in)
+  if (s?.coverSha) window.fluentio?.wait(coverUrl(s).then((url) => {
+    if (!url) return;
+    const img = picture(url), veil = el('span', { className: 'm-veil', style: `background:${shade(key)}` }, letters);
+    box.style.setProperty('--gen', 'transparent');
+    box.replaceChildren(img, veil);
+    let done = false;
+    const away = () => { if (done) return; done = true; veil.classList.add('off'); veil.addEventListener('animationend', () => veil.remove(), { once: true }); setTimeout(() => veil.remove(), 1500); };
+    const back = () => { if (done) return; done = true; img.remove(); box.style.setProperty('--gen', shade(key)); box.replaceChildren(letters); };
+    (img.decode ? img.decode() : new Promise((ok, no) => { img.onload = ok; img.onerror = no; })).then(away, () => (img.complete && img.naturalWidth ? away() : back()));
+  }));
   return box;
 }

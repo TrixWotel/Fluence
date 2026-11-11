@@ -79,7 +79,8 @@
       background: color-mix(in srgb, var(--c) 15%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent);
     }
     .tile-ic .i { width: 20px; height: 20px; }
-    .tile:hover .tile-ic { animation: wiggle calc(.7s / var(--speed)) var(--ease); }
+    /* (as the pointer comes onto a card, its icon hops, once: not again when the card is drawn anew under it) */
+    .tile-ic.hop { animation: hop calc(.72s / var(--speed)) ease-in-out; transform-origin: 50% 85%; }
     .tile-go { margin-left: auto; display: grid; color: var(--muted); opacity: 0; transform: translateX(-6px); transition: opacity var(--t2), transform var(--t2) var(--spring), color var(--t1); }
     .tile:hover .tile-go { opacity: 1; transform: none; }
     .tile-head:hover .tile-go { color: var(--c); }
@@ -156,6 +157,11 @@
     .tile.music .row .btn { display: inline-flex; align-items: center; gap: 6px; }
     .tile.music .m-bars { margin-left: auto; }
     .tile.music .m-bars + .tile-go { margin-left: 10px; }
+    /* (the bars that say a song's on: always in their place, rising one after another with a spring when it plays, and
+       sinking when it stops) */
+    .tile.music .m-bars i { transform: scaleY(0); transform-origin: 50% 100%; transition: transform calc(.26s / var(--speed)) ease-in calc(var(--k, 0) * 40ms / var(--speed)); }
+    .tile.music .m-bars.on i { transform: none; transition: transform calc(.46s / var(--speed)) cubic-bezier(.3, 1.7, .5, 1) calc(var(--k, 0) * 70ms / var(--speed)); }
+    .tile.music .m-bars i:nth-child(2) { --k: 1; } .tile.music .m-bars i:nth-child(3) { --k: 2; } .tile.music .m-bars i:nth-child(4) { --k: 3; }
     .tile.music.feature { grid-column: span 2; flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 18px 28px; padding: 22px 24px;
       background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 14%, var(--card)), color-mix(in srgb, var(--accent-2) 12%, var(--card)));
       box-shadow: var(--shadow), 0 0 calc(10px + var(--level) * 50px) calc(var(--level) * 8px) color-mix(in srgb, var(--accent) calc(var(--level) * 40%), transparent); }
@@ -342,6 +348,19 @@
       const head = (icon, title, href) => el(href ? 'a' : 'div', { className: 'tile-head', href }, el('span', { className: 'tile-ic' }, svg(icon)), el('span', {}, title), href ? el('span', { className: 'tile-go' }, svg('arrow')) : null);
       const button = (title, href) => el('a', { className: 'btn', href }, svg('plus'), title);
       const tile = (cls, color, ...kids) => { const t = el('article', { className: `card tile ${cls}`.trim() }, ...kids); t.style.setProperty('--c', color); return t; };
+      // (the pointer coming onto a card: its icon hops, once. Which card it's on goes by its kind, so a card drawn anew
+      // under the pointer, Music's after a click on play or Today's as the clock moves on, doesn't hop again)
+      let onCard = null;
+      addEventListener('pointermove', (e) => {
+        const t = e.target.closest?.('main .tile'), kind = t ? [...t.classList].filter((c) => !['card', 'tile', 'aide-filler', 'span2', 'feature'].includes(c)).join(' ') || 'tile' : null;
+        if (kind === onCard) return;
+        onCard = kind;
+        const ic = t?.querySelector('.tile-ic');
+        if (!ic || !f.moving()) return;
+        ic.classList.remove('hop'); void ic.offsetWidth; ic.classList.add('hop');
+        ic.addEventListener('animationend', () => ic.classList.remove('hop'), { once: true });
+      }, { passive: true });
+      addEventListener('pointerout', (e) => { if (!e.relatedTarget) onCard = null; }, { passive: true });
       const html = (tag, cls, markup) => { const n = el(tag, { className: cls }); n.innerHTML = markup; return n; };   // (the banks' own markup)
       const midnight = (t) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
       // the layout: Auto picks one for the time of day (study things in the morning, your tiles in the afternoon, music
@@ -487,16 +506,20 @@
             const lib = await import(link('kit/music/library.js'));
             player.mount();
             let seek = null;
+            // (the head stays put as the rest is drawn anew, a play, a pause or another song: its icon doesn't start over,
+            // and the bars rise and sink instead of popping in and out)
+            const bars = el('span', { className: 'm-bars', 'aria-hidden': 'true' }, el('i'), el('i'), el('i'), el('i'));
+            const top = el('a', { className: 'tile-head', href: link('music/') }, el('span', { className: 'tile-ic' }, svg('music')), el('span', {}, s.musicTitle), bars, el('span', { className: 'tile-go' }, svg('arrow')));
+            const put = (...kids) => { if (box.firstChild !== top) box.replaceChildren(top); else while (top.nextSibling) top.nextSibling.remove(); box.append(...kids.filter(Boolean)); };
             const fill = () => {
               const cur = player.current(), all = lib.state.lib.songs, newest = [...all].sort((a, b) => (b.added || 0) - (a.added || 0)), feature = box.classList.contains('feature');
-              const go = el('span', { className: 'tile-go' }, svg('arrow'));
-              const top = el('a', { className: 'tile-head', href: link('music/') }, el('span', { className: 'tile-ic' }, svg('music')), el('span', {}, s.musicTitle), cur && !player.audio.paused ? el('span', { className: 'm-bars', 'aria-hidden': 'true' }, el('i'), el('i'), el('i'), el('i')) : null, go);
+              bars.classList.toggle('on', !!cur && !player.audio.paused);
               const row = (x, list, i) => el('li', {}, el('button', { type: 'button', onclick: () => player.playList(list, i) }, lib.art(x, { size: 38 }), el('span', { className: 't' }, el('b', {}, x.title), el('small', {}, x.artist)), el('span', { className: 'pl' }, lib.svg('play', true))));
               if (!lib.state.conn && !all.length) {
                 seek = null;
-                return box.replaceChildren(top, el('p', { className: 'muted' }, 'Play your own songs here and on every page. They’re kept in your private Database repo on GitHub.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('music/') }, svg('plus'), 'Set up Music')));
+                return put(el('p', { className: 'muted' }, 'Play your own songs here and on every page. They’re kept in your private Database repo on GitHub.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('music/') }, svg('plus'), 'Set up Music')));
               }
-              if (!all.length) { seek = null; return box.replaceChildren(top, el('p', { className: 'muted' }, lib.state.loading ? 'Loading your music…' : 'No songs yet. Drop some on Music’s page.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('music/') }, lib.svg('upload'), 'Add songs'))); }
+              if (!all.length) { seek = null; return put(el('p', { className: 'muted' }, lib.state.loading ? 'Loading your music…' : 'No songs yet. Drop some on Music’s page.'), el('div', { className: 'row' }, el('a', { className: 'btn', href: link('music/') }, lib.svg('upload'), 'Add songs'))); }
               const liked = all.filter((x) => x.liked);
               const buttons = el('div', { className: 'row' },
                 el('button', { type: 'button', className: 'btn', onclick: () => player.playList(newest, 0) }, lib.svg('play', true), 'Play all'),
@@ -508,7 +531,7 @@
                 const next = player.upNext().slice(0, feature ? 4 : 3);
                 const side = el('div', { className: 'side' }, el('h3', {}, next.length ? 'Up next' : 'Newest'), el('ul', { className: 'm-mini' }, (next.length ? next : newest.slice(0, feature ? 4 : 3)).map((x) => row(x, next.length ? [x] : newest, next.length ? 0 : newest.indexOf(x)))));
                 if (next.length) side.querySelectorAll('.m-mini button').forEach((b, i) => { b.onclick = () => player.jump(player.position() + 1 + i); });
-                return box.replaceChildren(...[top, now, side, feature ? buttons : null].filter(Boolean));
+                return put(now, side, feature ? buttons : null);
               }
               seek = null;
               const added = noticed.news.some((x) => x.kind === 'songs') && noticed.last ? newest.filter((x) => (x.added || 0) > noticed.last) : [];
@@ -517,7 +540,7 @@
               if (liked.length >= 3) ways.push(['Liked', liked]);
               if (older.length >= 4) ways.push(['Rediscover', mix]);
               const [label, picks] = added.length ? ['New since last time', added] : turnOf(ways);
-              box.replaceChildren(top, el('p', { className: 'muted small' }, `${lib.plural(all.length, 'song')} · ${lib.total(all)}`),
+              put(el('p', { className: 'muted small' }, `${lib.plural(all.length, 'song')} · ${lib.total(all)}`),
                 el('div', { className: 'side' }, el('h3', {}, label), el('ul', { className: 'm-mini' }, picks.slice(0, feature ? 5 : 4).map((x, i) => row(x, picks, i)))), buttons);
             };
             fill();
