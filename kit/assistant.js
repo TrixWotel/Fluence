@@ -171,6 +171,27 @@
     const ask = (noticed[0] || list[0])?.ask || 'What do you feel like doing?';
     return notes.length ? `${cap(notes.join(', and '))}. ${ask}` : `I don’t have much to go on yet, so here’s a place to start. ${ask}`;
   }
+  // beside what the plan says, one more thing it noticed that isn't the plan: your studying, your notes, your music or
+  // your progress, a different one each hour (at night nothing about studying, and past lights out nothing at all),
+  // with the way to it when there's one
+  function aside(seen, list, hour) {
+    const st = seen.plan?.st;
+    if (st?.late) return null;
+    const night = !!st?.night || seen.hour >= 22 || seen.hour < 5, out = [];
+    const study = !night && list.find((x) => x.notice && kindOf(x) === 'study');
+    if (study) out.push({ kind: 'study', text: `${cap(study.notice)}.`, go: study });
+    const note = list.find((x) => x.notice && kindOf(x) === 'notes');
+    if (note) out.push({ kind: 'notes', text: `${cap(note.notice)}.`, go: night ? null : note });
+    else if (seen.wrote) out.push({ kind: 'notes', text: 'You’ve written in today’s journal.' });
+    const song = seen.music.current;
+    if (song) out.push({ kind: 'music', text: `You’ve been listening to ${song.title}.` });
+    const best = seen.banks.filter((b) => b.best?.when && b.best.text && seen.now - b.best.when < 2 * DAY).sort((a, b) => b.best.when - a.best.when)[0];
+    const learned = seen.banks.reduce((n, b) => n + Object.values(b.learn).filter((x) => x?.learned).length, 0), streak = (read('fluentio.visits') || {}).streak || 0;
+    if (best) out.push({ kind: 'progress', text: `New best in ${best.name}: ${best.best.text}.` });
+    else if (streak >= 3) out.push({ kind: 'progress', text: `You’ve been here ${streak} days in a row.` });
+    else if (learned) out.push({ kind: 'progress', text: `${cap(plural(learned, 'topic'))} learned so far.` });
+    return out.length ? out[((hour % out.length) + out.length) % out.length] : null;
+  }
 
   // ---------- its cards: Today, your studying and your notes (Music, Progress, the question of the day, what's new since
   // you were here and the date are Home's own tiles, index.html) ----------
@@ -343,18 +364,23 @@
     // (which arrangement: the next one each hour; the visits, kit/notice.js, so an hour isn't the same one every day)
     const turnNow = () => (visit || 0) + hourNow();
     let seen = see();
-    // (what it offers, and what it says when the plan has nothing to say, are the hour's, like the cards)
-    let list = suggestions(seen), listHour = hourNow(), hourSaid = null, from = 0, showing = [], said = '', note = null;
+    // (what it offers, what it says when the plan has nothing to say and what it says beside the plan are the hour's, like
+    // the cards)
+    let list = suggestions(seen), listHour = hourNow(), hourSaid = null, hourAside, from = 0, showing = [], said = '', note = null;
     // what it says: under the site's name, as the welcome's line, with a link to what it'd do first (unless what it
     // offers is at the side), or what something it offers did
     const line = hero.line || el('p'), hello = hero.hello || el('p');
     const go = (x) => (x.href ? el('a', { href: x.href, target: x.away ? '_blank' : null, rel: x.away ? 'noopener' : null }, `${x.title} →`) : el('button', { type: 'button', className: 'welcome-go', onclick: () => x.run(reply) }, `${x.title} →`));
     const setLine = () => {
-      // (when the plan's what it talks about, only something on the plan; at night, nothing)
-      // (what the plan says moves on with the clock; anything else is said once an hour)
-      const st = seen.plan?.st, fromPlan = !!(seen.plan && planWords(seen.plan)), first = !note && !shown.side && !(st && (st.night || st.late)) && (!fromPlan || list[0]?.plan) ? list[0] : null;
+      // (what the plan says moves on with the clock, and beside it, one more thing it noticed, the hour's; when something
+      // of yours is on to start, only that. Without the plan, what it says is the hour's)
+      // (the link: something on the plan when there's one to start, or else what it noticed beside it; at night, none)
+      const st = seen.plan?.st, words = seen.plan && planWords(seen.plan), fromPlan = !!words, night = !!(st && (st.night || st.late));
+      if (fromPlan && hourAside === undefined) hourAside = aside(seen, list, hourNow());
       if (!fromPlan && hourSaid == null) hourSaid = opening(list, seen);
-      const say = note || (fromPlan ? opening(list, seen) : hourSaid), key = `${say}|${first?.title || ''}`;
+      const also = fromPlan && !words.ask ? hourAside : null;
+      const first = note || shown.side || night ? null : !fromPlan ? list[0] : list[0]?.plan ? list[0] : also?.go || null;
+      const say = note || (!fromPlan ? hourSaid : words.ask ? `${words.say} ${words.ask}` : also ? `${words.say} ${also.text}` : words.say), key = `${say}|${first?.title || ''}`;
       if (key === said) return;
       said = key;
       line.replaceChildren(say, ...(first ? [' ', go(first)] : []));
@@ -564,7 +590,7 @@
       seen = see();
       const fresh = hourNow() !== listHour;
       if (fresh) {
-        listHour = hourNow(); list = suggestions(seen); hourSaid = null; note = null;
+        listHour = hourNow(); list = suggestions(seen); hourSaid = null; hourAside = undefined; note = null;
         if (from >= list.length) from = 0;
         other.hidden = list.length <= SHOW;
       }
