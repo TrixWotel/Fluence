@@ -33,7 +33,7 @@
       background: color-mix(in srgb, var(--c) 16%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 26%, transparent);
       transition: transform var(--t2) var(--spring);
     }
-    .subject:hover .tile { animation: hop calc(.72s / var(--speed)) ease-in-out; transform-origin: 50% 85%; }
+    .subject:hover .tile { transform: translateY(-2px) rotate(-5deg) scale(1.04); }
     .info { display: grid; gap: 2px; min-width: 0; }
     .info b { font-size: 1.2rem; letter-spacing: -0.01em; }
     .text { color: var(--muted); font-size: .95rem; }
