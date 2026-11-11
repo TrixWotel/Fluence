@@ -273,9 +273,9 @@
   // evening, a note from today, today's question in the morning, a new best (then your studying and progress are one
   // card), a lot that's new since your last visit (one wide card). From the arrangements of those (two cards, three, one
   // spread wide beside another or on its own, what it offers at the side), the ones that fit best, and a different one
-  // each hour and each visit, so Home changes through the day. What's on now always stays: the plan, at night, when
-  // something's on or something's next within the hour. A narrower window has the room for two; a phone has them one
-  // under the other
+  // each hour, so Home changes through the day, and only on the hour (draw keeps the hour's). What's on then stays: the
+  // plan, at night, when something's on or something's next within the hour. A narrower window has the room for two; a
+  // phone has them one under the other
   const KINDS = [[/^(Finish|Pick up|Go over|Work on|Beat your best|Try AMC|Pick a subject|Start The Wars|Try essay|Write an essay)\b/, 'study'], [/^(Keep listening|Skip this song|Put on some music|Set up Music)\b/, 'music'], [/^(Write in your journal|Back to )/, 'notes'], [/^Try today’s question/, 'question']];
   const kindOf = (x) => (x.plan ? 'plan' : KINDS.find(([re]) => re.test(x.title))?.[1] || '');
   const WIDE = new Set(['plan', 'study', 'music', 'since']);
@@ -336,20 +336,25 @@
   }
 
   // ---------- on the page ----------
-  const SHOW = 3;
+  const SHOW = 3, HOUR = 3600000, HOURLY = 'fluentio:home-hour';
+  // (the hours of your clock, counted: a new one at 9:00, 10:00…)
+  const hourNow = () => { const d = new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset() * MINUTE) / HOUR); };
   function draw(box, { tiles = {}, welcomed, news = [], hero = {}, turn: visit = 0 } = {}) {
-    // (which arrangement: one more each hour, and each visit, kit/notice.js)
-    const turnNow = () => (visit || 0) + Math.floor(Date.now() / 3600000);
+    // (which arrangement: the next one each hour; the visits, kit/notice.js, so an hour isn't the same one every day)
+    const turnNow = () => (visit || 0) + hourNow();
     let seen = see();
-    let list = suggestions(seen), from = 0, showing = [], said = '', note = null;
+    // (what it offers, and what it says when the plan has nothing to say, are the hour's, like the cards)
+    let list = suggestions(seen), listHour = hourNow(), hourSaid = null, from = 0, showing = [], said = '', note = null;
     // what it says: under the site's name, as the welcome's line, with a link to what it'd do first (unless what it
     // offers is at the side), or what something it offers did
     const line = hero.line || el('p'), hello = hero.hello || el('p');
     const go = (x) => (x.href ? el('a', { href: x.href, target: x.away ? '_blank' : null, rel: x.away ? 'noopener' : null }, `${x.title} →`) : el('button', { type: 'button', className: 'welcome-go', onclick: () => x.run(reply) }, `${x.title} →`));
     const setLine = () => {
       // (when the plan's what it talks about, only something on the plan; at night, nothing)
+      // (what the plan says moves on with the clock; anything else is said once an hour)
       const st = seen.plan?.st, fromPlan = !!(seen.plan && planWords(seen.plan)), first = !note && !shown.side && !(st && (st.night || st.late)) && (!fromPlan || list[0]?.plan) ? list[0] : null;
-      const say = note || opening(list, seen), key = `${say}|${first?.title || ''}`;
+      if (!fromPlan && hourSaid == null) hourSaid = opening(list, seen);
+      const say = note || (fromPlan ? opening(list, seen) : hourSaid), key = `${say}|${first?.title || ''}`;
       if (key === said) return;
       said = key;
       line.replaceChildren(say, ...(first ? [' ', go(first)] : []));
@@ -389,13 +394,21 @@
       return t;
     };
     // (each card in a column of its own; under a shorter one, more cards fill the room down to the tallest: see fill)
-    // (an arrangement stays the hour, unless what has to be there changes, or the window: then it's laid out anew, and
-    // if you're looking, the cards move to where they go, the ones going fading and the ones coming rising in)
-    let shown = { cards: [], side: false, rest: [] }, laid = '', made = new Map(), changes = 0;
+    // (an arrangement is the hour's, kept in this browser: music starting or stopping, the plan moving on, a reload or
+    // another visit change what's in the cards, never which cards; the next hour, the next one. A narrower or wider
+    // window has one of its own for the hour)
+    let shown = { cards: [], side: false, rest: [] }, laid = '', made = new Map(), changes = 0, gliding = 0, changing = false;
     const sizes = 'ResizeObserver' in window ? new ResizeObserver(() => refit()) : null, watch = (x) => { if (x) sizes?.observe(x); };
-    const named = (x, key) => { if (x) x.style.viewTransitionName = `aide-${key}`; return x; };
+    function arrangement(cols) {
+      const hour = hourNow(), kept = read(HOURLY), mine = kept && kept.hour === hour && kept.ways && typeof kept.ways === 'object' ? kept : { hour, ways: {} }, k = mine.ways[cols];
+      if (k && Array.isArray(k.cards) && k.cards.length && Array.isArray(k.rest) && k.cards.every((x) => x && typeof x.key === 'string' && (x.key !== 'plan' || seen.plan) && (x.key !== 'since' || news.length >= 3))) return k;
+      const turn = turnNow(), c = compose(seen, { news, cols, offered: showing, turn });
+      mine.ways[cols] = { cards: c.cards, side: c.side, cols: c.cols, rest: c.rest, turn };
+      try { f.write(HOURLY, mine); } catch {}
+      return mine.ways[cols];
+    }
     function lay(force = false) {
-      const cols = colsNow(), turn = turnNow(), c = compose(seen, { news, cols, offered: showing, turn }), sig = JSON.stringify([cols, c.cards, c.side]);
+      const cols = colsNow(), c = arrangement(cols), sig = JSON.stringify([cols, c.cards, c.side]);
       if (!force && sig === laid) { shown.rest = c.rest; return false; }
       const first = !laid;
       laid = sig;
@@ -404,31 +417,60 @@
         if (put) return;
         put = true;
         shown = c; made = new Map();
-        const items = c.cards.map((x) => ({ card: named(render(x), x.key), wide: x.wide })).filter((x) => x.card);
-        if (c.side) items.unshift({ card: named(side, 'side'), wide: false });
+        if (words(pick()) !== words(showing)) paint(false);
+        const items = c.cards.map((x) => ({ card: render(x), wide: x.wide })).filter((x) => x.card);
+        if (c.side) items.unshift({ card: side, wide: false });
         const stacks = items.map((x, i) => { const s = el('div', { className: `aide-stack${x.wide ? ' span2' : ''}` }, x.card); s.style.setProperty('--n', i); watch(x.card); return s; });
         grid.style.setProperty('--cols', cols === 1 ? 1 : c.cols);
         grid.classList.toggle('solo', cols > 1 && c.cols === 1);
         grid.dataset.cards = c.cards.map((x) => x.key + (x.wide ? '+' : '')).join(' ');
-        grid.dataset.turn = String(turn);
+        grid.dataset.turn = String(c.turn ?? turnNow());
+        grid.dataset.hour = String(hourNow());
         grid.replaceChildren(...stacks);
         setLine();
         fit();
       };
       if (first || document.hidden || !f.moving()) { lay2(); return true; }
-      // (the change, while you're looking; one the browser can't draw in time is just made)
       changes++;
       grid.dataset.changes = String(changes);
-      if (document.startViewTransition) {
-        document.documentElement.classList.add('aide-changing');
-        const t = document.startViewTransition(lay2);
-        setTimeout(() => { if (!put) { try { t.skipTransition(); } catch {} lay2(); } }, 1500);
-        t.finished.finally(() => document.documentElement.classList.remove('aide-changing'));
-      } else {
-        grid.animate({ opacity: [1, 0], transform: ['none', 'translateY(6px) scale(.99)'] }, { duration: 220, easing: 'ease-in' }).finished.then(lay2, lay2);
-        setTimeout(lay2, 600);
-      }
+      change(lay2);
       return true;
+    }
+    // (a change while you're looking: the cards there fade, one after the other, then the new ones rise in, as when you
+    // arrive but quicker, and the title and the cards glide from where they were to where they go, so nothing jumps
+    // when the new ones take more room or less)
+    function change(put) {
+      const pace = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--speed')) || 1, olds = [...grid.children];
+      const outs = olds.map((s, i) => s.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-6px) scale(.985)' }], { duration: 190 / pace, delay: (i * 40) / pace, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'forwards' }));
+      let done = false;
+      changing = true;
+      const swap = () => {
+        if (done) return;
+        done = true;
+        const movers = [hero.line?.closest('.hero'), box].filter(Boolean), tops = movers.map((n) => n.getBoundingClientRect().top);
+        grid.classList.remove('stagger');
+        grid.classList.add('aide-in');
+        changing = false;
+        put();
+        glide(movers, tops, 520 / pace);
+      };
+      Promise.all(outs.map((a) => a.finished)).then(swap, swap);
+      setTimeout(swap, (olds.length * 40 + 450) / pace);   // (a tab put away mid-change doesn't wait for its animations)
+    }
+    // (each frame, toward where the page puts them then, so a card that fills in a moment later moves them on smoothly)
+    function glide(nodes, tops, ms) {
+      const me = ++gliding, t0 = performance.now();
+      const step = (now) => {
+        if (me !== gliding) return;
+        const k = Math.min(1, Math.max(0, (now - t0) / ms)), e = 1 - (1 - k) ** 3;
+        nodes.forEach((n, i) => {
+          n.style.translate = '';
+          const at = n.getBoundingClientRect().top, y = tops[i] + (at - tops[i]) * e;
+          n.style.translate = k < 1 && Math.abs(y - at) >= 0.5 ? `0 ${(y - at).toFixed(1)}px` : '';
+        });
+        if (k < 1) requestAnimationFrame(step);
+      };
+      step(t0);
     }
     // a smaller card for the room under a shorter one (made once a layout, so one that loads, like Music, keeps its size)
     function filler(key) {
@@ -440,7 +482,6 @@
                 : key === 'notes' ? notesCard(seen)
                   : tiles[key]?.() || null;
         c?.classList.add('aide-filler');
-        named(c, key === 'planSmall' ? 'plan' : key);
         made.set(key, c);
         watch(c);
       }
@@ -515,16 +556,24 @@
       hello.hidden = false;
       refit();
     }).catch(() => {});
-    // what's playing changes what it offers, and so do songs another device added; the plan moves on with the clock, and
-    // then what it says changes too, and the cards (the plan's own card is drawn again for the clock)
-    let soon = 0;
+    // the plan moves on with the clock: its card is drawn again, and what it says follows (what's playing, songs another
+    // device added, a switch or your notes on another page change what's in the cards, not which); on the hour, the
+    // next arrangement, with what it offers and says then
+    let soon = 0, hourly = 0;
     const again = () => {
-      seen = see(); list = suggestions(seen);
-      if (from >= list.length) from = 0;
-      other.hidden = list.length <= SHOW;
-      if (words(pick()) !== words(showing)) paint(false);
-      if (!lay()) { const pc = grid.querySelector('.aide-plan'); if (pc && seen.plan) { const n = Object.assign(planCard(seen.plan, pc.classList.contains('span2')), { className: pc.className }); named(n, 'plan'); watch(n); pc.replaceWith(n); } }
-      setLine();
+      seen = see();
+      const fresh = hourNow() !== listHour;
+      if (fresh) {
+        listHour = hourNow(); list = suggestions(seen); hourSaid = null; note = null;
+        if (from >= list.length) from = 0;
+        other.hidden = list.length <= SHOW;
+      }
+      if (!lay()) {
+        if (fresh && words(pick()) !== words(showing)) paint(false);
+        const pc = grid.querySelector('.aide-plan');
+        if (pc && seen.plan) { const n = Object.assign(planCard(seen.plan, pc.classList.contains('span2')), { className: pc.className }); watch(n); pc.replaceWith(n); }
+      }
+      if (!changing) setLine();   // (in a change, the new line comes with the new cards)
       refit();
     };
     const refresh = () => { clearTimeout(soon); soon = setTimeout(again, 200); };
@@ -532,6 +581,9 @@
     // (another page of the site changing the plan, a switch, your notes, or where you left off)
     addEventListener('storage', (e) => { if (e.key === P()?.KEY || e.key === P()?.DOCS || e.key === 'fluentio.station' || e.key === 'fluentio.last') refresh(); });
     setInterval(() => { if (!document.hidden) again(); }, 30000);
+    // (right on the hour, even in a tab that's put away, where it changes without the animation)
+    const onHour = () => { clearTimeout(hourly); const d = new Date(), into = (d.getTime() - d.getTimezoneOffset() * MINUTE) % HOUR; hourly = setTimeout(() => { again(); onHour(); }, HOUR - into + 250); };
+    onHour();
     Promise.all([import(link('kit/music/player.js')), import(link('kit/music/library.js'))]).then(([player, lib]) => {
       for (const w of ['song', 'state']) player.events.addEventListener(w, refresh);
       lib.events.addEventListener('library', refresh);
