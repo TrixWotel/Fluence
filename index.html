@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Science Tests · Fluence</title>
-  <meta name="description" content="Heat and energy: tests like the ones in class, and Q = mcΔT practice with hundreds of variants and a worked solution for each.">
+  <meta name="description" content="Systems and matter, heat and energy, gases, the atmosphere and winds, and lab skills: learn a topic at a time with a short lesson, practise in many ways, and take tests.">
   <script src="../settings.js"></script>
   <script src="../kit/look.js"></script>
   <script src="../kit/bar.js"></script>
@@ -17,7 +17,7 @@
     <header id="top">
       <a class="back" href="../study/">← <span data-fill="studyTitle">Study</span></a>
       <h1>🧪 Science Tests</h1>
-      <p class="lead">Heat and energy: tests like the ones in class (graphs to read, data sets, experiments and problem solving), and Q = mcΔT practice in hundreds of variants, each with a worked solution.</p>
+      <p class="lead">Systems and matter, heat and energy, gases, the atmosphere and winds, and lab skills: learn a topic at a time with a short lesson, practise any question, and take tests, with a mixed review of it all.</p>
     </header>
     <div id="app"><noscript>These tests need JavaScript.</noscript></div>
   </main>
@@ -26,6 +26,15 @@
     import { heat, MATERIALS } from './heat.js';
     import { heatLearning } from './heat-lessons.js';
     import { heatExam } from './heat-exam.js';
+    import { systems } from './systems.js';
+    import { systemsLearning, systemsAside } from './systems-lessons.js';
+    import { energy } from './energy.js';
+    import { energyLearning, energyAside } from './energy-lessons.js';
+    import { earth } from './earth.js';
+    import { earthLearning, earthAside } from './earth-lessons.js';
+    import { labs } from './labs.js';
+    import { labsLearning, labsAside } from './labs-lessons.js';
+    import { review } from './review.js';
 
     // the formulas, next to the table of specific heats the questions use
     const formulas = () => {
@@ -45,12 +54,34 @@
       return box;
     };
 
+    // (the sets of ideas: each asked in many ways, learned a topic at a time)
+    const ABOUT = 'Practice asks in many ways: choosing, typing the word, true or false, matching words to what they mean, sorting onto two sides, putting steps in order, choosing all that fit, and numbers to work out. Learning goes a topic at a time, each with a short lesson, and a topic is learned after 4 right in a row.';
     testsPage({ tests: [
+      {
+        bank: systems, name: 'Systems and Matter', length: 20, learn: systemsLearning, about: ABOUT, asideName: 'Key facts', aside: systemsAside,
+        blurb: 'Systems and feedback loops, open and closed systems, properties of matter and density, states and phase changes, mixtures, and measuring in the lab.',
+      },
+      {
+        bank: energy, name: 'Energy and Matter', length: 20, learn: energyLearning, about: ABOUT, asideName: 'Key facts', aside: energyAside,
+        blurb: 'Temperature, thermal energy and heat, specific heat, how land and water warm and cool, conduction, convection and radiation, and gases and the gas laws.',
+      },
       {
         bank: heat, name: 'Heat Capacity: Q = mcΔT', length: 10, learn: heatLearning, exam: heatExam,
         blurb: 'Warming, cooling, mixing hot metal into water, heaters and calories.',
         about: 'Use Q = mcΔT to find the heat, the temperature change, the mass or the specific heat. Answers within 1% are right, so round as you like. The specific heats are in the table below.',
         asideName: 'Formulas and specific heats', aside: formulas, asideOpen: true,   // some questions ask which material in the table
+      },
+      {
+        bank: earth, name: 'Earth and Energy Systems', length: 20, learn: earthLearning, about: ABOUT, asideName: 'Key facts', aside: earthAside,
+        blurb: 'The atmosphere and its layers, air pressure, uneven heating, sea and land breezes, the global wind belts, the Coriolis effect and jet streams, and monsoons.',
+      },
+      {
+        bank: review, name: 'Mixed Review', length: 30, about: 'Every topic of Systems and Matter, Energy and Matter and Earth and Energy Systems in one set, asked in all the same ways, so a test mixes them the way a test on all of it would. To learn a topic first, go to its own set.',
+        blurb: 'Systems and Matter, Energy and Matter and Earth and Energy Systems, mixed in one test.',
+      },
+      {
+        bank: labs, name: 'Investigations and Data', length: 20, learn: labsLearning, about: ABOUT, asideName: 'Key facts', aside: labsAside,
+        blurb: 'Variables and fair tests, choosing and reading graphs, averages and errors, testing materials, insulation and design, and claims, evidence and reasoning.',
       },
     ] });
   </script>
