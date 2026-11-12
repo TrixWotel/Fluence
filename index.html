@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Physics Tests · Fluence</title>
-  <meta name="description" content="Kinematics with motion graphs, motion in a straight line, vectors and projectile motion: tests like the ones in class, and hundreds of practice variants of each, with a worked solution for every one.">
+  <meta name="description" content="Kinematics with motion graphs, motion in a straight line, vectors, projectile motion, forces and Newton’s laws, statics, torque and dynamics: tests like the ones in class, and hundreds of practice variants of each, with a worked solution for every one.">
   <script src="../settings.js"></script>
   <script src="../kit/look.js"></script>
   <script src="../kit/bar.js"></script>
@@ -29,7 +29,20 @@
     .graph .dim { stroke: var(--muted); stroke-width: 1.2; fill: none; }
     .graph .dl { fill: var(--muted); font-size: 12px; font-weight: 600; paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; }
     .graph .nt { fill: var(--muted); font-size: 12px; }
-    @media (max-width: 560px) { .graph .vl, .graph .dl { font-size: 16px; } }
+    /* the forces drawings from mech.js: bodies, ropes over pulleys, beams on pivots, and dashed axes and guides */
+    .mech .body { fill: color-mix(in srgb, var(--accent) 14%, var(--card)); stroke: color-mix(in srgb, var(--text) 55%, transparent); stroke-width: 1.4; }
+    .mech .bl { fill: var(--text); font-size: 12.5px; font-weight: 650; paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; }
+    .mech .rope { fill: none; stroke: var(--text); stroke-width: 1.6; stroke-linecap: round; }
+    .mech .bracket { stroke: var(--muted); stroke-width: 2.6; stroke-linecap: round; }
+    .mech .pulley { fill: var(--card); stroke: var(--text); stroke-width: 1.6; }
+    .mech .knot { fill: var(--text); }
+    .mech .beam { fill: color-mix(in srgb, var(--muted) 30%, var(--card)); stroke: color-mix(in srgb, var(--text) 55%, transparent); stroke-width: 1.2; }
+    .mech .pivot { fill: color-mix(in srgb, var(--muted) 45%, var(--card)); stroke: var(--muted); stroke-width: 1.2; }
+    .mech .ground { stroke: var(--muted); stroke-width: 1.6; }
+    .mech .ang { fill: none; stroke: var(--muted); stroke-width: 1.3; }
+    .mech .axis, .mech .guide { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+    .mech .vec.dash { stroke-dasharray: .045 .03; }
+    @media (max-width: 560px) { .graph .vl, .graph .dl, .mech .bl { font-size: 16px; } }
   </style>
 </head>
 <body data-title="Physics Tests">
@@ -38,7 +51,7 @@
     <header id="top">
       <a class="back" href="../study/">← <span data-fill="studyTitle">Study</span></a>
       <h1>🚀 Physics Tests</h1>
-      <p class="lead">Kinematics with motion graphs, motion in a straight line, vectors and projectile motion. Each has tests like the ones in class (a lab to analyse, a problem to solve, motion to explain), and practice questions in hundreds of variants, each with a worked solution and most with a graph or a drawing to scale.</p>
+      <p class="lead">Kinematics with motion graphs, motion in a straight line, vectors and projectile motion, then forces: Newton’s laws, bodies in equilibrium, torque, and bodies and systems that accelerate. Every course has practice questions in hundreds of variants, each with a worked solution and most with a graph or a drawing to scale, and the first four have tests like the ones in class (a lab to analyse, a problem to solve, motion to explain).</p>
     </header>
     <div id="app"><noscript>These tests need JavaScript.</noscript></div>
   </main>
@@ -56,6 +69,15 @@
     import { projectileBank } from './projectiles.js';
     import { projectilesLearning } from './projectiles-lessons.js';
     import { projectilesExam } from './projectiles-exam.js';
+    import { forcesBank } from './forces.js';
+    import { forcesLearning, forcesFormulas } from './forces-lessons.js';
+    import { staticsBank } from './statics.js';
+    import { staticsLearning, staticsFormulas } from './statics-lessons.js';
+    import { torqueBank } from './torque.js';
+    import { torqueLearning, torqueFormulas } from './torque-lessons.js';
+    import { dynamicsBank } from './dynamics.js';
+    import { dynamicsLearning, dynamicsFormulas } from './dynamics-lessons.js';
+    import { forcesReview } from './forces-review.js';
 
     const box = (html) => () => {
       const el = document.createElement('div');
@@ -131,6 +153,36 @@
         blurb: 'Things launched sideways and at angles: time in the air, how far, how high, how they land, cliffs, ledges, walls and tanks.',
         about: 'Across and up as two separate motions that share the time. Use g = 9.8 m/s² and ignore air resistance. Answers within 2% are right.',
         asideName: 'Formulas', aside: projectileFormulas,
+      },
+      // (the forces courses use g = 9.81 m/s², as the class does)
+      {
+        bank: forcesBank, name: 'Forces and Newton’s Laws', length: 10, learn: forcesLearning,
+        blurb: 'What forces do, net force, Newton’s three laws, weight, the normal force, friction, tension, and falling with and without air resistance.',
+        about: 'The three laws and the kinds of force, asked in many ways: choosing, matching, sorting and numbers to work out. Use g = 9.81 m/s². Answers within 2% are right, so round as you like.',
+        asideName: 'Formulas', aside: box(forcesFormulas),
+      },
+      {
+        bank: staticsBank, name: 'Statics of Particles', length: 10, learn: staticsLearning,
+        blurb: 'Bodies at rest or moving steadily: ΣF = 0, weights hung from ropes and knots, boxes held on slopes, and steady pulls against friction.',
+        about: 'Equilibrium, ΣFx = 0 and ΣFy = 0, with every rope’s tension split into its parts. Use g = 9.81 m/s². Answers within 2% are right.',
+        asideName: 'Formulas', aside: box(staticsFormulas),
+      },
+      {
+        bank: torqueBank, name: 'Torque and Rotational Equilibrium', length: 10, learn: torqueLearning,
+        blurb: 'τ = Fl, forces at an angle, clockwise and counterclockwise, seesaws and counterweights, centers of gravity, and beams on pivots and cables.',
+        about: 'Torques about a pivot, counterclockwise positive, and the two conditions for equilibrium: ΣF = 0 and Στ = 0. Use g = 9.81 m/s². Answers within 2% are right.',
+        asideName: 'Formulas', aside: box(torqueFormulas),
+      },
+      {
+        bank: dynamicsBank, name: 'Dynamics of Particles and Systems', length: 10, learn: dynamicsLearning,
+        blurb: 'ΣF = ma at work: pushes and pulls against friction, slopes, ropes that lift, and bodies joined over pulleys.',
+        about: 'Newton’s second law, one body at a time: ΣFx = ma along the motion and ΣFy = 0 across it, then joined bodies by adding their equations. Use g = 9.81 m/s². Answers within 2% are right.',
+        asideName: 'Formulas', aside: box(dynamicsFormulas),
+      },
+      {
+        bank: forcesReview, name: 'Forces Mixed Review', length: 20,
+        blurb: 'Newton’s laws, statics, torque and dynamics, mixed in one test.',
+        about: 'Every topic of Forces and Newton’s Laws, Statics of Particles, Torque and Rotational Equilibrium and Dynamics of Particles and Systems in one set, so a test mixes them the way a test on all of it would. To learn a topic first, go to its own course. Use g = 9.81 m/s². Answers within 2% are right.',
       },
     ] });
   </script>
