@@ -297,8 +297,8 @@
       const fresh = !v.at || now - v.at > 30 * 60000;
       const visits = { count: (v.count || 0) + (fresh ? 1 : 0), streak: away === 0 ? v.streak || 1 : away === 1 ? (v.streak || 1) + 1 : 1, away: fresh ? away : v.away ?? null };
       f.write('fluentio.visits', { ...visits, at: now });
-      const NAMES = { essays: 'Essay Writing', triangles: 'Triangle Angles', amc10: 'the AMC 10', amc12: 'the AMC 12', heat: 'Heat Capacity', kinematics: 'Kinematics', motion: 'Motion in a Straight Line', vectors: 'Vectors', projectiles: 'Projectile Motion', vocab: 'Vocabulary', preterite: 'the preterite', imperfect: 'the imperfect', middleages: 'the Middle Ages', wars: 'the Wars of Religion' };
-      const IN = { math: ['triangles', 'amc10', 'amc12'], science: ['heat'], physics: ['kinematics', 'motion', 'vectors', 'projectiles'], spanish: ['vocab', 'preterite', 'imperfect'], history: ['middleages', 'wars'], english: ['essays'], geography: [] };
+      const NAMES = { essays: 'Essay Writing', triangles: 'Triangle Angles', amc10: 'the AMC 10', amc12: 'the AMC 12', heat: 'Heat Capacity', kinematics: 'Kinematics', motion: 'Motion in a Straight Line', vectors: 'Vectors', projectiles: 'Projectile Motion', forces: 'Forces and Newton’s Laws', statics: 'Statics of Particles', torque: 'Torque and Rotational Equilibrium', dynamics: 'Dynamics of Particles and Systems', forcesreview: 'the Forces Mixed Review', systems: 'Systems and Matter', energy: 'Energy and Matter', earth: 'Earth and Energy Systems', labs: 'Investigations and Data', scireview: 'the Science Mixed Review', vocab: 'Vocabulary', preterite: 'the preterite', imperfect: 'the imperfect', middleages: 'the Middle Ages', wars: 'the Wars of Religion', ushistory: 'American History' };
+      const IN = { math: ['triangles', 'amc10', 'amc12'], science: ['heat', 'systems', 'energy', 'earth', 'scireview', 'labs'], physics: ['kinematics', 'motion', 'vectors', 'projectiles', 'forces', 'statics', 'torque', 'dynamics', 'forcesreview'], spanish: ['vocab', 'preterite', 'imperfect'], history: ['middleages', 'wars', 'ushistory'], english: ['essays'], geography: [] };
       const mine = {};   // id → { learned, bests }
       let learned = 0, bests = 0, best = null;
       for (const [id, name] of Object.entries(NAMES)) {
@@ -434,7 +434,7 @@
           const box = tile('wide2', 'var(--plot2)', head('spark', 'Question of the day'), el('p', { className: 'muted' }, 'Finding today’s question…'));
           const POOL = [['amc10', 'math/amc.js', 'amc'], ['heat', 'science/heat.js', 'heat'], ['vocab', 'spanish/vocab.js', 'vocab'], ['motion', 'physics/motion.js', 'motionBank'],
             ['amc10', 'math/amc.js', 'amc'], ['preterite', 'spanish/tenses.js', 'preteriteTest'], ['vectors', 'physics/vectors.js', 'vectorBank'], ['imperfect', 'spanish/tenses.js', 'imperfectTest'], ['middleages', 'history/middle-ages.js', 'middleAges'],
-            ['earth', 'science/earth.js', 'earth'], ['energy', 'science/energy.js', 'energy'], ['systems', 'science/systems.js', 'systems']];
+            ['earth', 'science/earth.js', 'earth'], ['energy', 'science/energy.js', 'energy'], ['systems', 'science/systems.js', 'systems'], ['forces', 'physics/forces.js', 'forcesBank'], ['ushistory', 'history/us-history.js', 'usHistory']];
           const today = Math.round((midnight(now) - new Date(2026, 0, 1)) / 86400000), [id, file, name] = POOL[((today % POOL.length) + POOL.length) % POOL.length];
           const folder = file.split('/')[0], subject = s.study.find((x) => folderOf(x) === folder) || { title: folder, emoji: '' };
           f.wait(Promise.all([import(link(file)), import(link('kit/tests.js'))]).then(([mod, { isRight }]) => {

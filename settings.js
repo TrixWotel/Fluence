@@ -135,10 +135,10 @@ window.FLUENTIO_SETTINGS = {
   study: [
     { emoji: '🌍', title: 'Geography', text: 'Find countries and capitals on the world map, or one continent at a time.', link: 'geography/', color: '#1f9d74' },
     { emoji: '📐', title: 'Math', text: 'Triangle angles, and AMC 10 and AMC 12 practice, from the first problems of a test to the hardest.', link: 'math/', color: '#2f6fed' },
-    { emoji: '🧪', title: 'Science', text: 'Heat and energy: tests like the ones in class, and Q = mcΔT practice.', link: 'science/', color: '#8b5cf6' },
-    { emoji: '🚀', title: 'Physics', text: 'Kinematics, motion in a straight line, vectors and projectiles: tests like the ones in class, and practice.', link: 'physics/', color: '#e8743b' },
+    { emoji: '🧪', title: 'Science', text: 'Systems and matter, heat and energy, gases, the atmosphere and winds, and lab skills: learn a topic at a time, practise and take tests.', link: 'science/', color: '#8b5cf6' },
+    { emoji: '🚀', title: 'Physics', text: 'Kinematics, vectors and projectiles, then forces: Newton’s laws, statics, torque and dynamics. Tests like the ones in class, and practice.', link: 'physics/', color: '#e8743b' },
     { emoji: '🇪🇸', title: 'Spanish', text: '1,100 words in 25 themes, and the preterite and the imperfect.', link: 'spanish/', color: '#e5484d' },
-    { emoji: '🏰', title: 'History', text: 'The Middle Ages and the Wars of Religion, as stories where you make the choices, with notes and tests.', link: 'history/', color: '#b7791f' },
+    { emoji: '🏰', title: 'History', text: 'The Middle Ages, the Wars of Religion and American history to the end of the Cold War, as stories where you make the choices, with notes and tests.', link: 'history/', color: '#b7791f' },
     { emoji: '✍️', title: 'English', text: 'Essays: learn how a good one works, a step at a time, then write your own and check it.', link: 'english/', color: '#0ea5b7' },
     { emoji: '🎨', title: 'Board', text: 'Your whiteboard, for working things out while you study: ideas, flowcharts and diagrams.', link: 'board/', color: '#d6409f' },
     { emoji: '🗂️', title: 'Station', text: 'Notes in folders that link to each other, tables to compare things, and a journal of what you decided and why.', link: 'station/', color: '#c2884a' },
