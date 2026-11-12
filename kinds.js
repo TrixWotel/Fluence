@@ -5,10 +5,11 @@
 // its story, in stories, has truth, who and sort. near(a, b) says two topics are too close to share an "odd one out";
 // far, if given, is topics of another time to take the odd one from when a topic has none of its own far enough away.
 // centuries: the earliest and latest that a list of five can start from. gap: how many years apart the events in a list
-// are kept.
+// are kept. rounds: how many times over a topic asks its twelve ways (20 variants a round), each round moving on to new
+// facts, events and sets, for a course whose topics have more than one round asks.
 import { bank } from '../kit/bank.js';
 
-export function courseBank(id, TOPICS, near, { centuries: [earliest, latest], gap = 15, tfGap = 20, what = 'part of the Middle Ages', far = [], stories = {} }) {
+export function courseBank(id, TOPICS, near, { centuries: [earliest, latest], gap = 15, tfGap = 20, what = 'part of the Middle Ages', far = [], stories = {}, rounds = 1 }) {
 const TIMELINE = TOPICS.flatMap((t) => t.events);
 const ordinal = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
 const century = (y) => Math.floor((y - 1) / 100) + 1;
@@ -145,5 +146,5 @@ const templates = TOPICS.map((topic) => {
     return { topic: topic.name, way: kind, ...ASK[kind](d, topic, turn) };
   };
 });
-return bank(id, templates, TOPICS.length * 20);
+return bank(id, templates, TOPICS.length * 20 * rounds);
 }

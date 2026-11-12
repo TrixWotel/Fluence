@@ -22,6 +22,10 @@ const COURSE_FILES = {
     const [b, l, s] = await Promise.all([import('./wars-of-religion.js'), import('./wars-of-religion-lessons.js'), import('./stories-wars.js')]);
     return { bank: b.warsOfReligion, topics: b.TOPICS, learn: l.warsLearning, stories: s.STORIES };
   },
+  ushistory: async () => {
+    const [b, l, s] = await Promise.all([import('./us-history.js'), import('./us-history-lessons.js'), import('./stories-us-history.js')]);
+    return { bank: b.usHistory, topics: b.TOPICS, learn: l.usLearning, stories: s.STORIES };
+  },
 };
 const loaded = new Map();
 const open = (id) => { if (!loaded.has(id)) loaded.set(id, COURSE_FILES[id]()); return loaded.get(id); };

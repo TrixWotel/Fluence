@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>History · Fluence</title>
-  <meta name="description" content="The Middle Ages and the Wars of Religion, in short stories where you make the choices, with notes, practice and tests.">
+  <meta name="description" content="The Middle Ages, the Wars of Religion and American history to the end of the Cold War, in short stories where you make the choices, with notes, practice and tests.">
   <script src="../settings.js"></script>
   <script src="../kit/look.js"></script>
   <script src="../kit/bar.js"></script>
@@ -32,6 +32,9 @@
     import { warsOfReligion } from './wars-of-religion.js';
     import { warsLearning, warsTimeline } from './wars-of-religion-lessons.js';
     import { warsExam } from './wars-of-religion-exam.js';
+    import { usHistory } from './us-history.js';
+    import { usLearning, usTimeline } from './us-history-lessons.js';
+    import { usExam } from './us-history-exam.js';
     import { chapterCards } from './chapters-home.js';
 
     chapterCards(document.getElementById('chapters'));
@@ -48,6 +51,12 @@
         blurb: 'From Luther’s protest to the Peace of Westphalia: the Huguenots, the St. Bartholomew’s Day Massacre, the Defenestration of Prague and the Thirty Years’ War. Tests like the ones in class, with made-up sources to question, and practice.',
         about: 'Practice asks in many ways: myth or true, who am I from clues, sort onto two sides, put events in order, match people and words to what they were, choose all that fit, the odd one out, the year and the century, as well as choosing or typing an answer. The tests like the ones in class add a source to question and an answer to explain.',
         asideName: 'The timeline', aside: warsTimeline,
+      },
+      {
+        bank: usHistory, name: 'American History', length: 20, learn: usLearning, exam: usExam, story: (k) => `chapters.html#ushistory/${k}`,
+        blurb: 'From the first peoples to the end of the Cold War: the colonies, the Revolution and the Constitution, westward growth, the Civil War and Reconstruction, the Gilded Age and the Progressives, two world wars and the Depression, civil rights, Vietnam and the fall of the Berlin Wall. Tests like the ones in class, with made-up sources to question, and practice.',
+        about: 'Practice asks in many ways: myth or true, who am I from clues, sort onto two sides, put events in order, match people and words to what they were, choose all that fit, the odd one out, the year and the century, as well as choosing or typing an answer. A test like the ones in class has key words and dates, a source to read and question, and an answer to explain, which you mark yourself against the mark scheme. Learning goes in time order, in eight units, each topic with a short lesson, and each chapter tells its story.',
+        asideName: 'The timeline', aside: usTimeline,
       },
     ] });
   </script>

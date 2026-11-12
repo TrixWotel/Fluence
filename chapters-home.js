@@ -6,6 +6,7 @@ const KEY = 'fluentio.chapters';
 export const COURSES = {
   middleages: { name: 'The Middle Ages', icon: '🏰', chapters: 14, blurb: 'Vikings, knights, plague and the people who survived them. From the fall of Rome to the printing press.' },
   wars: { name: 'The Wars of Religion', icon: '⚔️', chapters: 5, blurb: 'A split in the Church, a wedding that ended in massacre, three men thrown from a window, and thirty years of war.' },
+  ushistory: { name: 'American History', icon: '🦅', chapters: 29, blurb: 'Colonists, rebels, pioneers, soldiers and marchers, and the choices that made a nation. From the first peoples to the end of the Cold War.' },
 };
 
 export const load = () => { const q = f.read(KEY); return { done: q?.done && typeof q.done === 'object' ? q.done : {} }; };
